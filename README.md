@@ -1,6 +1,22 @@
 # Galileo
 Galileo is a symbolic and numerical math tool written in Scala.
 
+Differentiating features:
+* Support for tensor operations and differential geometry operations (Christoffel symbols, Ricci and Riemann tensors)
+* Powerful simplification rules (accessible using the `simplify` command)
+* Symbolic matrix manipulation (you can invert a matrix containing symbols)
+* Support for logic operations
+* Basic framework for rules driven proofs is available (e.g. `prove(1/x==x^(-1))`)
+
+## Installation and running
+Galileo uses the 'sbt' build system. After cloning the repository, running
+```
+sbt run
+```
+will launch the galileo interactive shell.
+
+Galileo also provides a de-facto Scala API for symbolic math, the best way to explore its use is by looking at the test scripts.
+
 ## Basics
 ### Working with numbers
 ```
