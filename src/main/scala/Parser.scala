@@ -155,7 +155,7 @@ class Parser extends JavaTokenParsers with ImplicitConversions {
   
   // functions
   def function:Parser[ Expr ] = 
-    "kron" ~> "(" ~> expression ~ ( "," ~> expression <~ ")" ) ^^ TensorProduct
+    "kron" ~> "(" ~> expression ~ ( "," ~> expression <~ ")" ) ^^ TensorProduct |
     "sin" ~> "(" ~> expression <~ ")" ^^ SinF1 |
     "cos" ~> "(" ~> expression <~ ")" ^^ CosF1 |
     "tan" ~> "(" ~> expression <~ ")" ^^ TanF1 |
