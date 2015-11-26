@@ -1,5 +1,6 @@
 package galileo.tensor
 
+import galileo.environment.Environment
 import galileo.expr._
 
 import TensorIndexKind._
@@ -32,9 +33,11 @@ object ChristoffelFirst{
 	}
 }
 
-trait Christoffel {
+trait Christoffel extends Expr {
 	val variables:List[Variable]
 	val components:List[Expr]
+	
+	def info(env:Option[Environment]=None) = this.getClass.getSimpleName + "(" + variables.mkString + "," + components.mkString + ")"
 
 	val dimension = variables.size
 	def valueAt( location:Int* ):Expr = this.valueAt( location.to[List] )
@@ -77,3 +80,24 @@ object ChristoffelSecond{
 case class ChristoffelSecond(variables:List[Variable],components:List[Expr]) extends Christoffel {
 	def tensor = Tensor( List( Upper, Lower, Lower ), dimension, components )
 }
+
+trait ChristoffelU extends Expr {
+	def info(env:Option[Environment]=None) = this.getClass.getSimpleName + "(" + expr + ")"
+	val expr:Expr
+	val generator:Metric=>Christoffel
+	override def visit(env:Option[Environment]=None) = expr.visit( env ) match {
+		case metric:Metric => generator( metric )
+		case a => this //.apply(a)
+	}
+}
+
+// u for unhandled, so expr has not been visit-ed yet
+case class ChristoffelFirstU(expr:Expr) extends ChristoffelU {
+	val generator:Metric=>Christoffel = ChristoffelFirst.apply
+}
+
+case class ChristoffelSecondU(expr:Expr) extends ChristoffelU {
+	val generator:Metric=>Christoffel = ChristoffelSecond.apply
+}
+
+

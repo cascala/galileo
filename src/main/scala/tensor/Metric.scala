@@ -1,5 +1,6 @@
 package galileo.tensor
 
+import galileo.environment.Environment
 import galileo.expr.{Expr,Number,Product,Square,Variable}
 import galileo.trigonometry.SinF1
 
@@ -48,7 +49,8 @@ object Metric {
 }
 
 // g^ab
-case class Metric private(tensor:Tensor,variables:List[Variable]) {
+case class Metric private(tensor:Tensor,variables:List[Variable]) extends Expr {
+	def info(env:Option[Environment]=None) = "Metric(" + tensor + ",[" + variables.mkString(",") + "])"
 	def inverse:Metric = {
 		val indices = tensor.indices.map( index => index.inverse )
 		val m = tensor.toMatrix.inverse.toDenseMatrix.rows.flatten

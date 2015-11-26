@@ -11,7 +11,7 @@ import galileo.proof.Proof
 import galileo.manipulate.{Expand,Factor,Simplify}
 import galileo.solve.Solve
 import galileo.trigonometry._
-import galileo.tensor.TensorProduct
+import galileo.tensor.{ChristoffelFirstU,ChristoffelSecondU,Metric,TensorProduct}
 import galileo.rand.Rand
 
 class Parser extends builtinParser with exprParser { 
@@ -31,11 +31,11 @@ class Parser extends builtinParser with exprParser {
   def parse(str:String):ParseResult[List[Expr]] = parseAll(program, str)
 }
 
-trait exprParser extends logicParser with functionParser with matrixParser {
+trait exprParser extends logicParser with functionParser with matrixParser with tensorParser {
   val expression:Parser[Expr] = chainl1( term, "+" ^^^ Sum2 | "-" ^^^ Sub | "||" ^^^ Or2 ) 
   def term:Parser[Expr] = chainl1( power, "*" ^^^ Product2 | "/" ^^^ Div | "&&" ^^^ And2 ) 
   def power:Parser[Expr] = chainl1( factor, "^" ^^^ Power ) 
-  def factor:Parser[Expr] = mats | function | deriv | boolOps |
+  def factor:Parser[Expr] = mats | tensor | function | deriv | boolOps |
     rowVector |
     floatingPointNumber ^^ NumD | 
     bool | 
@@ -60,10 +60,23 @@ trait exprParser extends logicParser with functionParser with matrixParser {
   val Div = ( a:Expr, b:Expr ) => Fraction( a, b ) 
   val Product2 = (a:Expr, b:Expr ) => Product( a, b )
   val Sum2 = (a:Expr, b:Expr ) => Sum( a, b )
-  val Or2 = (a:Expr,b:Expr) => BoolOrSc( a, b )
+  val Or2 = (a:Expr,b:Expr) => BoolOrSc( a, b ) // sc for short-circuit evalualation
   val And2 = (a:Expr,b:Expr) => BoolAndSc( a, b )
 }
 
+trait tensorParser extends JavaTokenParsers with ImplicitConversions {
+  val expression:Parser[Expr]
+  def tensor = metric | christoffel
+  def metric:Parser[Metric] = "metric.generate(" ~> metrictemplate <~ ")" ^^ { 
+    case "two-sphere" => Metric.twoSphere( Variable( "r") )
+    case "three-sphere" => Metric.threeSphere( Variable( "r") )
+  } 
+  def metrictemplate:Parser[String] = "two-sphere" | "three-sphere"
+  def christoffel = 
+    "christoffelfirst(" ~> expression <~ ")" ^^ ChristoffelFirstU |
+    "christoffelsecond(" ~> expression <~ ")" ^^ ChristoffelSecondU
+
+}
   //def tensor = "tensor" ~> "(" ~> expr ~ "," ~ expr ~ "," ~ expr <~ ")" ^^ { case l~_~u~_~d => TensorU( l, u, d ) } 
 
   //def tensor = christof // "hello" ^^^{ Number( 1 ) } //christof
@@ -74,6 +87,7 @@ trait exprParser extends logicParser with functionParser with matrixParser {
 trait matrixParser extends JavaTokenParsers with ImplicitConversions {
   val expression:Parser[Expr]
   // m_expression is an expression that is not a matrix or vector itself
+  // m_expression can be elements of a matrix
   val m_expression:Parser[Expr]
   // content valid inside a matrix  
   //def matrixContent:Parser[Expr] = m_expression //unaryMinusMatrixTerm | matrixTerm | // | 
@@ -132,7 +146,7 @@ trait matrixParser extends JavaTokenParsers with ImplicitConversions {
   def transpose:Parser[Expr] = "transpose" ~> "(" ~> m_expression <~ ")" ^^ { case e => Transpose( e ) }
   
   val NumD = ( a:String ) => Number( a.toDouble )
-  val Der = ( a:Expr, b:Variable ) => Derivative( a, b ) //a.derive( b ) //Derivative( a, b ) //a.derive( b )
+  //val Der = ( a:Expr, b:Variable ) => Derivative( a, b ) //a.derive( b ) //Derivative( a, b ) //a.derive( b )
   
   val Mat = (ll:List[List[Expr]]) => { require( ll.forall( str => str.size == ll(0).size ), "Not all rows have the same size" ); DenseMatrix( ll ) }
 }
