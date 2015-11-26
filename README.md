@@ -1,5 +1,7 @@
 # Galileo
-Galileo is a symbolic and numerical math tool written in Scala.
+Galileo is the genesis of a symbolic and numerical math tool written in Scala; a Computer Algebra System (CAS).
+It's similar to matlab or octave, but has many features of maple and mathematica as well in the sense that it supports variables and symbolic calculations.
+
 
 Differentiating features:
 * Support for tensor operations and differential geometry operations (Christoffel symbols, Ricci and Riemann tensors)
