@@ -38,6 +38,15 @@ object LinSpace {
 	}
 }
 
+// to handle b:e and b:i:end
+case class RowVector( begin:Expr, end:Expr, incr:Expr ) extends Expr {
+	override def visit(env:Option[Environment]=None) = (begin.visit(env), end.visit(env), incr.visit(env)) match {
+		case (Number(b),Number(e),Number(i)) => DenseMatrix( List( ( b to e by i ).map( n => Number( n ) ).to[List] ) )
+		case (b,e,i) => RowVector(b,e,i)
+	}
+	def info(env:Option[Environment]=None) = "RowVector(" + begin + "," + end + "," + incr + ")"
+}
+
 object LogSpace {
 	def apply( start:Double, end:Double, n:Int=50) =  {
 		val incr = ( end - start ) / ( n - 1 ) // todo, use fraction here

@@ -72,6 +72,7 @@ trait exprParser extends logicParser with functionParser with matrixParser {
   //def vector:Parser[List[Expr]] = "[" ~> rep1sep( expression, " " ) <~ "]" ^^ { case es => es.to[List] }
 
 trait matrixParser extends JavaTokenParsers with ImplicitConversions {
+  val expression:Parser[Expr]
   // m_expression is an expression that is not a matrix or vector itself
   val m_expression:Parser[Expr]
   // content valid inside a matrix  
@@ -85,8 +86,8 @@ trait matrixParser extends JavaTokenParsers with ImplicitConversions {
   def matlu:Parser[Expr] = "lu" ~> "(" ~> ( matrix | variableE )  <~ ")" ^^ MatLU
   def matinv:Parser[Expr] = "inv" ~> "(" ~> ( m_expression )  <~ ")" ^^ MatInv
   def matnorm:Parser[Expr] = 
-    ( "norm" ~> "(" ~> m_expression <~ "," ) ~ ( posNumber <~ ")" ) ^^ { case m~p => MatNorm( m, p ) } |
-    "norm" ~> "(" ~> m_expression <~ ")" ^^ { case m => MatNorm( m ) }
+    ( "norm" ~> "(" ~> expression <~ "," ) ~ ( posNumber <~ ")" ) ^^ { case m~p => MatNorm( m, p ) } |
+    "norm" ~> "(" ~> expression <~ ")" ^^ { case m => MatNorm( m ) }
 
   def posNumber:Parser[Integer] = wholeNumber ^^ { s:String => { val r = s.toInt; require( r >= 0 ); r } } 
   def ones:Parser[Expr] = 
