@@ -166,4 +166,15 @@ case class Fraction(numerator:Expr, denominator:Expr) extends FunF2 {
 	}
 
 	override def expand = Fraction( numerator.expand, denominator.expand )
+
+	override def extractFactor(possibleFactor:Expr):Option[Expr] = possibleFactor match {
+		case Fraction(n,d) => (numerator.extractFactor(n),denominator.extractFactor(d)) match {
+			case (Some(nn),Some(nd)) => Some( Fraction(nn,nd) )
+			case _ => None
+		}
+		case e:Expr => (numerator.extractFactor( e ) ) match {
+			case Some(nn) => Some(Fraction(nn,denominator))
+			case _ => None
+		}
+	}
 }
