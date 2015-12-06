@@ -68,8 +68,9 @@ case class Power(operand:Expr, exponent:Expr) extends FunF2 {
   	// a^n.extractFactor(a) -> a^(n-1)
   	// a^n.extractFactor(a^m) -> a^(n-m)
   	override def extractFactor(possibleFactor:Expr):Option[Expr] = possibleFactor match {
-  		case this.operand => Some( Power( operand, Diff( exponent, Number( 1 ) ) ) )
-  		case Power(op,ex) if ( op == operand ) => Some( Power(operand, Diff( exponent, ex ) ) ) 
+  		case this.operand => Some( Power( operand, Diff( exponent, Number( 1 ) ) ).visit() )
+  		//case this => Some( Number( 1 ) )
+  		case Power(op,ex) if ( op == operand ) => Some( Power( operand, Diff( exponent, ex ) ).visit() ) 
   		case _ => None
   	} 
 
