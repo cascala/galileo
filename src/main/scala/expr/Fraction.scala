@@ -109,15 +109,6 @@ case class Fraction(numerator:Expr, denominator:Expr) extends FunF2 {
 
 	// simplify by finding common factors in the numerator and denominator of a fraction
 	override def simplify:Expr = {
-		def factors(e:Expr):List[Expr] = e match {
-			case p:Product => p.factors.toList
-			case s:Sum => s.factors match {
-				case Some(p) => p.factors.toList
-				case _ => List( s )
-			} 
-			case _1 => List( _1 )
-		}
-
 		// simplify things with simple num/denom, like a^2/a^3
 		def simplifyOne(f:Fraction):Option[Fraction] = (f.numerator,f.denominator) match {
 			case (a:Expr,b:Expr) if ( a == b ) => Some( Fraction( Number( 1 ), Number( 1 ) ) )
@@ -139,8 +130,6 @@ case class Fraction(numerator:Expr, denominator:Expr) extends FunF2 {
 			case _ => None
 		}
 
-		//val n = factors( numerator.simplify )
-		//val d = factors( denominator.simplify )
 		val n = numerator.simplify.flatFactors
 		val d = denominator.simplify.flatFactors
 
@@ -155,17 +144,6 @@ case class Fraction(numerator:Expr, denominator:Expr) extends FunF2 {
 			val candd = newd(indd)
 			//println( "candn:" + candn.info() )
 			//println( "candd:" + candd.info() )
-
-/*
-			candn.extractFactor( candd ) match {
-				case Some( num ) => { 
-					newn = newn.updated( indn, num )
-					newd = newd.updated( indd, Number( 1 ) )
-					indd = indd + 1
-				}
-				case None => indd = indd + 1
-			}	
-*/
 			//println( "Calling simplyOne on:" + candn + "/" + candd )
 			simplifyOne( Fraction( candn,candd ) ) match {
 				case Some(newf) => { 

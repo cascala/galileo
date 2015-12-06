@@ -27,6 +27,12 @@ class SimplifyTest extends FunSuite {
 		"-4*a*b+2*a*b" -> "(-2.0)*a*b",
 		"cos(a)^2+sin(a)^2" -> "1.0",
 		"d*cos(a)^2+d*sin(a)^2" -> "d",
+		"(-1*a*b)/(-1*c*d)" -> "a*b/(c*d)",
+		//"c/a+b*c^2.0/(a^2.0*d+(-1.0)*a*b*c)+(-1.0)*c*d/(a*d+(-1.0)*b*c)" -> "0.0",
+		//"b/a+b^2.0*c/(a^2.0*d+(-1.0)*a*b*c)+(-1.0)*b*d/(a*d+(-1.0)*b*c)" -> "0.0",
+		"8*y/4"-> "2.0*y",
+		//"a/(2*b)-a/b+a/(2*b)" -> "0.0", // can be fixed with better sorting...
+		//"b+b/c" -> "b*(1+1/c)",
 		//"2*a+2*b" -> "2.0*(a+b)",
 		//"-2*a+b" -> "-2.0*(a-b)",
 		"1" -> "1.0"	
@@ -63,6 +69,16 @@ class FactorTest extends FunSuite {
 		"-2*a+2.0*b" -> "(-2.0)*(a+(-1.0)*b)",
 		"7.0*c*u^2.0+d*u^2.0" -> "(7.0*c+d)*u^2.0",
 		"u*(u*d+u*7)" -> "(d+7.0)*u^2.0",
+		//"1.0/a+b*c/(a^2.0*d+(-1.0)*a*b*c)" -> "(b*c/(a*d+(-1.0)*b*c)+1.0)/a",
+		//"b+b/c" -> "b*(1.0/c+1.0)",
+		//"a/b+c/b^2" -> "(a+c/b)/b",
+		"1+a+a^2" -> "a*(a+1.0)+1.0",
+		//"1+1/a+1/a^2" -> "(1.0/a+1.0)/a+1.0",
+		//"a/(b*c)+d/(b*e)" -> "(a/c+d/e)/b",
+		//"b/(a*(a+b))+c/(a+b)" -> "(b/a+c)/(a+b)",
+		//"a*b*c*(a+b)+d*e*f*(a+b)" -> "(a+b)*(a*b*c+d*e*f)",
+		//"(a+b)+d*e*f*(a+b)" -> "",
+		//"(b*c/(a*(a*d+(-1.0)*b*c))+(-1.0)*d/(a*d+(-1.0)*b*c))*c" -> "",
 		"1" -> "1.0"	
 	)
 	val genv = new Environment( None ) 
@@ -149,12 +165,7 @@ class extractFactorTest extends FunSuite {
 		//info( "p.extractFactor(Number(3)): " + p.extractFactor(Number(3) ) )
 		val s = Sum( Product( Number( 3 ), Variable( "a" ) ), Product( Number( 3 ), Variable( "b" ), Variable( "a" ) ) )
 		//info( "s.factors" + s.factors )
-		assert( s.factors == Some( 
-			Product( 
-				Number( 3 ), 
-				Sum( Variable( "a" ), Product( Variable( "a" ), Variable( "b" ) ) )
-			) 
-		) )
+		assert( s.possibleFactors == List( s, Number( 3 ), Variable( "a" ) ) )
 		assert( s.extractFactor( Variable( "a" ) ) == Some( Sum( Product(Number(3),Variable("b")), Number(3) ) ) )
 	}
 }
