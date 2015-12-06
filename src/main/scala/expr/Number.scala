@@ -39,15 +39,24 @@ case class Number(value: Double) extends Expr {
 
 	override def possibleFactors:List[Expr] = this.value match {
 		case 0 => List()
-		case 1 => List()
-		case -1 => List()
+		//case 1 => List()
+		//case -1 => List()
 		case _ => List( this )
 	}
 
-	override def extractFactor(e:Expr):Option[Expr] = e match {
-		case Number( n ) if ( value%n == 0 ) => Some( Number( value / n ) )
+	override def extractFactor(e:Expr):Option[Expr] = { 
+		//println( "Number(" + this.value + ").extractFactor(" + e + ")" )
+		e match {
+
+		case Number( 1 ) => None //Some( this ) creates a cycle
+		case b if ( b == this ) => Some( Number( 1 ) )
+		case b if ( b == -this ) => Some( Number( -1 ) )
+		//case Number( -1 ) => Some( Number( -1 * this.value ) )
+		case Number( n ) if ( Math.abs(value)>Math.abs(n) && value%n == 0 ) => Some( Number( value / n ) )
+		case Number( n ) if ( n > 0 && value > n && value%n == 0 ) => Some( Number( value / n ) )
+		case Number( n ) if ( n < 0 && value < n && value%n == 0 ) => Some( Number( value / n ) )
 		case _ => None
-	}
+	} }
 }
 
 case class NumberI( value:Int ) extends Expr {
