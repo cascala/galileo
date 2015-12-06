@@ -46,8 +46,9 @@ trait Expr{
 
 	// Possibly extract factor e from an expression
 	// (a).extractFactor(a) -> Number( 1 )
-	def extractFactor(e:Expr):Option[Expr] = ( this == e ) match {
-		case true => Some( Number( 1 ) )
+	def extractFactor(e:Expr):Option[Expr] = e match {
+		case Number( 1 ) => Some( this )
+		case s if ( s == this ) => Some( Number( 1 ) )
 		case _ => None
 	}
 
