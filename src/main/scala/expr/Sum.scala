@@ -66,7 +66,10 @@ case class Sum(terms: Expr*) extends FunMany {
     return rv
   }
 
-  override def simplify: Expr = Sum(flatTerms.map(term => Simplify(term).visit()).toList).visit()
+  override def simplify:Expr = Sum(flatTerms.map(term => Simplify(term).visit()).toList).visit() match {
+    case s:Sum if ( s == this ) => s
+    case e => e.simplify // OK to recurse
+  }
 
   // todo, rewrite using 'scan'
   override def visit(env: Option[Environment] = None): Expr = {
@@ -153,7 +156,8 @@ case class Sum(terms: Expr*) extends FunMany {
   */
 
   override def expand: Expr = Sum(flatTerms.map(term => term.expand).toList)
-
+  override def possibleFactors = List( this ) ++ terms(0).possibleFactors
+  
   // a*b+a+a*c+d*a+d*b*a -> a*(1+b+c+d*(1+b))
   override def factor: Expr = {
     //( "sum.factor(" + this + ")" )
@@ -195,6 +199,7 @@ case class Sum(terms: Expr*) extends FunMany {
   }
 
   // 2 * a + 2 * b -> 2 * ( a + b )
+  /*
   def factors: Option[Product] = {
     val possibleFactors = terms(0) match {
       case p: Product => p.factors.toList
@@ -220,6 +225,7 @@ case class Sum(terms: Expr*) extends FunMany {
     }
     None // List( this )
   }
+  */
 
   // (a*b+a*c).extractFactor(a) -> b+c
   override def extractFactor(possibleFactor: Expr): Option[Expr] = {

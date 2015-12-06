@@ -143,18 +143,11 @@ class ExpandTest extends FunSuite {
 class extractFactorTest extends FunSuite {
 	test( "001") {
 		val n = Number( 3 )
-		//info( "n.extractFactor(Number(3)): " + n.extractFactor(Number(3) ) )
 		assert( n.extractFactor( Number(3) ) == Some( Number( 1 ) ) )
 		val p = Product( Number( 3 ), Variable( "a") )
-		//info( "p.extractFactor(Number(3)): " + p.extractFactor(Number(3) ) )
+		assert( p.possibleFactors == List( Number( 3 ), Variable( "a" ) ) )
 		val s = Sum( Product( Number( 3 ), Variable( "a" ) ), Product( Number( 3 ), Variable( "b" ), Variable( "a" ) ) )
-		//info( "s.factors" + s.factors )
-		assert( s.factors == Some( 
-			Product( 
-				Number( 3 ), 
-				Sum( Variable( "a" ), Product( Variable( "a" ), Variable( "b" ) ) )
-			) 
-		) )
+		assert( s.possibleFactors == List( s, Number( 3 ), Variable( "a" ) ) )
 		assert( s.extractFactor( Variable( "a" ) ) == Some( Sum( Product(Number(3),Variable("b")), Number(3) ) ) )
 	}
 }
