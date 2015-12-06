@@ -156,6 +156,8 @@ case class Product( factors:Expr*) extends Expr with FunMany {
   // extract a factor
   // e.g. if this == Product( a, b, c ), extractFactor( b ) will return Product( a, c )
   override def extractFactor(possibleFactor:Expr):Option[Expr] = {
+    if( possibleFactor == this ) return Some( Number( 1 ) )
+
     // chekc if b exists in Product(a,b,c)
     val found = this.factors.map( factor => factor.extractFactor( possibleFactor ) ).zipWithIndex.find( { case (e:Option[Expr],i:Int) => e match { 
       case Some(_) => true 
@@ -164,7 +166,7 @@ case class Product( factors:Expr*) extends Expr with FunMany {
 
     found match { 
       // Found one - splice factors and re-insert
-      case Some((Some(e),i:Int)) => Some( Product( factors.toList.updated( i, e ) ) )
+      case Some((Some(e),i:Int)) => Some( expressify( factors.toList.updated( i, e ) ) )
       case Some(_) => None
       case None => None
     }
