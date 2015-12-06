@@ -603,9 +603,10 @@ case class DenseMatrix( rows:List[List[Expr]]) extends Expr with Matrix {
 		this.rows.zip( that.rows ).map( { case( lc, rc) => lc.zip(rc).map( { case (le,re) => Product( le,re ) } ) } )
 	)
 
-	override def visit(env:Option[Environment]=None) = DenseMatrix(
-		rows.map( row => row.map( elem => elem.visit( env ) ) )
-	)
+	override def visit(env:Option[Environment]=None) = DenseMatrix( rows.map( row => row.map( elem => elem.visit( env ) ) ) )
+	override def expand = DenseMatrix( rows.map( row => row.map( elem => elem.expand ) ) )
+	override def simplify = DenseMatrix( rows.map( row => row.map( elem => elem.simplify ) ) )
+	override def factor = DenseMatrix( rows.map( row => row.map( elem => elem.factor ) ) )
 
 	override def eval() = DenseMatrix(
 		rows.map( row => row.map( elem => elem.eval() ) )
