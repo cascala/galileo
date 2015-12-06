@@ -131,7 +131,7 @@ case class Sum(terms: Expr*) extends FunMany {
       case (a, b) if (a == -b) => Some(Number(0))
       //case ( Fraction( a, b ), c ) => Fraction( Sum( a, Product( b, c ) ), b ).visit()
       //case ( a, Fraction( b, c ) ) => Fraction( Sum( b, Product( a, c ) ), c ).visit()
-      case (Fraction(a, b), Fraction(c, Product(d, e))) if (b == e) => Some(Product(Fraction(a, b), Sum(Number(1), Fraction(c, d))).visit())
+      //case (Fraction(a, b), Fraction(c, Product(d, e))) if (b == e) => Some(Product(Fraction(a, b), Sum(Number(1), Fraction(c, d))).visit())
       case (Number(1), Fraction(a, Sum(b, c))) if (a == -c) => Some(Fraction(b, Sum(b, c)).visit())
       case (Number(1), Fraction(a, Sum(b, c))) if (a == -b) => Some(Fraction(c, Sum(b, c)).visit())
       case (a, b) => None
