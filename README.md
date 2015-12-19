@@ -95,6 +95,20 @@ c	d
 galileo>P*A
 a	b
 c	d
+galileo>A=[3 4;5 b]
+3.0	4.0
+5.0	b
+galileo>inv(A)
+(-1.0)*b/((-3.0)*b+20.0)	3.0*b/(5.0*((-3.0)*b+20.0))+1.0/5.0
+5.0/((-3.0)*b+20.0)	(-15.0)/(5.0*((-3.0)*b+20.0))
+galileo> simplify(ans)
+(-1.0)*b/((-3.0)*b+20.0)	3.0*b/((-15.0)*b+100.0)+1.0/5.0
+5.0/((-3.0)*b+20.0)	(-15.0)/((-15.0)*b+100.0)
 ```
 ### Tensor manipulation
-
+```
+galileo> m=metric.generate(three-sphere)
+Metric(Tensor(List(TensorIndex(Lower,3), TensorIndex(Lower,3)),List(r^2.0, 0.0, 0.0, 0.0, r^2.0*sin(psi)^2.0, 0.0, 0.0, 0.0, r^2.0*sin(psi)^2.0*sin(theta)^2.0)),List(psi, theta, phi ))
+galileo> simplify(einsteintensor(m))
+Tensor(List(TensorIndex(Lower,3), TensorIndex(Lower,3)),List(-1.0, 0.0, 0.0, 0.0, (-1.0)*sin(psi)^2.0, 0.0, 0.0, 0.0, sin(psi)^2.0*sin(theta)^2.0+(-1.0)*cos(psi)^2.0*sin(theta)^2.0+(-3.0)*sin(psi)^2.0*sin(theta)^2.0+sin(theta)^2.0))
+```
