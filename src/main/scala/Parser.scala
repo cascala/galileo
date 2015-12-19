@@ -11,7 +11,7 @@ import galileo.proof.Proof
 import galileo.manipulate.{Expand,Factor,Simplify}
 import galileo.solve.Solve
 import galileo.trigonometry._
-import galileo.tensor.{ChristoffelFirstU,ChristoffelSecondU,Metric,TensorProduct}
+import galileo.tensor._
 import galileo.rand.Rand
 
 class Parser extends builtinParser with exprParser { 
@@ -66,17 +66,25 @@ trait exprParser extends logicParser with functionParser with matrixParser with 
 
 trait tensorParser extends JavaTokenParsers with ImplicitConversions {
   val expression:Parser[Expr]
-  def tensor = metric | christoffel
+  def tensor = metric | christoffel | tensors
   def metric:Parser[Metric] = "metric.generate(" ~> metrictemplate <~ ")" ^^ { 
     case "two-sphere" => Metric.twoSphere( Variable( "r") )
     case "three-sphere" => Metric.threeSphere( Variable( "r") )
   } 
   def metrictemplate:Parser[String] = "two-sphere" | "three-sphere"
-  def christoffel = 
+  def christoffel = // these are not tensors - small technicality
     "christoffelfirst(" ~> expression <~ ")" ^^ ChristoffelFirstU |
     "christoffelsecond(" ~> expression <~ ")" ^^ ChristoffelSecondU
 
+  def tensors = 
+    "riemannfirst" ~> "(" ~> expression <~ ")" ^^ RiemannFirstU |
+    "riemannsecond" ~> "(" ~> expression <~ ")" ^^ RiemannSecondU |
+    "einsteintensor" ~> "(" ~> expression <~ ")" ^^ EinsteinTensorU |
+    "einsteinscalar" ~> "(" ~> expression <~ ")" ^^ EinsteinScalarU |
+    "riccitensor" ~> "(" ~> expression <~ ")" ^^ RicciTensorU |
+    "ricciscalar" ~> "(" ~> expression <~ ")" ^^ RicciScalarU
 }
+
   //def tensor = "tensor" ~> "(" ~> expr ~ "," ~ expr ~ "," ~ expr <~ ")" ^^ { case l~_~u~_~d => TensorU( l, u, d ) } 
 
   //def tensor = christof // "hello" ^^^{ Number( 1 ) } //christof

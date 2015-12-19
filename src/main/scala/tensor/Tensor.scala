@@ -40,44 +40,21 @@ case class TensorIndex( kind:TensorIndexKind, dimension:Int) {
 	//def variables = 
 }
 
-trait TensorTrait {
+/*
+trait TensorTrait extends Expr {
+	override def info(env:Option[Environment]=None) = "TensorTrait"
 	def components:List[Expr]
 	def indices:List[TensorIndex]
+	def rank:TensorRank = TensorRank( indices.filter( x => x.kind == Upper ).size, indices.filter( x => x.kind == Lower ).size )
 	def valueAt(location:Int*):Expr
-	
-	def *(that:Expr):TensorTrait // return type is important here!
-	def *(that:TensorTrait) = Tensor( 
-		this.indices ++ that.indices,
-		this.components.map( thiscomponent => that.components.map( thatcomponent => Product( thiscomponent, thatcomponent ).visit() ) ).flatten
-	)
-
-	// Sum, supports scalar and 
-	def +(that:TensorTrait):Tensor = that.indices match {
-		case Nil => { 
-			require( that.components.size == 1 )
-			Tensor( this.indices, components.map( component => Sum( component, that.components( 0 ) ).visit() ) )
-		}
-		case l:List[TensorIndex] => {
-			require( this.indices == l, "l:\n" + l + "\nthis.indices\n" + this.indices )
-			Tensor( this.indices, this.components.zip( that.components ).map( { case ( _1:Expr,_2:Expr) => Sum(_1,_2).visit() } ) )
-		}
-	}
-	def -(that:TensorTrait):Tensor = that.indices match {
-		case Nil => { 
-			require( that.components.size == 1 )
-			Tensor( this.indices, components.map( component => Sum( component, Product( Number( -1 ), that.components( 0 ) ) ).visit() ) )
-		}
-		case l:List[TensorIndex] => {
-			require( this.indices == l, "l:\n" + l + "\nthis.indices\n" + this.indices )
-			Tensor( this.indices, this.components.zip( that.components ).map( { case ( _1:Expr,_2:Expr) => Sum(_1,Product(Number(-1),_2)).visit() } ) )
-		}
-	}
-
 	def swapIndices(left:Int,right:Int):TensorTrait 
-
-	// Tensor + Scalar
-	def +(that:Expr) = Tensor( this.indices, this.components.map( component => Sum( component, that ).visit() ) )
+	def contract( upperIndex:Int, lowerIndex:Int ):TensorTrait
+	def *(that:Expr):TensorTrait
+	def +(that:Expr):TensorTrait
+	def +(that:Tensor):Tensor
+	//def +(that:Tensor):Tensor
 }
+*/
 
 object Tensor {
 	// All indices will assume to be of the same dimension
@@ -110,11 +87,10 @@ case class TensorRank(upper:Int,lower:Int){
 	def +(that:TensorRank) = TensorRank( this.upper + that.upper, this.lower + that.lower )
 }
 
-case class Tensor( indices:List[TensorIndex], components:List[Expr]) extends TensorTrait {
-
+case class Tensor( indices:List[TensorIndex], components:List[Expr]) extends Expr {
 	def rank:TensorRank = TensorRank( indices.filter( x => x.kind == Upper ).size, indices.filter( x => x.kind == Lower ).size )
 	lazy val rankInt = rank.toInt
-
+	def info(env:Option[Environment]=None) = "Tensor(" + indices + "," + components + ")"
 	def toMatrix:Matrix = {
 		require( indices.size == 2 )
 		DenseMatrix( components.grouped(indices(1).dimension ).toList )
@@ -171,8 +147,6 @@ case class Tensor( indices:List[TensorIndex], components:List[Expr]) extends Ten
 
 	def totalSize = indices.map( index => index.dimension ).foldLeft(1)(_*_)
 
-	def visit( env:Option[Environment] = None ) = Tensor( this.indices, components.map( component => component.visit( env ) ) )
-
 	// Let's say we have the following dimensions:
 	// 4, 3, 5
 	// location     address
@@ -194,7 +168,7 @@ case class Tensor( indices:List[TensorIndex], components:List[Expr]) extends Ten
 		location.zip( offsets ).map( { case (l,o) => l * o } ).sum
 	}
 
-	def *(that:Expr) = Tensor( this.indices, this.components.map( component => Product( component, that ).visit() ) )
+	//def *(that:Expr) = Tensor( this.indices, this.components.map( component => Product( component, that ).visit() ) )
 	def /(that:Expr) = Tensor( this.indices, this.components.map( component => Fraction( component, that ).visit() ) )
 
 	// Use this to reduce rank,
@@ -226,5 +200,63 @@ case class Tensor( indices:List[TensorIndex], components:List[Expr]) extends Ten
 				rv = rv + ( this.valuesAtIndex( lowerIndex, i ).valuesAtIndex( upperIndex - 1, i ) ) //.visit()
 		}
 		rv
+	}
+
+	// Tensor + Expr
+	def +(that:Expr) = that match {
+		case t:Tensor => this tensorPlus t
+		case e:Expr => Tensor( this.indices, this.components.map( component => Sum( component, that ).visit() ) )
+	}
+	def +(that:Tensor):Tensor = this tensorPlus that 
+
+	// Tensor + Tensor
+	private def tensorPlus(that:Tensor):Tensor = that.indices match {
+		case Nil => { 
+			require( that.components.size == 1 )
+			Tensor( this.indices, components.map( component => Sum( component, that.components( 0 ) ).visit() ) )
+		}
+		case l:List[TensorIndex] => {
+			require( this.indices == l, "l:\n" + l + "\nthis.indices\n" + this.indices )
+			Tensor( this.indices, this.components.zip( that.components ).map( { case ( _1:Expr,_2:Expr) => Sum(_1,_2).visit() } ) )
+		}
+	}
+
+	// Tensor - Tensor
+	def -(that:Tensor) = that.indices match {
+		case Nil => { 
+			require( that.components.size == 1 )
+			Tensor( this.indices, components.map( component => Sum( component, Product( Number( -1 ), that.components( 0 ) ) ).visit() ) )
+		}
+		case l:List[TensorIndex] => {
+			require( this.indices == l, "l:\n" + l + "\nthis.indices\n" + this.indices )
+			Tensor( this.indices, this.components.zip( that.components ).map( { case ( _1:Expr,_2:Expr) => Sum(_1,Product(Number(-1),_2)).visit() } ) )
+		}
+	}
+
+	// Tensor * Expr
+	def *(that:Expr):Tensor = that match {
+		case t:Tensor => this tensorTimes t
+		case e:Expr => Tensor( this.indices, this.components.map( component => Product( component, that ).visit() ) )
+	}
+
+	// Tensor * Tensor
+	def tensorTimes(that:Tensor) = Tensor( 
+		this.indices ++ that.indices,
+		this.components.map( thiscomponent => that.components.map( thatcomponent => Product( thiscomponent, thatcomponent ).visit() ) ).flatten
+	)
+
+	override def visit(env:Option[Environment]=None) = Tensor( indices, components.map( component => component.visit( env ) ) )
+	override def expand = Tensor( indices, components.map( component => component.expand ) )
+	override def simplify = Tensor( indices, components.map( component => component.simplify ) )
+	override def factor = Tensor( indices, components.map( component => component.factor ) )
+}
+
+trait TensorU extends Expr {
+	def info(env:Option[Environment]=None) = this.getClass.getSimpleName + "(" + expr + ")"
+	val expr:Expr
+	val generator:Metric=>Tensor
+	override def visit(env:Option[Environment]=None) = expr.visit( env ) match {
+		case metric:Metric => generator( metric )
+		case a => this //.apply(a)
 	}
 }

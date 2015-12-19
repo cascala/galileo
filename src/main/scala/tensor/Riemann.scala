@@ -69,3 +69,11 @@ object RiemannFirst extends Riemann {
 		rv.visit()
 	}
 }
+
+case class RiemannFirstU(expr:Expr) extends TensorU {
+	val generator:Metric=>Tensor = RiemannFirst.apply
+}
+
+case class RiemannSecondU(expr:Expr) extends TensorU {
+	val generator:Metric=>Tensor = RiemannSecond.apply
+}
