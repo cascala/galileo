@@ -39,8 +39,8 @@ case class Number(value: Double) extends Expr {
 
 	override def possibleFactors:List[Expr] = this.value match {
 		case 0 => List()
-		//case 1 => List()
-		//case -1 => List()
+		case 1 => List()
+		case -1 => List()
 		case _ => List( this )
 	}
 

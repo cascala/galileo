@@ -98,7 +98,6 @@ case class Fraction(numerator:Expr, denominator:Expr) extends FunF2 {
 		//case ( Product( Number( a ), b ), s:Sum ) => Number( a )
 		//case (n:Product,d:Product) if( Product.commonExpressions( n , d ) ) => n.
 		case (a:Expr, b:Expr) => Fraction( a, b )
-		
 	}
 
 	override def eval():Expr = ( numerator.eval(), denominator.eval() ) match {
@@ -107,8 +106,34 @@ case class Fraction(numerator:Expr, denominator:Expr) extends FunF2 {
 		case ( a:Expr, b:Expr ) => Fraction( a, b )
 	}
 
-	// simplify by finding common factors in the numerator and denominator of a fraction
 	override def simplify:Expr = {
+		//val pf = numerator.possibleFactors
+		var nn = numerator.simplify
+		var nd = denominator.simplify
+		for( possibleFactor <- numerator.possibleFactors ++ denominator.possibleFactors ) {
+			( nn.extractFactor( possibleFactor ), nd.extractFactor( possibleFactor ) ) match {
+				case (Some(a),Some(b)) => { nn = a; nd = b }
+				case _ => Nil
+			}
+		}
+		// negative numbers in denominator
+		val negd = nd.flatFactors.collect( { case Number( n ) if n < 0 => n } )
+		negd.size match { 
+			case 1 => { nn = Product( Number( -1 ), nn ); nd = Product( Number( -1 ), nd ) }
+			case 0 => Nil 
+		}
+
+		nd.visit() match {
+			case Number( 1 ) => nn.visit()
+			case Number( -1 ) => Product( Number( -1 ), nn ).visit()
+			case _ => Fraction( nn,nd ).visit()		
+		}
+
+		// Move negative numbers to numerator
+	}
+
+	// simplify by finding common factors in the numerator and denominator of a fraction
+	def simplifyOld:Expr = {
 		// simplify things with simple num/denom, like a^2/a^3
 		def simplifyOne(f:Fraction):Option[Fraction] = (f.numerator,f.denominator) match {
 			case (a:Expr,b:Expr) if ( a == b ) => Some( Fraction( Number( 1 ), Number( 1 ) ) )

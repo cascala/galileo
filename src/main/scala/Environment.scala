@@ -5,6 +5,7 @@ import galileo.constants._
 import galileo.expr._
 import galileo.linalg._
 import galileo.logic._
+import galileo.tensor.{Metric,Tensor}
 
 import scala.collection.mutable.Map
 
@@ -57,7 +58,7 @@ class Environment(parent:Option[Environment]) {
 		def toType( v:Expr ):String = v match{
 			case Number(_) => "Scalar"
 			case Bool(_) => "Boolean"
-			case m:Matrix => "Matrix ( " + m.numRows + " x " + m.numCols + " )"
+			case m:Matrix => "Matrix:" + m.numRows + "(r)," + m.numCols + "(c)"
 			/*case m:DiagMatrix => "Matrix ( " + m.numRows + " x " + m.numCols + " )"
 			case m:LowerTriangularMatrix => "Matrix ( " + m.numRows + " x " + m.numCols + " )"
 			case m:UpperTriangularMatrix => "Matrix ( " + m.numRows + " x " + m.numCols + " )"
@@ -65,6 +66,7 @@ class Environment(parent:Option[Environment]) {
 			case Complex(_,_) => "Complex Expression"
 			case c:Constant => "Constant" + " " + toType( c.value )
 			case p:Product => "Product expression"
+			case m:Metric => "Metric:" + m.variables.mkString(",")
 			//case ps:ProductSeries => "ProductSeries expression"
 			case _ => "Expression" 
 		}
