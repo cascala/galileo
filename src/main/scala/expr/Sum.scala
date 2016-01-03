@@ -229,6 +229,9 @@ case class Sum(terms: Expr*) extends FunMany {
 
   // (a*b+a*c).extractFactor(a) -> b+c
   override def extractFactor(possibleFactor: Expr): Option[Expr] = {
+    if( possibleFactor == this )
+      return Some( Number( 1 ) )
+
     val extracted = terms.foldLeft((List[Expr](), true))({ case ((l: List[Expr], good: Boolean), e: Expr) => if (good) {
       e.extractFactor(possibleFactor) match {
         case Some(e) => (l :+ e, true)

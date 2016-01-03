@@ -92,8 +92,8 @@ case class Fraction(numerator:Expr, denominator:Expr) extends FunF2 {
 		// this seems to be too agressive	
 		// case ( Number( 1 ), Sum( Fraction( a, b ), c ) ) => Fraction( b, Sum( a, Product( b,c ) ) ).visit()
 
-		//case ( a, Sum( b, Fraction( c, d ) ) ) => Fraction( Product( a, d ), Sum( Product( b, d ), c ) ).visit()
-		//case ( a, Sum( Fraction( b, c ), d ) ) => Fraction( Product( a, c ), Sum( b, Product( c, d ) ) ).visit()
+		case ( a, Sum( b, Fraction( c, d ) ) ) => Fraction( Product( a, d ), Sum( Product( b, d ), c ) ).visit()
+		case ( a, Sum( Fraction( b, c ), d ) ) => Fraction( Product( a, c ), Sum( b, Product( c, d ) ) ).visit()
 
 		//case ( Product( Number( a ), b ), s:Sum ) => Number( a )
 		//case (n:Product,d:Product) if( Product.commonExpressions( n , d ) ) => n.
@@ -202,4 +202,6 @@ case class Fraction(numerator:Expr, denominator:Expr) extends FunF2 {
 			case _ => None
 		}
 	}
+
+	override def possibleFactors = List( this ) ++ numerator.possibleFactors ++ denominator.possibleFactors.map( x => Fraction( Number( 1 ), x ) )
 }
