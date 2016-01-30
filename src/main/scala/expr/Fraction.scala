@@ -9,8 +9,8 @@ case class Fraction(numerator:Expr, denominator:Expr) extends FunF2 {
 	val b = denominator 
 	override def toString() = numerator.factorToString() + "/" + denominator.denominatorToString()
 	override def denominatorToString() = factorToString()
-	override def factorToString() = "(" + toString() + ")"
-	override def toStringWithSign():String = "+(" + toString() + ")"
+	override def factorToString() = toString() //"(" + toString() + ")"
+	override def toStringWithSign():String = "+" + toString()
 	override def info(env:Option[Environment]=None) = "Fraction(" + numerator + "," + denominator + ")" 
 
 	def conversions(depth:Int):List[Conversion] = {

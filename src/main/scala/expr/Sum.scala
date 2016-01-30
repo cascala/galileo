@@ -55,7 +55,13 @@ case class Sum(terms: Expr*) extends FunMany {
 
   override def factorToString() = "(" + toString() + ")"
 
-  override def toString() = terms.map(term => term.toString()).mkString("+")
+  override def toString() = {
+    //terms.map(term => term.termToString()).mkString("+")
+    var rv = terms(0).toString()
+    for( i <- 1 until terms.size )
+      rv = rv + terms(i).toStringWithSign
+    rv
+  }
 
   override def eval() = Sum(terms.map(term => term.eval()): _*).visit() // eval will replace all vars and constants, the rest is just turning it into numbers
 
@@ -155,7 +161,22 @@ case class Sum(terms: Expr*) extends FunMany {
   }
   */
 
-  override def expand: Expr = Sum(flatTerms.map(term => term.expand).toList)
+  override def expand: Expr = {
+    // expand all terms
+    Sum(flatTerms.map(term => term.expand).toList)
+    /*
+    // then, to the extent there are fractions, put everything on a common denominator
+    // a/b + c/d + e/f => ( a*d*f + c*b*f + e*b*d ) / (b*d*f)
+    val denominators = rv.flatTerms.collect( { case Fraction(_,d) => d } )
+    val nt = rv.flatTerms.map( {
+      case Fraction( n, d ) => Product( n, Product( denominators.filter( denominator => denominator != d ) ) ).visit()
+      case e => Product( e, Product( denominators ) ).visit()
+    } )
+
+    Fraction( Sum( nt ), Product( denominators ).expand ).visit()
+    */
+  }
+
   override def possibleFactors = List( this ) ++ terms(0).possibleFactors
   
   // a*b+a+a*c+d*a+d*b*a -> a*(1+b+c+d*(1+b))
@@ -197,35 +218,6 @@ case class Sum(terms: Expr*) extends FunMany {
     var ts = Sum(this.terms.map(term => term.factor): _*).flatTerms.sortWith(Sum.sort)
     expressify(scan(Sum.neutralElement, ts, searchFactor))
   }
-
-  // 2 * a + 2 * b -> 2 * ( a + b )
-  /*
-  def factors: Option[Product] = {
-    val possibleFactors = terms(0) match {
-      case p: Product => p.factors.toList
-      case e: Expr => List(e)
-    }
-
-    // check if any of the possible factors shows up in all terms
-    for (possibleFactor <- possibleFactors) {
-      val extracted = terms.foldLeft((List[Expr](), true))({ case ((l: List[Expr], good: Boolean), e: Expr) => if (good) {
-        e.extractFactor(possibleFactor) match {
-          case Some(e) => (l :+ e, true)
-          case _ => (l, false)
-        }
-      }
-      else
-        (l, false)
-      })
-
-      extracted match {
-        case (l, true) => return Some(Product(possibleFactor, Sum(l).visit()))
-        case (_, false) => Nil // do nothing
-      }
-    }
-    None // List( this )
-  }
-  */
 
   // (a*b+a*c).extractFactor(a) -> b+c
   override def extractFactor(possibleFactor: Expr): Option[Expr] = {

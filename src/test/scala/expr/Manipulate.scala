@@ -19,7 +19,7 @@ class SimplifyTest extends FunSuite {
 		"(2*a+2*b)/2" -> "a+b",
 		"(2*a*b+3*a*c)/a" -> "2.0*b+3.0*c",
 		"1*(2*a*b+3*a*c)/a" -> "2.0*b+3.0*c",
-		"-1*(2*a*b+3*a*c)/a" -> "(-2.0)*b+(-3.0)*c",
+		"-1*(2*a*b+3*a*c)/a" -> "(-2.0)*b-3.0*c",
 		"4.0*(sin(theta)^5.0+2.0*sin(theta)^6.0)/sin(theta)" -> "4.0*sin(theta)^4.0+8.0*sin(theta)^5.0",
 		"4.0*(sin(theta)^5.0+2.0*sin(theta)^6.0)/sin(theta)^2" -> "(8.0*sin(theta)+4.0)*sin(theta)^3.0",
 		"2*((-2)*s^2+2*c^2)*s^(-2)+(-4)*c^2*s^(-2)" -> "-4.0",
@@ -66,7 +66,7 @@ class FactorTest extends FunSuite {
 		//"c*a*b+b+a*b+d*b" -> "b*(a*(c+1.0)+d+1.0)",
 		//"a*b*c+a*b+a*d" -> "a*(b*(c+1.0)+d)",
 		"2*a+2*b" -> "2.0*(a+b)",
-		"-2*a+2.0*b" -> "(-2.0)*(a+(-1.0)*b)",
+		"-2*a+2.0*b" -> "(-2.0)*(a-1.0*b)",
 		"7.0*c*u^2.0+d*u^2.0" -> "(7.0*c+d)*u^2.0",
 		"u*(u*d+u*7)" -> "(d+7.0)*u^2.0",
 		//"1.0/a+b*c/(a^2.0*d+(-1.0)*a*b*c)" -> "(b*c/(a*d+(-1.0)*b*c)+1.0)/a",
@@ -98,44 +98,15 @@ class FactorTest extends FunSuite {
 	}
 }
 
-class ExpandSimplifyTest extends FunSuite {
-	val parser = new Parser()
-  	val handler = new ExprHandler
-	//import parser.{ Success, NoSuccess }
-
-	val expected = Map[String,String](
-		"a*(a+b)" -> "a*a+a*b",
-		"(a+b)*(a+b)" -> "a*a+a*b+b*a+b*b",
-		"(a+b)*(a-b)" -> "a*a+a*(-1.0)*b+b*a+b*(-1.0)*b",
-		"1" -> "1.0"	
-	)
-	val genv = new Environment( None ) 
-
-	test( "001" ) {
-		import parser.{ Success, NoSuccess }
-		expected foreach { case (in:String, out:String) => {
-			parser.parse( "expand(" + in + ")" ) match {
-				case Success(expressions,_) => {
-						assert( expressions.size == 1 )
-						val r = handler.eval( genv, expressions(0))		
-						assert( r != "" )
-						assert( out == r )
-					}
-				case err: NoSuccess   => fail( "Failure for " + in + ", " + out )
-			}
-		} }
-	}
-}
-
 class ExpandTest extends FunSuite {
 	val parser = new Parser()
   	val handler = new ExprHandler
 	//import parser.{ Success, NoSuccess }
 
 	val expected = Map[String,String](
-		"a*(a+b)" -> "a*a+a*b",
-		"(a+b)*(a+b)" -> "a*a+a*b+b*a+b*b",
-		"(a+b)*(a-b)" -> "a*a+a*(-1.0)*b+b*a+b*(-1.0)*b",
+		"a*(a+b)" -> "a^2.0+a*b",
+		"(a+b)*(a+b)" -> "a^2.0+2.0*a*b+b^2.0",
+		"(a+b)*(a-b)" -> "a^2.0-1.0*b^2.0",
 		"1" -> "1.0"	
 	)
 	val genv = new Environment( None ) 

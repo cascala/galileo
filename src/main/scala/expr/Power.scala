@@ -60,8 +60,8 @@ case class Power(operand:Expr, exponent:Expr) extends FunF2 {
 
   	// (a+b)^N -> (a+b)*(a+b) ... (a+b)
   	override def expand = (operand,exponent) match {
-  		case (_:Sum,Number( n ) ) if ( n%1 == 0 && n > 0 ) => Product( List.fill(n.toInt)(operand) ).expand
-  		case (_:Product,Number( n ) ) if ( n%1 == 0 && n > 0 ) => Product( List.fill(n.toInt)(operand) ).expand
+  		case (_:Sum,Number( n ) ) if ( n%1 == 0 && n > 0 ) => Product( List.fill(n.toInt)(operand) ).expand.visit()
+  		case (_:Product,Number( n ) ) if ( n%1 == 0 && n > 0 ) => Product( List.fill(n.toInt)(operand) ).expand.visit()
   		case _ => this
   	}
 

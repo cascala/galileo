@@ -6,7 +6,7 @@ import galileo.logic.Bool
 
 // 4.3, 3 or 1E6
 case class Number(value: Double) extends Expr {
-	override def toString() = value.toString
+	override def toString() = value.toString()
 	override def factorToString() = if( value < 0 ) "(" + value.toString() + ")" else value.toString()
 	override def toStringWithSign() = if( value < 0 ) value.toString else "+" + value.toString()
 	override val doubleValue = value

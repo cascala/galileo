@@ -21,6 +21,6 @@ class DerivativeTest extends FunSuite {
 	val f = Fraction( g, h )
 	test( "fraction") {
 		val fd = Derivative( f, x )
-		assert( fd.visit().simplify.toString == "(x*cos(x)+(-2.0)*sin(x))/x^3.0" )
+		assert( fd.visit().simplify.toString == "(x*cos(x)-2.0*sin(x))/x^3.0" )
 	}
 }

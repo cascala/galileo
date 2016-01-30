@@ -99,7 +99,7 @@ class ParserTest extends FunSuite {
 		"va*vb+8*va*vb-va*vb" -> "8.0*va*vb",
 		"va+vb-vb" -> "va",
 		"-1*(va+vb)+vc" -> "(-1.0)*(va+vb)+vc", // a, b and c were set in env above
-		"-1*(va+vb)-vc" -> "(-1.0)*(va+vb)+(-1.0)*vc",
+		"-1*(va+vb)-vc" -> "(-1.0)*(va+vb)-1.0*vc",
 		"cos(x*7)" -> "cos(7.0*x)",
 		"acos(cos(y))" -> "y",
 		"[-2.3]" -> "-2.3",

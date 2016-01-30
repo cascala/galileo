@@ -190,7 +190,7 @@ case class Product( factors:Expr*) extends Expr with FunMany {
       // This replaces the producct into a sum
       // a * (b +c ) * d -> a * b * d + a * c * d
       case Some((s:Sum,i:Int)) => { 
-        Sum( s.terms.toList.map( term => Product( factors.toList.updated(i,term) ) ) ).expand //visit() // do we need visit here?
+        Sum( s.terms.toList.map( term => Product( factors.toList.updated(i,term) ) ) ).expand.visit() // do we need visit here?
       }
       case _ => this
     }
