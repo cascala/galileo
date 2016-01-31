@@ -41,6 +41,10 @@ trait Expr{
 	val doubleValue:Double = Double.MinValue
 
 	def unary_-():Expr = Product( Number( -1 ), this ).visit()
+	def +(that:Expr) = Sum( this, that ).visit()
+	def -(that:Expr) = Sum( this, Product( Number( -1 ), that ) )
+	//def *(that:Expr) = Product( this, that ).visit()
+	//def /(that:Expr) = Fraction( this, that ).visit()
 	def info(env:Option[Environment]=None):String // abstract, needs to be defined = "Expr(" + toString() + ")"
 	//def conversions(depth:Int):List[Conversion]
 

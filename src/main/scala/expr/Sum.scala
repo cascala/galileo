@@ -97,9 +97,13 @@ case class Sum(terms: Expr*) extends FunMany {
       case (Power(SinF1(a), Number(2)), Power(CosF1(b), Number(2))) if (a == b) => Some(Number(1))
       case (Power(CosF1(a), Number(2)), Power(SinF1(b), Number(2))) if (a == b) => Some(Number(1))
       case (Power(CosF1(a), Number(2)), Number(-1)) => Some(Product(Number(-1), Square(SinF1(a))))
+      case (Power(SinF1(a), Number(2)), Number(-1)) => Some(Product(Number(-1), Square(CosF1(a))))
 
       case (Product(Number(x), Power(CosF1(a), Number(2))), Product(Number(y), Power(SinF1(b), Number(2)))) if (a == b && x <= -1 && y <= -1) =>
         Some(Sum(Product(Number(x + 1), Power(CosF1(a), Number(2))), Product(Number(y + 1), Power(SinF1(b), Number(2))), Number(-1)))
+
+      case (Product(Number(x), Power(CosF1(a), Number(2)),b), Product(Number(y), Power(SinF1(c), Number(2)),d)) if (a == c && b == d && x <= -1 && y <= -1) =>
+        Some(Sum(Product(Number(x + 1), Power(CosF1(a), Number(2)),b), Product(Number(y + 1), Power(SinF1(c), Number(2)),d), Product( d, Number(-1))) )
 
       case (Product(Number(x), Power(CosF1(a), Number(2))), Product(Number(y), Power(SinF1(b), Number(2)))) if (a == b && x >= 1 && y >= 1) =>
         Some(Sum(Product(Number(x - 1), Power(CosF1(a), Number(2))), Product(Number(y - 1), Power(SinF1(b), Number(2))), Number(1)))

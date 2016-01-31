@@ -583,7 +583,7 @@ case class DenseMatrix( rows:List[List[Expr]]) extends Expr with Matrix {
 		} )
     	DenseMatrix( rv )
     }
-    def +(that:Expr):DenseMatrix = {
+    override def +(that:Expr):DenseMatrix = {
     	DenseMatrix( rows.map( row => row.map( elem => Sum( elem, that ) ) ) )
     }
 

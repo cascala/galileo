@@ -71,7 +71,7 @@ case class DiagTensor( indices:List[TensorIndex], elements:List[Expr] ) extends 
 		}
 	}
 
-	def +(that:Expr) = DiagTensor( this.indices, this.elements.map( element => Sum( element, that ).visit() ) )
+	override def +(that:Expr) = DiagTensor( this.indices, this.elements.map( element => Sum( element, that ).visit() ) )
 
 	def +(that:DiagTensor) = {
 		require( this.indices == that.indices )

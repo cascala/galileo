@@ -203,7 +203,7 @@ case class Tensor( indices:List[TensorIndex], components:List[Expr]) extends Exp
 	}
 
 	// Tensor + Expr
-	def +(that:Expr) = that match {
+	override def +(that:Expr) = that match {
 		case t:Tensor => this tensorPlus t
 		case e:Expr => Tensor( this.indices, this.components.map( component => Sum( component, that ).visit() ) )
 	}
