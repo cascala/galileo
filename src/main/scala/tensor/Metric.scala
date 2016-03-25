@@ -1,7 +1,7 @@
 package galileo.tensor
 
 import galileo.environment.Environment
-import galileo.expr.{Expr,Number,Product,Square,Variable}
+import galileo.expr._
 import galileo.trigonometry.SinF1
 
 import TensorIndexKind._
@@ -46,6 +46,22 @@ object Metric {
 		List( "psi", "theta", "phi " ).map( x => Variable( x ) )
 	)
 
+	// Schwarzschild metric
+	def schwarzschild(radius:Expr):Metric = {
+		val r_s:Expr= Variable("r_s") // schwarzschild radius,  2*G*M/c^2
+		Metric(
+			Tensor( 
+				List( Lower, Lower ), 4, // 4 dimensional
+				List( 
+					Product( Number( -1 ), Fraction( radius - r_s, radius ) ), Number( 0 ), Number( 0 ), Number( 0 ),
+					Number( 0 ), Fraction( radius, radius - r_s ), Number( 0 ), Number( 0 ),
+					Number( 0 ), Number( 0 ), Square( radius ), Number( 0 ),
+					Number( 0 ), Number( 0 ), Number( 0 ), Product( Square( radius ), Square( SinF1( Variable( "phi" ) ) ) )
+				)
+			),
+			List( "t", "r", "theta", "phi" ).map( x => Variable( x ) )
+		)
+	}
 }
 
 // g^ab
