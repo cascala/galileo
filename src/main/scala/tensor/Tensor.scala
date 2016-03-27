@@ -3,6 +3,7 @@ package galileo.tensor
 import galileo.environment.Environment
 import galileo.expr.{Derivative,Expr,Fraction,Number,Product,Sum,Variable}
 import galileo.linalg.{DenseMatrix,Matrix}
+import galileo.selectable.Selectable
 
 object TensorIndexKind extends Enumeration {
 	type TensorIndexKind = Value
@@ -87,7 +88,7 @@ case class TensorRank(upper:Int,lower:Int){
 	def +(that:TensorRank) = TensorRank( this.upper + that.upper, this.lower + that.lower )
 }
 
-case class Tensor( indices:List[TensorIndex], components:List[Expr]) extends Expr {
+case class Tensor( indices:List[TensorIndex], components:List[Expr]) extends Expr with Selectable {
 	def rank:TensorRank = TensorRank( indices.filter( x => x.kind == Upper ).size, indices.filter( x => x.kind == Lower ).size )
 	lazy val rankInt = rank.toInt
 	def info(env:Option[Environment]=None) = "Tensor(" + indices + "," + components + ")"
@@ -249,6 +250,10 @@ case class Tensor( indices:List[TensorIndex], components:List[Expr]) extends Exp
 	override def expand = Tensor( indices, components.map( component => component.expand ) )
 	override def simplify = Tensor( indices, components.map( component => component.simplify ) )
 	override def factor = Tensor( indices, components.map( component => component.factor ) )
+
+	def select(indices:List[Expr]):Expr = {
+		Number( 3 )
+	}
 }
 
 trait TensorU extends Expr {

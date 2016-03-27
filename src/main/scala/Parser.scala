@@ -17,7 +17,7 @@ import galileo.rand.Rand
 class Parser extends builtinParser with exprParser { 
 	// lexer can be used to reserve keywords
   def program = rep1sep(statement, ";") <~ opt(";")
-  def statement:Parser[Expr] =  builtin | prove | assignment | expression
+  def statement:Parser[Expr] =  builtin | prove | assignment | expression // | selector // | expression // | selector
   def builtin:Parser[Expr] = whos | who | clear | ls | cd | pwd | load | exit
   def prove:Parser[Expr] = "prove" ~ "(" ~> expression ~ ( "=" | ">" | "<" | "!=" ) ~ expression <~ ")" ^^ { case l~o~r => Proof( l, o, r ) }
   // Assignment and array assignment (AssignmentN)
@@ -25,6 +25,11 @@ class Parser extends builtinParser with exprParser {
     ( "[" ~> ident <~ "," ) ~ (ident <~ "," ) ~ ( ident <~ "]" ) ~ ( "=" ~> expression ) ^^ { case a~b~c~e => Assignment3( a, b, c, e ) } |
     ( "[" ~> ident <~ "," ) ~ ( ident <~ "]" ) ~ ( "=" ~> expression ) ^^ { case a~b~e => Assignment2( a, b, e ) } |
     ident ~ ( "=" ~> expression ) ^^ { case name~e => Assignment( name, e ) }
+  
+/*
+override def selector:Parser[Expr] = 
+    expression ~ ( "[" ~> expression <~ "]" ) ^^ { case selectee~index0 => Selector( selectee, index0 ) }
+*/
   override def failure(msg: String) = "" ~> super.failure(msg)
   // VERY IMPORTANT
   // NEEDS parseAll rather than parse
@@ -35,14 +40,21 @@ trait exprParser extends logicParser with functionParser with matrixParser with 
   val expression:Parser[Expr] = chainl1( term, "+" ^^^ Sum2 | "-" ^^^ Sub | "||" ^^^ Or2 ) 
   def term:Parser[Expr] = chainl1( power, "*" ^^^ Product2 | "/" ^^^ Div | "&&" ^^^ And2 ) 
   def power:Parser[Expr] = chainl1( factor, "^" ^^^ Power ) 
-  def factor:Parser[Expr] = mats | tensor | function | deriv | boolOps |
+  def factor:Parser[Expr] = selector | mats | tensor | function | deriv | boolOps |
     rowVector |
     floatingPointNumber ^^ NumD | 
     bool | 
-    variableE | //bool | //rowVector |
+    variableE |
     "(" ~> expression <~ ")" | unaryMinus | "" ~> failure( "factor expected")
   def unaryMinus:Parser[Expr] = "-" ~> term ^^ { e:Expr => Product( Number( -1 ), e ) }
-
+  // for matrix selection, e.g. A[0] or A[0,1]
+  def selector:Parser[Expr] = 
+    ident ~ ( "[" ~> factor <~ "," ) ~ factor <~ "]" ^^ { case selectee~index0~index1 => Selector( Variable( selectee ), index0, index1 ) } |
+    ident ~ ( "[" ~> factor <~ "]" ) ^^ { case selectee~index0 => Selector( Variable( selectee ), index0 ) } |
+    mats ~ ( "[" ~> factor <~ "," ) ~ factor <~ "]" ^^ { case selectee~index0~index1 => Selector( Variable( selectee ), index0, index1 ) } |
+    mats ~ ( "[" ~> factor <~ "]" ) ^^ { case selectee~index0 => Selector( selectee, index0 ) } |
+    tensor ~ ( "[" ~> factor <~ "," ) ~ factor <~ "]" ^^ { case selectee~index0~index1 => Selector( Variable( selectee ), index0, index1 ) } |
+    tensor ~ ( "[" ~> factor <~ "]" ) ^^ { case selectee~index0 => Selector( selectee, index0 ) } 
   // An expression that is not a matrix or vector
   val m_expression = chainl1( m_term, "+" ^^^ Sum2 | "-" ^^^ Sub | "||" ^^^ Or2 ) 
   def m_term:Parser[Expr] = chainl1( m_power, "*" ^^^ Product2 | "/" ^^^ Div | "&&" ^^^ And2 ) 
@@ -68,10 +80,11 @@ trait tensorParser extends JavaTokenParsers with ImplicitConversions {
   val expression:Parser[Expr]
   def tensor = metric | christoffel | tensors
   def metric:Parser[Metric] = "metric.generate(" ~> metrictemplate <~ ")" ^^ { 
-    case "two-sphere" => Metric.twoSphere( Variable( "r") )
-    case "three-sphere" => Metric.threeSphere( Variable( "r") )
+    case "two-sphere" => Metric.twoSphere( Variable( "r" ) )
+    case "three-sphere" => Metric.threeSphere( Variable( "r" ) )
+    case "schwarzschild" => Metric.schwarzschild( Variable( "r") )
   } 
-  def metrictemplate:Parser[String] = "two-sphere" | "three-sphere"
+  def metrictemplate:Parser[String] = "two-sphere" | "three-sphere" | "schwarzschild"
   def christoffel = // these are not tensors - small technicality
     "christoffelfirst(" ~> expression <~ ")" ^^ ChristoffelFirstU |
     "christoffelsecond(" ~> expression <~ ")" ^^ ChristoffelSecondU
@@ -82,9 +95,12 @@ trait tensorParser extends JavaTokenParsers with ImplicitConversions {
     "einsteintensor" ~> "(" ~> expression <~ ")" ^^ EinsteinTensorU |
     "einsteinscalar" ~> "(" ~> expression <~ ")" ^^ EinsteinScalarU |
     "riccitensor" ~> "(" ~> expression <~ ")" ^^ RicciTensorU |
-    "ricciscalar" ~> "(" ~> expression <~ ")" ^^ RicciScalarU |
+    "ricciscalar" ~> "(" ~> expression <~ ")" ^^ RicciScalarU /*|
     "schoutentensor" ~> "(" ~> expression <~ ")" ^^ SchoutenTensorU |
-    "weyltensor" ~> "(" ~> expression <~ ")" ^^ WeylTensorU
+    "weyltensor" ~> "(" ~> expression <~ ")" ^^ WeylTensorU |
+    "cottontensor" ~> "(" ~> expression <~ ")" ^^ CottonTensorU |
+    "lanczostensor" ~> "(" ~> expression <~ ")" ^^ LanczosTensorU  
+    */  
 }
 
   //def tensor = "tensor" ~> "(" ~> expr ~ "," ~ expr ~ "," ~ expr <~ ")" ^^ { case l~_~u~_~d => TensorU( l, u, d ) } 

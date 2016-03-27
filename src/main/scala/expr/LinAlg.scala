@@ -3,10 +3,11 @@ package galileo.linalg
 // Linear algebra stuff, matrices and vectors
 import galileo.expr._
 import galileo.environment._
+import galileo.selectable.Selectable
 
 import scala.collection.mutable.{ListBuffer}
 
-trait Matrix extends Expr{
+trait Matrix extends Expr with Selectable {
 	val numRows:Int
 	val numCols:Int
 	def *(that:Expr):Expr // dotProduct
@@ -22,6 +23,13 @@ trait Matrix extends Expr{
 	//def tensorProduct(that:Expr):Matrix
 	def transpose:Matrix //= this.toDenseMatrix.transpose
 	def apply(i:Int,j:Int):Expr = this.toDenseMatrix.rows(i)(j)
+	def select(indices:List[Expr]):Expr = {
+		indices match {
+			case Number( i ) :: Number( j ) :: Nil => this.apply(i.toInt,j.toInt)
+			case Number( i ) :: Nil => DenseMatrix( List( this.toDenseMatrix.rows( i.toInt ) ) )
+			case _ => ErrorExpr( "Unhandled selection" )
+		}
+	}
 }
 
 // for statements like 1:2:11
