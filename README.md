@@ -77,6 +77,10 @@ galileo>deriv(x^2,x)
 galileo>A=[a b;c d]
 a    b
 c    d
+galile0>A[0]
+a    b
+galileo>A[0,1]
+b
 galileo>[L,U,P]=lu(A)
 L	=
 1.0	0.0	
