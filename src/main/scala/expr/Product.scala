@@ -134,8 +134,6 @@ case class Product( factors:Expr*) extends Expr with FunMany {
   			case (l:Matrix,r:Matrix) => Some( ( l * r.toDenseMatrix ).visit() )
         case (l:Matrix,e) => Some( ( l * e ).visit() )
         case (l, r:Matrix ) => Some( ( r * l ).visit() )
-        //case (l:Variable, r:Matrix ) => Some( ( r * l ).visit() )
-        //case (l)
      
         // WE SHOULD NOT DO THIS WHEN A IS A SUM?!
         case (a,b) if (a == b ) => Some( Power( a, Number( 2 ) ).visit() ) // this goes against 'expand'
