@@ -51,9 +51,9 @@ trait exprParser extends logicParser with functionParser with matrixParser with 
   def selector:Parser[Expr] = 
     ident ~ ( "[" ~> factor <~ "," ) ~ factor <~ "]" ^^ { case selectee~index0~index1 => Selector( Variable( selectee ), index0, index1 ) } |
     ident ~ ( "[" ~> factor <~ "]" ) ^^ { case selectee~index0 => Selector( Variable( selectee ), index0 ) } |
-    mats ~ ( "[" ~> factor <~ "," ) ~ factor <~ "]" ^^ { case selectee~index0~index1 => Selector( Variable( selectee ), index0, index1 ) } |
+    mats ~ ( "[" ~> factor <~ "," ) ~ factor <~ "]" ^^ { case selectee~index0~index1 => Selector( selectee , index0, index1 ) } |
     mats ~ ( "[" ~> factor <~ "]" ) ^^ { case selectee~index0 => Selector( selectee, index0 ) } |
-    tensor ~ ( "[" ~> factor <~ "," ) ~ factor <~ "]" ^^ { case selectee~index0~index1 => Selector( Variable( selectee ), index0, index1 ) } |
+    tensor ~ ( "[" ~> factor <~ "," ) ~ factor <~ "]" ^^ { case selectee~index0~index1 => Selector( selectee, index0, index1 ) } |
     tensor ~ ( "[" ~> factor <~ "]" ) ^^ { case selectee~index0 => Selector( selectee, index0 ) } 
   // An expression that is not a matrix or vector
   val m_expression = chainl1( m_term, "+" ^^^ Sum2 | "-" ^^^ Sub | "||" ^^^ Or2 ) 
