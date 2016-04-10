@@ -1,0 +1,5 @@
+clear;
+A=[a b;c d];
+[L,U,P]=lu(A);
+L*U
+A*P
