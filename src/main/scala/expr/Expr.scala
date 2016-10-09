@@ -68,6 +68,11 @@ trait Expr{
 	}
 }
 
+// Needed for things like comments, etc, which don't express anything
+class NilExpr extends Expr {
+	def info(env:Option[Environment]=None) = "NilExpr"
+}
+
 case class ErrorExpr( message:String = "Unknown error" ) extends Expr {
 	override def toString  = message
 	def info(env:Option[Environment]=None) = "ErrorExpr(" + message + ")"

@@ -18,7 +18,7 @@ class Parser extends builtinParser with exprParser {
 	// lexer can be used to reserve keywords
   def program = rep1sep(statement, ";") <~ opt(";")
   def statement:Parser[Expr] =  builtin | prove | assignment | expression // | selector // | expression // | selector
-  def builtin:Parser[Expr] = whos | who | clear | ls | cd | pwd | load | exit
+  def builtin:Parser[Expr] = comment | whos | who | clear | ls | cd | pwd | load | exit
   def prove:Parser[Expr] = "prove" ~ "(" ~> expression ~ ( "=" | ">" | "<" | "!=" ) ~ expression <~ ")" ^^ { case l~o~r => Proof( l, o, r ) }
   // Assignment and array assignment (AssignmentN)
   def assignment:Parser[Expr] = 
@@ -212,6 +212,8 @@ trait logicParser extends JavaTokenParsers with ImplicitConversions {
 
 trait builtinParser extends JavaTokenParsers { //extends JavaTokenParsers with ImplicitConversions{ 
   //system commands, used by builtin
+  def comment:Parser[Expr] = "//" ~ rep(not("\n") ~ ".".r) ^^^ { new NilExpr }
+  //"//" ~ rep(not("\n") ~ ".".r) ^^^ Unit
   def clear:Parser[Expr] = "clear" ^^ { case _ => new Clear() }
   def exit:Parser[Expr] = "exit" ^^ { case _ => new Exit() }
   def ls:Parser[Expr] = "ls" ^^ { case _ => SystemCommand( "ls" ) }

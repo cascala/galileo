@@ -166,8 +166,17 @@ case class Sum(terms: Expr*) extends FunMany {
   */
 
   override def expand: Expr = {
+      def expandSum(left: Expr, right: Expr): Option[Expr] = (left, right) match {
+        case (Fraction(a,b), Fraction( c, d )) => Some( Fraction( Sum( Product( a, d ), Product( b, c ) ), Product( b, d ) ).visit() )
+        case (Fraction(a,b),c) => Some( Fraction( Sum( a, Product( b, c ) ), b ).visit() )
+        case (a,Fraction(b,c)) => Some( Fraction( Sum( Product( a, c ), b ), c ).visit() )
+        case _ => None
+    }
     // expand all terms
-    Sum(flatTerms.map(term => term.expand).toList)
+    val ts = flatTerms.map(term => term.expand).toList
+    expressify( scan(Sum.neutralElement, ts, expandSum ) )
+    // bring all terms to a common denominator
+
     /*
     // then, to the extent there are fractions, put everything on a common denominator
     // a/b + c/d + e/f => ( a*d*f + c*b*f + e*b*d ) / (b*d*f)
