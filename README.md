@@ -46,6 +46,7 @@ galileo>x+7
 ```
 
 ### Complex numbers
+The imaginary unit is available as either i or j, with i*i=-1
 ```
 galileo>2+3*i
 3*j+2

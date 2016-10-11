@@ -23,7 +23,7 @@ class WeylTest extends FunSuite {
 		val indices = 0 until m.dimension
 		for( i <- indices; j <- indices; k <- indices; l <- indices ) {
 			// Bianchi
-			//assert( Sum( C.valueAt( i, j, k, l ), C.valueAt( k, i, j, l ), C.valueAt( j, k, i, l ) ).visit().simplify == Number( 0 ) )
+			assert( Sum( C.valueAt( i, j, k, l ), C.valueAt( k, i, j, l ), C.valueAt( j, k, i, l ) ).visit().simplify == Number( 0 ) )
 			// (a)symmetry
 			//assert( Sum( C.valueAt( i, j, k, l ), C.valueAt( j, i, k, l ) ).visit().simplify == Number( 0 ) )
 			assert( C.valueAt( i, j, k, l ).simplify.visit(Some(env)).eval ==  C.valueAt( k, l, i, j ).simplify.visit(Some(env)).eval, "i,j,k,l:" + i + "," + j + "," + k + "," + l )
