@@ -66,9 +66,10 @@ true
 ```
 
 ## Basic calculus
+You can take the derivative using the 'deriv' command.
 ```
 galileo>deriv(x^2,x)
-2*x 
+2.0*x 
 ```
 
 ## Matrices and tensors
