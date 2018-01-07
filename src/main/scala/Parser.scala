@@ -110,6 +110,7 @@ trait tensorParser extends JavaTokenParsers with ImplicitConversions {
   //  "christof" ~> "(" ~> expression ~ ( "," ~> expression <~ ")" ) ^^ { case metric~coords => Christoffel( metric, coords, 1 ) }
   //def vector:Parser[List[Expr]] = "[" ~> rep1sep( expression, " " ) <~ "]" ^^ { case es => es.to[List] }
 
+// Matrix related Parser functionality
 trait matrixParser extends JavaTokenParsers with ImplicitConversions {
   val expression:Parser[Expr]
   // m_expression is an expression that is not a matrix or vector itself
@@ -210,7 +211,7 @@ trait logicParser extends JavaTokenParsers with ImplicitConversions {
   def boolXor:Parser[Expr] = ( "xor" ~> "(" ~> expression ) ~ ( "," ~> expression <~ ")" ) ^^ { case e~f => BoolXor( e, f ) }
 }
 
-trait builtinParser extends JavaTokenParsers { //extends JavaTokenParsers with ImplicitConversions{ 
+trait builtinParser extends JavaTokenParsers { 
   //system commands, used by builtin
   def comment:Parser[Expr] = "//" ~ rep(not("\n") ~ ".".r) ^^^ { new NilExpr }
   //"//" ~ rep(not("\n") ~ ".".r) ^^^ Unit

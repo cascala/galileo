@@ -41,9 +41,8 @@ class ExprHandler{
       case p:Proof => p.visit( Some( env ) )
       case i:Info => i.visit( Some( env ) )
       case r:Rand => r.visit( Some( env ) )
-      case l:Load => ExprArray( l.expressions:_* ).visit( Some( env ) )
-      //case a:ExprArray => ExprArray( a.exprs.toList.map( expression => expression.visit( Some( env ) ) ):_* )
-  	
+      case l:Load => l.visit( Some( env ) )
+
   		case Assignment2( n0, n1, MatLU( e ) ) => visit( e ) match {
   			case m:Matrix => m.lup_lup match{
 				  case (l,u,p) => {
@@ -78,12 +77,12 @@ class ExprHandler{
       case a:Assignment3 => ErrorExpr( "right hand side can not produce three variables" )
 
   		
-  		case Assignment( name, value ) => { val vv = visit( value ); env.set( name, vv ); vv }
-  		 /*( visit(left), visit(right) match {
-  			case ( l:Number, r:Number ) => Number( l + v )
-  			case 
-  		}
-  		*/
+  		case Assignment( name, value ) => { 
+				val vv = visit( value ) 
+				env.set( name, vv )
+				vv 
+			}
+  		
 
   		case p:Power => p.visit( Some( env ) )
 
