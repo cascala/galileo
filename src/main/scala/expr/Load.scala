@@ -21,7 +21,7 @@ case class Load(filename:String) extends Expr {
 	override def visit( env:Option[Environment] ):Expr = {
 		val lines = Source.fromFile(filename).getLines
 		val p = new Parser()
-		var l = new NilExpr() // to return the last expression in the file
+		var l:Expr = new NilExpr() // to return the last expression in the file
 		for( line <- lines ) {
 			p.parse( line ) match {
 				case p.Success(expressions,_) => { 

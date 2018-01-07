@@ -148,9 +148,7 @@ case class Assignment3(name0:String, name1:String, name2: String, expr:Expr ) ex
 	override def visit(env:Option[Environment]) = ErrorExpr( "Todo Assignment3.visit" ) //{ val vv = expr.visit( env ); env.set( name, vv ); vv }
 }
 
-
-
-
+// E.g. a=1
 case class Variable(name : String = "x") extends Expr {
 	override def toString() = name
 	def info(env:Option[Environment]=None):String = "Variable(" + name + ",value:" + this.visit(env) + ")"
