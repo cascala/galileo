@@ -13,15 +13,18 @@ trait Matrix extends Expr with Selectable {
 	def *(that:Expr):Expr // dotProduct
 	def *(that:DenseMatrix):DenseMatrix
 	
-	val lu_lup:(Matrix,Matrix) // = this.toDenseMatrix.lu_lup
-	val lup_lup:(Matrix,Matrix,Matrix) //= this.toDenseMatrix.lup_lup
-	def solve( rhs:DenseMatrix ):DenseMatrix // = DenseMatrix( List( List( Variable( "todo solve") ) ) )
+	val lu_lup:(Matrix,Matrix) 
+	val lup_lup:(Matrix,Matrix,Matrix) 
+	def solve( rhs:DenseMatrix ):DenseMatrix 
 	val toDenseMatrix:DenseMatrix
 	val inverse:Matrix
 	def visit(env:Option[Environment]):Expr
+	// elementwise operation
+	def operate(env:Option[Environment],operator:Expr=>Expr):Matrix
 	def norm(p:Int):Expr = this.toDenseMatrix.norm( p )
 	//def tensorProduct(that:Expr):Matrix
 	def transpose:Matrix //= this.toDenseMatrix.transpose
+	// This can be optimized for subtypes - todo
 	def apply(i:Int,j:Int):Expr = this.toDenseMatrix.rows(i)(j)
 	def select(indices:List[Expr]):Expr = {
 		indices match {
@@ -30,6 +33,7 @@ trait Matrix extends Expr with Selectable {
 			case _ => ErrorExpr( "Unhandled selection" )
 		}
 	}
+
 }
 
 // for statements like 1:2:11
@@ -97,7 +101,7 @@ case class OnesMatrixU( nrs:Expr, ncs:Expr,element:Expr=Number(1)) extends Expr 
 	def info(env:Option[Environment]=None) = "OnesMatrix(" + nrs + "," + ncs + ")"
 }
 
-// Matrix with all elements equalt to element
+// Matrix with all elements equal to element
 case class OnesMatrix( numRows:Int, numCols:Int, element:Expr=Number( 1 ) ) extends Matrix {
 	override def visit( environment:Option[Environment]=None) = 
 		OnesMatrix( numRows, numCols, element.visit( environment ) )
@@ -122,6 +126,7 @@ case class OnesMatrix( numRows:Int, numCols:Int, element:Expr=Number( 1 ) ) exte
 		DenseMatrix( List.fill( numRows ){ sums } )
 	}
 	
+	def operate(env:Option[Environment], operator:Expr=>Expr):Matrix = OnesMatrix( numRows, numCols, operator( element ) )
 	def solve( rhs:DenseMatrix ) = DenseMatrix(List( List( ErrorExpr( "Indefinite matrix can not be solved" ) ) ) )
 	
 	DenseMatrix( List( List( Variable( "todo solve OnesMatrix") ) ) )
@@ -202,6 +207,8 @@ case class DiagMatrix( numCols:Int, diag:List[Expr] ) extends Matrix {
 	// todo: How does this work for non square matrices?
 	lazy val inverse:DiagMatrix = DiagMatrix( numCols, diag.map( elem => Fraction( Number( 1 ), elem ).visit() ) )
 	def transpose = this
+
+	def operate(env:Option[Environment], operator:Expr=>Expr):Matrix = DiagMatrix( numCols, diag.map( elem => operator( elem ) ) )
 }
 
 // cols are only defined starting at the diag element
@@ -291,6 +298,7 @@ case class LowerTriangularMatrix( cols:List[List[Expr]] ) extends Expr with Matr
 	
 	lazy val inverse = this.solve( EyeMatrix( this.numRows ).toDenseMatrix ) //Variable( "Todo")
 	def transpose = UpperTriangularMatrix( this.cols )
+	def operate(env:Option[Environment], operator:Expr=>Expr):Matrix = UpperTriangularMatrix( cols.map( col =>col.map( elem => operator( elem ) ) ) )
 }
 
 // rows are only defined starting at the diag element
@@ -377,6 +385,7 @@ case class UpperTriangularMatrix( rows:List[List[Expr]] ) extends Matrix {
 	lazy val inverse = this.solve( EyeMatrix( this.numRows ).toDenseMatrix ) //Variable( "Todo")
 
 	def transpose = LowerTriangularMatrix( this.rows )
+	def operate(env:Option[Environment], operator:Expr=>Expr):Matrix = UpperTriangularMatrix( rows.map( row => row.map( elem => operator( elem ) ) ) )
 }
 
 /*
@@ -448,12 +457,6 @@ case class RowPermutationMatrixInverse( ps:ListBuffer[Int] ) extends Matrix {
 		DenseMatrix( rows )
 	}
 
-/*
-	def *(that:LowerTriangularMatrix):LowerTriangularMatrix = {
-		that
-	}
-	*/
-
 // NOT CORRECT
 	lazy val inverse:RowPermutationMatrix = {
 		//psi = 
@@ -461,6 +464,8 @@ case class RowPermutationMatrixInverse( ps:ListBuffer[Int] ) extends Matrix {
 	}
 
 	def transpose = RowPermutationMatrix( ps )
+	// this is important... Don't mess with the values in this matrix, since the elements have special meaning
+	def operate(env:Option[Environment], operator:Expr=>Expr):Matrix = this.toDenseMatrix.operate(env,operator)
 }
 
 /*
@@ -546,6 +551,7 @@ case class RowPermutationMatrix( ps:ListBuffer[Int] ) extends Matrix {
 	}
 
 	def transpose = RowPermutationMatrixInverse( ps )
+	def operate(env:Option[Environment], operator:Expr=>Expr):Matrix = this.toDenseMatrix.operate(env,operator)
 }
 
 case class DenseMatrix( rows:List[List[Expr]]) extends Expr with Matrix {
@@ -722,6 +728,8 @@ case class DenseMatrix( rows:List[List[Expr]]) extends Expr with Matrix {
 
 	lazy val toDenseMatrix = this
 	def transpose = DenseMatrix( rows.transpose ) 
+
+	def operate(env:Option[Environment], operator:Expr=>Expr):Matrix = DenseMatrix( rows.map( row => row.map( elem => operator(elem) ) ) )
 }
 
 // Handler for lu command

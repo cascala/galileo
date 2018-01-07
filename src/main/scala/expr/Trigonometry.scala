@@ -3,6 +3,7 @@ package galileo.trigonometry
 import galileo.constants._
 import galileo.environment.Environment
 import galileo.expr._
+import galileo.linalg.Matrix
 import galileo.logic.Bool
 
 trait TrigF1 extends FunF1 {
@@ -17,6 +18,7 @@ case class SinF1( e:Expr ) extends TrigF1 { // ( e:Expr ) extends TrigF1 with Ex
 		case Bool( false ) => Number( 0 )
 		case Bool( true ) => Number( math.sin( 1 ) )
 		case Number( n ) => Number( math.sin( n ) )
+		//case Matrix( )
 		case _:ConstantPi => Number( 0 ) 
 		// expression with all variables resolved, but some constants may remain!
 	}
@@ -28,6 +30,7 @@ case class SinF1( e:Expr ) extends TrigF1 { // ( e:Expr ) extends TrigF1 with Ex
 		//case ( Product( Number( v ), ConstantPi() ) ) if( v % 1 == 0 ) => Number( -1 )
 		case ConstantPi() => Number( 0 )
 		case Fraction( ConstantPi(), Number( 2 ) ) => Number( 1 )
+		case m:Matrix => m.operate(env,e=>SinF1(e)) // elementwise operation
 		//case ( Product( Number( a ), Fraction( ConstantPi(), Number( b ) ) ) ) if ( b / a ).asInstanceOf[Int] ==  
 		case a => SinF1( a )
 	}
@@ -52,6 +55,7 @@ case class CosF1( e:Expr ) extends TrigF1 {
 		case Product( Number( v ), ConstantPi() ) if( v % 1 == 0 ) => Number( -1 )
 		case ConstantPi() => Number( -1 )
 		case Fraction( ConstantPi(), Number( 2 ) ) => Number( 1 )
+		case m:Matrix => m.operate(env,e=>CosF1(e)) // elementwise operation
 		//case ( Product( Number( a ), Fraction( ConstantPi(), Number( b ) ) ) ) if ( b / a ).asInstanceOf[Int] ==  
 		case a => CosF1( a )
 	}
@@ -66,6 +70,7 @@ case class TanF1( e:Expr ) extends TrigF1{
 		case Bool( true ) => Number( math.tan( 1 ) )
 		case Number( n ) => Number( math.tan( n ) )
 		//case _:ConstantPi => Number( 0 ) 
+		
 		// expression with all variables resolved, but some constants may remain!
 	}
 	//val inverse:InvTrigF1 = AtanF1
@@ -76,6 +81,7 @@ case class TanF1( e:Expr ) extends TrigF1{
 		//case ( Product( Number( v ), ConstantPi() ) ) if( v % 1 == 0 ) => Number( -1 )
 		case ( ConstantPi() ) => Number( 0 )
 		case ( Fraction( ConstantPi(), Number( 2 ) ) ) => Number( 1 )
+		case m:Matrix => m.operate(env,e=>TanF1(e)) // elementwise operation
 		//case ( Product( Number( a ), Fraction( ConstantPi(), Number( b ) ) ) ) if ( b / a ).asInstanceOf[Int] ==  
 		case ( a ) => TanF1( a )
 	}

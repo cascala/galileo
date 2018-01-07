@@ -28,18 +28,6 @@ object Sum {
     case (_: Expr, _: Number) => true
     case (Product(_: Number, a: Variable), Product(_: Number, b: Variable)) => a < b
     case (_1, _2) => _1 < _2
-
-    /*
-        case (AtrigF1,TrigF1) => true
-        case (TrigF1(x),ATrigF1(y)) => false
-        case (CosF1(x,SinF1) => true
-        case (SinF1(_),CosF1(_)) => false
-        case (Power(x:FunF1),y:FunF1) => sort( x, y )
-    */
-    //case (Product())
-    // cos(x)^2 before sin(x)^2
-    //case (Power(SinF1:))
-
     }
   }
   val neutralElement: Number = Number(0)
