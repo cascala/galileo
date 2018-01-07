@@ -2,7 +2,7 @@ package galileo.expr
 
 import galileo.environment.Environment
 
-case class Max( exprs:Expr* ) extends Expr{
+case class Max( exprs:Expr* ) extends Expr {
 	override def eval() = Max( exprs.map( expr => expr.eval() ):_* ).visit()
 
 	override def visit(env:Option[Environment]) = exprs.map( expr => expr.visit( env ) ).to[List] match {
@@ -22,9 +22,10 @@ case class Max( exprs:Expr* ) extends Expr{
 	}
 	override def toString() = "max(" + exprs.mkString( "," ) + ")"
 	override def info(env:Option[Environment]=None):String = "Max(" + exprs.mkString(",") + ")"
+	def variables:List[Variable] = exprs.toList.flatMap( expr => expr.variables )
 }
 
-case class Abs( e:Expr ) extends Expr{
+case class Abs( e:Expr ) extends Expr {
 	override def visit( env:Option[Environment]) = e.visit( env ) match {
 		case Number( a ) if a < 0 => Number( -a )
 		case Number( a ) => Number( a )
@@ -35,4 +36,6 @@ case class Abs( e:Expr ) extends Expr{
 	override def toStringWithSign() = "+" + toString() //if( value < 0 ) value.toString else "+" + value.toString()
 
 	override def info(env:Option[Environment]=None):String = "Abs(" + e.toString() + ")"
+
+	def variables:List[Variable] = e.variables
 }

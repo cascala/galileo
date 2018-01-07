@@ -1,7 +1,7 @@
 package galileo.proof
 
 import galileo.environment.Environment
-import galileo.expr.Expr
+import galileo.expr.{Expr,Statement}
 
 object Proof extends Enumeration{
 	type Status = Value
@@ -136,7 +136,7 @@ object Proof extends Enumeration{
 }
  
 // we prove relations, e.g. Prove( 4 == 5 - 1 ) or Prove( x = 2 * x + 5 - x - 5 )  or Prove( 4 > 3 )
-case class Proof( relation:Relation, steps:List[Rule]=List(), status:Proof.Status ) extends Expr {
+case class Proof( relation:Relation, steps:List[Rule]=List(), status:Proof.Status ) extends Expr with Statement {
 	// during this step we search for Truth... Or falsitude
 	override def visit(env:Option[Environment]) = Proof.prove( relation, 0 ) match {
 		case Some( p ) => p

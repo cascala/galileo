@@ -15,7 +15,7 @@ import scala.io.Source
 
 // Used for loading and runninf files
 // Sample use 'load(examples/a.gg)'
-case class Load(filename:String) extends Expr {
+case class Load(filename:String) extends Expr with Statement {
 	def info(env:Option[Environment]=None) = "Load(" + filename + ")"
 	
 	override def visit( env:Option[Environment] ):Expr = {

@@ -57,6 +57,7 @@ case class RowVector( begin:Expr, end:Expr, incr:Expr ) extends Expr {
 		case (b,e,i) => RowVector(b,e,i)
 	}
 	def info(env:Option[Environment]=None) = "RowVector(" + begin + "," + end + "," + incr + ")"
+	def variables:List[Variable] = begin.variables ++ end.variables ++ incr.variables
 }
 
 object LogSpace {
@@ -73,7 +74,7 @@ object LogSpace {
 }
 
 // transpose( expr ) command in parser
-case class Transpose(e:Expr) extends Expr {
+case class Transpose(e:Expr) extends Expr with Statement {
 	def info(env:Option[Environment]=None) = "Transpose(" + e + ")"
 	override def visit( env:Option[Environment]=None) = e.visit( env ) match {
 		case m:Matrix => m.transpose
@@ -93,7 +94,7 @@ case class MatKron( a:Expr, b:Expr ) extends Expr {
 */
 
 // U for unhandled - count of rows and cols are expressions, not int
-case class OnesMatrixU( nrs:Expr, ncs:Expr,element:Expr=Number(1)) extends Expr {
+case class OnesMatrixU( nrs:Expr, ncs:Expr,element:Expr=Number(1)) extends Expr with Statement {
 	override def visit( env:Option[Environment]=None ) = ( nrs.visit(env), ncs.visit(env) ) match {
 		case ( Number(nr), Number(nc) ) if (nr%1==0 && nc%1==0) => OnesMatrix( nr.toInt, nc.toInt, element )
 		case _ => ErrorExpr( "Incorrect arguments in ones(" + nrs + "," + ncs + ")" ) 
@@ -138,9 +139,10 @@ case class OnesMatrix( numRows:Int, numCols:Int, element:Expr=Number( 1 ) ) exte
 	lazy val lup_lup:(Matrix,Matrix,Matrix) = this.toDenseMatrix.lup_lup
 
 	def transpose = this
+	def variables:List[Variable] = element.variables
 }
 
-case class EyeMatrixU(nrs:Expr,ncs:Expr) extends Expr{
+case class EyeMatrixU(nrs:Expr,ncs:Expr) extends Expr with Statement {
 	def info(env:Option[Environment]=None) = "EyeMatrixU(" + nrs + "," + ncs + ")"
 	override def visit(env:Option[Environment]=None) = (nrs.visit(env), ncs.visit(env)) match {
 		case ( Number( nr ), Number( nc ) ) if ( nr%1==0 && nc%1 == 0 && !(nc < nr )) => EyeMatrix( nr.toInt, nc.toInt )
@@ -209,6 +211,7 @@ case class DiagMatrix( numCols:Int, diag:List[Expr] ) extends Matrix {
 	def transpose = this
 
 	def operate(env:Option[Environment], operator:Expr=>Expr):Matrix = DiagMatrix( numCols, diag.map( elem => operator( elem ) ) )
+	def variables:List[Variable] = diag.flatMap( elem => elem.variables )
 }
 
 // cols are only defined starting at the diag element
@@ -299,6 +302,7 @@ case class LowerTriangularMatrix( cols:List[List[Expr]] ) extends Expr with Matr
 	lazy val inverse = this.solve( EyeMatrix( this.numRows ).toDenseMatrix ) //Variable( "Todo")
 	def transpose = UpperTriangularMatrix( this.cols )
 	def operate(env:Option[Environment], operator:Expr=>Expr):Matrix = UpperTriangularMatrix( cols.map( col =>col.map( elem => operator( elem ) ) ) )
+	def variables:List[Variable] = cols.flatMap( col => col.flatMap( elem => elem.variables ) )
 }
 
 // rows are only defined starting at the diag element
@@ -386,6 +390,7 @@ case class UpperTriangularMatrix( rows:List[List[Expr]] ) extends Matrix {
 
 	def transpose = LowerTriangularMatrix( this.rows )
 	def operate(env:Option[Environment], operator:Expr=>Expr):Matrix = UpperTriangularMatrix( rows.map( row => row.map( elem => operator( elem ) ) ) )
+	def variables:List[Variable] = rows.flatMap( row => row.flatMap( elem => elem.variables ) )
 }
 
 /*
@@ -464,8 +469,9 @@ case class RowPermutationMatrixInverse( ps:ListBuffer[Int] ) extends Matrix {
 	}
 
 	def transpose = RowPermutationMatrix( ps )
-	// this is important... Don't mess with the values in this matrix, since the elements have special meaning
+	
 	def operate(env:Option[Environment], operator:Expr=>Expr):Matrix = this.toDenseMatrix.operate(env,operator)
+	def variables:List[Variable] = List() 
 }
 
 /*
@@ -552,6 +558,7 @@ case class RowPermutationMatrix( ps:ListBuffer[Int] ) extends Matrix {
 
 	def transpose = RowPermutationMatrixInverse( ps )
 	def operate(env:Option[Environment], operator:Expr=>Expr):Matrix = this.toDenseMatrix.operate(env,operator)
+	def variables:List[Variable] = List()
 }
 
 case class DenseMatrix( rows:List[List[Expr]]) extends Expr with Matrix {
@@ -730,15 +737,16 @@ case class DenseMatrix( rows:List[List[Expr]]) extends Expr with Matrix {
 	def transpose = DenseMatrix( rows.transpose ) 
 
 	def operate(env:Option[Environment], operator:Expr=>Expr):Matrix = DenseMatrix( rows.map( row => row.map( elem => operator(elem) ) ) )
+	def variables:List[Variable] = rows.flatMap( row => row.flatMap( elem => elem.variables ) )
 }
 
 // Handler for lu command
-case class MatLU(expr:Expr) extends Expr {
+case class MatLU(expr:Expr) extends Expr with Statement {
 	def info(env:Option[Environment]=None) = this.toString()
 }
 
 // Handler for inv command
-case class MatInv(expr:Expr) extends Expr {
+case class MatInv(expr:Expr) extends Expr with Statement {
 	def info(env:Option[Environment]=None) = this.toString()
 	override def visit(env:Option[Environment]=None) = expr.visit( env ) match {	 
         case m:Matrix => m.inverse
@@ -747,7 +755,7 @@ case class MatInv(expr:Expr) extends Expr {
 }
 
 // Handler for norm command
-case class MatNorm(expr:Expr, p:Int = 2) extends Expr {
+case class MatNorm(expr:Expr, p:Int = 2) extends Expr with Statement {
 	def info(env:Option[Environment]=None) = this.toString()
 	override def visit(env:Option[Environment]=None) = expr.visit( env ) match {
         case m:Matrix => m.norm(p)

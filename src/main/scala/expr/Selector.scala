@@ -14,4 +14,8 @@ case class Selector( selectee:Expr,indices:Expr*) extends Expr {
 			case e:Expr => ErrorExpr( "Can not select from " + e.info())
 		}
 	}
+	def variables:List[Variable] = {
+		throw new IllegalArgumentException( "variables should not be called on an unassigned Selector" )
+		List()
+	}
 }

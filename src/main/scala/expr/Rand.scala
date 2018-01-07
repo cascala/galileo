@@ -4,7 +4,7 @@ import util.Random
 import util.Random.nextDouble
 
 import galileo.environment.Environment
-import galileo.expr.{ErrorExpr,Expr,Number}
+import galileo.expr.{ErrorExpr,Expr,Number,Statement}
 import galileo.linalg.DenseMatrix
 
 
@@ -26,7 +26,7 @@ object Rand{
 	}
 }
 
-case class Rand(exprs:Expr*) extends Expr {
+case class Rand(exprs:Expr*) extends Expr with Statement {
 	def info(env:Option[Environment]=None) = "Rand(" + exprs.map( e => e.info(env)).mkString(",") + ")"
 	override def visit(env:Option[Environment]) = exprs.map( expr => expr.visit( env ) ).to[List] match {
 		case Number( d ) :: Nil if ( d%1 == 0 ) => Rand( d.toInt )

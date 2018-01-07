@@ -71,4 +71,6 @@ case class Complex(real:Expr, imag:Expr) extends Expr {
 		case ( r:Expr, Number( 0.0 ) ) => r
 		case ( r, i ) => Complex( r, i )
 	}
+
+	def variables:List[Variable] = real.variables ++ imag.variables
 }

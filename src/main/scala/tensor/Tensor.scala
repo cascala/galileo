@@ -1,7 +1,7 @@
 package galileo.tensor
 
 import galileo.environment.Environment
-import galileo.expr.{Derivative,Expr,Fraction,Number,Product,Sum,Variable}
+import galileo.expr._
 import galileo.linalg.{DenseMatrix,Matrix}
 import galileo.selectable.Selectable
 
@@ -39,6 +39,14 @@ case class TensorIndex( kind:TensorIndexKind, dimension:Int) {
 		case Lower => TensorIndex( Upper, dimension )
 	}
 	//def variables = 
+}
+
+// to be renamed Tensor after Tensor is renamed DenseTensor
+trait TensorTrait {
+	def variables:List[Variable] =  {
+		throw new IllegalArgumentException( "variables should not be called on a Tensor" )
+		List()
+	}
 }
 
 /*
@@ -88,6 +96,7 @@ case class TensorRank(upper:Int,lower:Int){
 	def +(that:TensorRank) = TensorRank( this.upper + that.upper, this.lower + that.lower )
 }
 
+// Should really extend TensorTrait .. this should be called DenseTensor
 case class Tensor( indices:List[TensorIndex], components:List[Expr]) extends Expr with Selectable {
 	def rank:TensorRank = TensorRank( indices.filter( x => x.kind == Upper ).size, indices.filter( x => x.kind == Lower ).size )
 	lazy val rankInt = rank.toInt
@@ -254,9 +263,11 @@ case class Tensor( indices:List[TensorIndex], components:List[Expr]) extends Exp
 	def select(indices:List[Expr]):Expr = {
 		Number( 3 )
 	}
+
+	def variables:List[Variable] = components.flatMap( component => component.variables )
 }
 
-trait TensorU extends Expr {
+trait TensorU extends Expr with Statement {
 	def info(env:Option[Environment]=None) = this.getClass.getSimpleName + "(" + expr + ")"
 	val expr:Expr
 	val generator:Metric=>Tensor

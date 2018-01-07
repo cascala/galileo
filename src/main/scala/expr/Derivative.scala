@@ -3,14 +3,23 @@ package galileo.expr
 import galileo.environment.Environment
 import galileo.expr._
 import galileo.trigonometry._
+import galileo.linalg.Matrix
+import galileo.tensor.Tensor
 
 // dy / dx
 // complete derivative
 case class Derivative( y:Expr, x:Expr ) extends Expr {
 	override def toString() = "deriv(" + y.toString() + "," + x.toString() + ")"
 	def info(env:Option[Environment]=None) = this.toString()
+
+	// This is interesting,
+	// variables is only used for the chain rule -- not sure this function will ever be used
+	def variables:List[Variable] = List() // To Be Determined
 	// should we remove x from env before visiting?
 	override def visit(env:Option[Environment]) = ( y.visit( env ), x.visit( env ) ) match{
+		case (_,s:Statement) => ErrorExpr( "Can't derive with respect to " + s )
+		case (_,m:Matrix) => ErrorExpr( "Can't derive with respect to " + m )
+		case (_,t:Tensor) => ErrorExpr( "Can't derive with respect to " + t )
 		case (Number(_),_) => Number( 0 )
 		case (a:Variable, b:Variable ) if ( a == b ) => Number( 1 )
 		case (a:Variable, b:Variable ) => Number( 0 ) // not a dependency
@@ -48,6 +57,12 @@ case class Derivative( y:Expr, x:Expr ) extends Expr {
 			Product( e, Power( o, Sum( e, Number( -1 ) ) ), Derivative( o, b ) ),
 			Product( Derivative( e, b ), Power( o, e ) )
 		).visit()
+		// Chain Rule
+		/*
+		case (_,e:Expr) => {
+			e.variables()
+		}
+		*/
 		/*
 		case (Variable( name ), v: => if( name == v.name ) Number( 1 ) else Number( 0 )
 		case Sum( e1, e2 ) => Sum( e1 derive v, e2 derive v )

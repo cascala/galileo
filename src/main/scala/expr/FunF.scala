@@ -7,6 +7,7 @@ import galileo.environment.Environment
 trait FunF1 extends Expr {
 	val e:Expr
 	override def leadingVariable:Option[String] = e.leadingVariable
+	def variables:List[Variable] = e.variables
 }
 
 // Functions of two variables (or expressions)
@@ -21,17 +22,19 @@ trait FunF2 extends Expr {
 		case _ => None
 	}
   def info(env:Option[Environment]=None) = this.getClass.getSimpleName + "(" + a + "," + b + ")"
+  def variables:List[Variable] = a.variables ++ b.variables
 }
 
 // Functions of any number of variables (or expressions)
 // Used by Sum and Product
 trait FunMany extends Expr {
  	val elements:List[Expr]
-  	// Possible variable name 
+  	
+	// Possible variable name 
   	override def leadingVariable:Option[String] = {
-    	val lvs = this.elements.map( element => element.leadingVariable ).filter( pv => pv != None )
+    	val lvs = this.elements.map( element => element.leadingVariable ).filter( pv => pv != None ).map( {case Some( s ) => s })
     	lvs.size > 0 match {
-      		case true => Some( lvs.map( { case Some( s ) => s } ).min )
+      		case true => Some( lvs.min )
       		case false => None
     	}
   	}
@@ -61,4 +64,6 @@ trait FunMany extends Expr {
   // * factors become a Product
   def expressify(l:List[Expr]):Expr
   //def neutralElement:Number
+
+  def variables:List[Variable] = elements.flatMap( element => element.variables )
 }

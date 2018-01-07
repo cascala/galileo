@@ -16,7 +16,7 @@ case class LogF1( e:Expr ) extends FunF1{
 	}
 }
 
-case class ExpF1( e:Expr ) extends Expr {
+case class ExpF1( e:Expr ) extends FunF1 {
 	override def toString() = "exp(" + e.toString() + ")"
 	def info(env:Option[Environment]=None):String = "ExpF1(" + e + ")"
 	override def visit( env:Option[Environment]=None):Expr = e.visit( env ) match {

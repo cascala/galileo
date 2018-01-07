@@ -60,6 +60,7 @@ trait Expr{
 	def flatTerms:List[Expr] = List( this )
 	def possibleFactors:List[Expr] = List( this )
 	def leadingVariable:Option[String] = None
+	def variables:List[Variable]
 	def <(that:Expr):Boolean = (this.leadingVariable,that.leadingVariable) match { 
 		case (Some(a),Some(b)) => a < b
 		case (_,Some(b)) => false // Plain numbers go after expressions with variables
@@ -69,60 +70,38 @@ trait Expr{
 }
 
 // Needed for things like comments, etc, which don't express anything
-class NilExpr extends Expr {
+class NilExpr extends Expr with Statement {
 	def info(env:Option[Environment]=None) = "NilExpr"
+	//def variables:List[Variable] = List()
 }
 
-case class ErrorExpr( message:String = "Unknown error" ) extends Expr {
+case class ErrorExpr( message:String = "Unknown error" ) extends Expr with Statement {
 	override def toString  = message
 	def info(env:Option[Environment]=None) = "ErrorExpr(" + message + ")"
 }
 
-case class StringExpr( message:String ) extends Expr {
+case class StringExpr( message:String ) extends Expr with Statement {
 	override def toString  = message
 	def info(env:Option[Environment]=None) = "StringExpr(" + message + ")"
 }
 
-case class ExprArray(exprs:Expr*) extends Expr {
+case class ExprArray(exprs:Expr*) extends Expr with Statement {
 	override def toString() = exprs.mkString( "\n" ) //( e:Expr => e.toString() )
 	def info(env:Option[Environment]=None) = "ExprArray(" + exprs + ")"
 	override def visit(env:Option[Environment]=None):Expr = {
 		ExprArray( exprs.map( expression => expression.visit( env ) ):_* )
 	}
+	//def variables:List[Variable] = exprs.flatMap( expr => expr.variables )
 }
 
-// ls, pwd
-case class SystemCommand( command:String ) extends Expr {
-	def info(env:Option[Environment]=None) ="SystemCommand(" + command + ")"
-	import sys.process._
-	override def toString() = {
-		import scala.language.postfixOps
-		command !! // does not work for cd
-	}
-}
 
-// who
-case class Who() extends Expr {
-	def info(env:Option[Environment]=None) = "Who()"
-}
-
-// whos
-case class Whos() extends Expr {
-	def info(env:Option[Environment]=None) = "Whos()"
-}
-
-// clear
-case class Clear() extends Expr {
-	def info(env:Option[Environment]=None) = "Clear()"
-}
-
-// exit
-case class Exit() extends Expr {
-	def info(env:Option[Environment]=None) = "Exit()"
+trait Assignment {
+	val expr:Expr
+	def variables:List[Variable] = expr.variables
 }
 
 // a = ...
-case class Assignment(name:String, expr:Expr) extends Expr{
+case class Assignment1(name:String, expr:Expr) extends Expr with Assignment {
 	override def toString() = name + "\t=\n" + expr.toString()
 	def info(env:Option[Environment]=None) = "Assignment(" + name + "," + expr + ")"
 	override def visit(env:Option[Environment]) = {
@@ -135,14 +114,14 @@ case class Assignment(name:String, expr:Expr) extends Expr{
 }
 
 // [ A,B] = ...
-case class Assignment2(name0:String, name1:String, expr:Expr ) extends Expr{
+case class Assignment2(name0:String, name1:String, expr:Expr ) extends Expr with Assignment {
 	override def toString() = "[" + name0 + "," + name1 + "]\t=\n" + expr.toString() 
 	def info(env:Option[Environment]=None) = "Assignment2(" + name0 + "," + name1 + "," + expr + ")"
 	override def visit(env:Option[Environment]) = ErrorExpr( "Todo Assignment2.visit" ) //{ val vv = expr.visit( env ); env.set( name, vv ); vv }
 }
 
 // [A,B, C] = ...
-case class Assignment3(name0:String, name1:String, name2: String, expr:Expr ) extends Expr{
+case class Assignment3(name0:String, name1:String, name2: String, expr:Expr ) extends Expr with Assignment { 
 	override def toString() = "[" + name0 + "," + name1 + "," + name2 + "]\t=\n" + expr.toString() 
 	def info(env:Option[Environment]=None) = "Assignment3(" + name0 + "," + name1 + "," + name2 + "," + expr + ")"
 	override def visit(env:Option[Environment]) = ErrorExpr( "Todo Assignment3.visit" ) //{ val vv = expr.visit( env ); env.set( name, vv ); vv }
@@ -168,14 +147,54 @@ case class Variable(name : String = "x") extends Expr {
 	}
 	override def possibleFactors:List[Expr] = List( this )
 	override def leadingVariable:Option[String] = Some( name )
+	def variables:List[Variable] = List( this )
 }
 
 case class FuncCall(func:Expr, params:List[Expr]) extends Expr {
 	def info(env:Option[Environment]=None):String = "FuncCall(" + func + "," + params + ")"
+	def variables:List[Variable] = params.flatMap( param => param.variables )
 }
 
 case class Eval( e:Expr ) extends Expr {
 	override def visit( env:Option[Environment]=None):Expr = e.eval()
 	def info(env:Option[Environment]=None):String = "Eval(" + e + ")"
+	def variables:List[Variable] = e.variables
 }
 
+// a Variable free expression
+trait Statement {
+	def variables:List[Variable] = {
+		throw new IllegalArgumentException( "variables should not be called on an unassigned Tensor" )
+		List()
+	}
+}
+
+// ls, pwd
+case class SystemCommand( command:String ) extends Expr with Statement {
+	def info(env:Option[Environment]=None) ="SystemCommand(" + command + ")"
+	import sys.process._
+	override def toString() = {
+		import scala.language.postfixOps
+		command !! // does not work for cd
+	}
+}
+
+// who
+case class Who() extends Expr with Statement {
+	def info(env:Option[Environment]=None) = "Who()"
+}
+
+// whos
+case class Whos() extends Expr with Statement {
+	def info(env:Option[Environment]=None) = "Whos()"
+}
+
+// clear
+case class Clear() extends Expr with Statement {
+	def info(env:Option[Environment]=None) = "Clear()"
+}
+
+// exit
+case class Exit() extends Expr with Statement {
+	def info(env:Option[Environment]=None) = "Exit()"
+}

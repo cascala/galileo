@@ -33,6 +33,7 @@ object ChristoffelFirst{
 	}
 }
 
+// These are NOT tensors!
 trait Christoffel extends Expr {
 	val variables:List[Variable]
 	val components:List[Expr]
@@ -81,7 +82,7 @@ case class ChristoffelSecond(variables:List[Variable],components:List[Expr]) ext
 	def tensor = Tensor( List( Upper, Lower, Lower ), dimension, components )
 }
 
-trait ChristoffelU extends Expr {
+trait ChristoffelU extends Expr with Statement {
 	def info(env:Option[Environment]=None) = this.getClass.getSimpleName + "(" + expr + ")"
 	val expr:Expr
 	val generator:Metric=>Christoffel

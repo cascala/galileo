@@ -36,7 +36,7 @@ object DiagTensor {
 
 // efficient Diagonal element only tensor
 // A mess to maintain :(
-case class DiagTensor( indices:List[TensorIndex], elements:List[Expr] ) extends Expr {
+case class DiagTensor( indices:List[TensorIndex], elements:List[Expr] ) extends Expr with TensorTrait {
 	def info(env:Option[Environment]=None) = "DiagTensor(" + indices + "," + elements + ")"
 	private lazy val rankInt = indices.size.toInt
 	// Move to trait?

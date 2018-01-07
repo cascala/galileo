@@ -10,6 +10,7 @@ trait Constant extends Expr { // has dimensions - todo
 	override def toString() = shortName //value.toString()
 	def info(env:Option[Environment]=None) = "Constant(" + shortName + ")"
 	override def eval() = value
+	def variables:List[Variable] = List()
 }
 
 case class ConstantPi() extends Constant {

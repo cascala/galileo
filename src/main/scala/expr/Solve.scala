@@ -1,10 +1,10 @@
 package galileo.solve
 
-import galileo.expr.{ErrorExpr,Expr}
+import galileo.expr.{ErrorExpr,Expr,Statement}
 import galileo.environment.Environment
 import galileo.linalg.{Matrix,DenseMatrix}
 
-case class Solve( lhs:Expr, rhs:Expr ) extends Expr {
+case class Solve( lhs:Expr, rhs:Expr ) extends Expr with Statement {
 	override def visit( env:Option[Environment]=None):Expr = ( lhs.visit( env ), rhs.visit( env ) ) match {
   		case (l:DenseMatrix, r:DenseMatrix ) if ( l.numRows == l.numCols && l.numRows == r.numRows ) => l.solve( r )
 		case (l:Matrix, r:DenseMatrix ) if ( l.numRows == l.numCols && l.numRows == r.numRows ) => l.solve( r )

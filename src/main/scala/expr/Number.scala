@@ -57,6 +57,8 @@ case class Number(value: Double) extends Expr {
 		case Number( n ) if ( n < 0 && value < n && value%n == 0 ) => Some( Number( value / n ) )
 		case _ => None
 	} }
+
+	def variables:List[Variable] = List()
 }
 
 case class NumberI( value:Int ) extends Expr {
@@ -73,4 +75,6 @@ case class NumberI( value:Int ) extends Expr {
 		case -1 => List()
 		case _ => List( this )
 	}
+	
+	def variables:List[Variable] = List()
 }

@@ -50,8 +50,8 @@ class ExprHandler{
             env.set( n0, pil )
             env.set( n1, u )
             ExprArray(
-              Assignment( n0, pil ),
-              Assignment( n1, u )
+              Assignment1( n0, pil ),
+              Assignment1( n1, u )
             )
           } 
         }
@@ -65,9 +65,9 @@ class ExprHandler{
             env.set( n1, u )
             env.set( n2, p ) 
             ExprArray(
-              Assignment( n0, l ),
-              Assignment( n1, u ),
-              Assignment( n2, p )
+              Assignment1( n0, l ),
+              Assignment1( n1, u ),
+              Assignment1( n2, p )
             )
           }
           case _ => ErrorExpr( "function 'lu(matrix)' can only be applied to a matrix" )
@@ -77,7 +77,7 @@ class ExprHandler{
       case a:Assignment3 => ErrorExpr( "right hand side can not produce three variables" )
 
   		
-  		case Assignment( name, value ) => { 
+  		case Assignment1( name, value ) => { 
 				val vv = visit( value ) 
 				env.set( name, vv )
 				vv 

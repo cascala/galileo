@@ -24,7 +24,7 @@ class Parser extends builtinParser with exprParser {
   def assignment:Parser[Expr] = 
     ( "[" ~> ident <~ "," ) ~ (ident <~ "," ) ~ ( ident <~ "]" ) ~ ( "=" ~> expression ) ^^ { case a~b~c~e => Assignment3( a, b, c, e ) } |
     ( "[" ~> ident <~ "," ) ~ ( ident <~ "]" ) ~ ( "=" ~> expression ) ^^ { case a~b~e => Assignment2( a, b, e ) } |
-    ident ~ ( "=" ~> expression ) ^^ { case name~e => Assignment( name, e ) }
+    ident ~ ( "=" ~> expression ) ^^ { case name~e => Assignment1( name, e ) }
   
 /*
 override def selector:Parser[Expr] = 
@@ -76,6 +76,7 @@ trait exprParser extends logicParser with functionParser with matrixParser with 
   val And2 = (a:Expr,b:Expr) => BoolAndSc( a, b )
 }
 
+// Tensor related Parser functionality
 trait tensorParser extends JavaTokenParsers with ImplicitConversions {
   val expression:Parser[Expr]
   def tensor = metric | christoffel | tensors
