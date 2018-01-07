@@ -1,5 +1,6 @@
 // to use the files, launch the galileo interpreter
-
+// then, type 'load(examples/a.gg)', without the quotes
+// galileo>load(examples/a.gg)
 clear;
 a=1;
 b=2;

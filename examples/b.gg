@@ -1,0 +1,9 @@
+// to use the files, launch the galileo interpreter
+// then, type 'load(examples/b.gg)', without the quotes
+// galileo>load(examples/b.gg)
+
+// a vector, from 0 up to .5 (including .5) in steps of .1
+v=0:0.1:.5 
+sin(v)
+eval(sin(v))
+
