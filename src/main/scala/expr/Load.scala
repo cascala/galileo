@@ -13,54 +13,24 @@ import scala.io.Source
 //
 //import scala.util.parsing.combinator.JavaTokenParsers.{Success,NoSuccess}
 
+// Used for loading and runninf files
+// Sample use 'load(examples/a.gg)'
 case class Load(filename:String) extends Expr {
 	def info(env:Option[Environment]=None) = "Load(" + filename + ")"
 	
-	def expressions:List[Expr] = {
-		//var contents = "a=10;b=11;c=a+b;c"
-		val contents = Source.fromFile(filename).getLines.mkString
-		// parse this (or should we send the contents to the command window?)
+	override def visit( env:Option[Environment] ):Expr = {
+		val lines = Source.fromFile(filename).getLines
 		val p = new Parser()
-		p.parse( contents ) match {
-			case p.Success(expressions,_) => { 
-				/*env match { // Handle the expressions }
-					case Some( e ) => h.eval( e, ExprArray( expressions:_* ) ) //.foreach( expression => h.eval( e, expression ) )
-					case None => h.eval( new Environment( None ), ExprArray( expressions:_* ) )
-					//expressions.foreach( expression => h.eval( new Environment( None ), expression ) ) //ErrorExpr( "Internal error" ) // handler.eval( )
+		var l = new NilExpr() // to return the last expression in the file
+		for( line <- lines ) {
+			p.parse( line ) match {
+				case p.Success(expressions,_) => { 
+				for(expression <- expressions)
+					l = expression.visit(env) 
 				}
-				*/
-				expressions
+				case err => ErrorExpr( "Failure to parse " + filename + err  )
 			}
-			case err => List( ErrorExpr( "Failure to parse " + contents + err  ) )
 		}
-	}
-	
-
-	override def visit( env:Option[Environment] ) = {
-		var p = new Parser()
-		//var h = new ExprHandler()
-		
-		//import parser.NoSuccess // this does not compile... argh
-//import p.Success
-		//var contents = "a=10;b=11;c=a+b"
-		val contents = Source.fromFile(filename).getLines.mkString
-		// parse this (or should we send the contents to the command window?)
-		p.parse( contents ) match {
-			case p.Success(expressions,_) => { 
-				/*env match { // Handle the expressions }
-					case Some( e ) => h.eval( e, ExprArray( expressions:_* ) ) //.foreach( expression => h.eval( e, expression ) )
-					case None => h.eval( new Environment( None ), ExprArray( expressions:_* ) )
-					//expressions.foreach( expression => h.eval( new Environment( None ), expression ) ) //ErrorExpr( "Internal error" ) // handler.eval( )
-				}
-				*/
-				ExprArray( expressions:_* )
-			}
-			case err => ErrorExpr( "Failure to parse " + contents + err  )
-		}
-		
-		//Number( 1 )
-		//Expr
+		l
 	} // visit
-
-
 }
