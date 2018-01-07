@@ -1,0 +1,4 @@
+// Demonstration of the chain rule as used for derivatives
+
+deriv(sin(x^3),x)
+
