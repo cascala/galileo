@@ -1,17 +1,15 @@
-import galileo.parser._
 import galileo.complex._
 import galileo.constants._
 import galileo.environment._
+import galileo.expr._
 import galileo.exprhandler._
 import galileo.linalg.{DenseMatrix,DiagMatrix,OnesMatrix}
+import galileo.parser._
 
 import org.scalatest._
 
 import util.Random
 import util.Random.nextDouble
-
-
-import galileo.expr._
 
 class ParserTest extends FunSuite {
 	val parser = new Parser()
