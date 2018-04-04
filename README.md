@@ -10,6 +10,11 @@ Differentiating features:
 * Support for logic operations
 * Basic framework for rules driven proofs is available (e.g. `prove(1/x==x^(-1))`)
 
+## Usage as a library
+You can use Galileo as a mathematical library, using sbt, Maven etc.
+For details, see:
+[http://search.maven.org/#artifactdetails%7Ccom.github.cascala%7Cgalileo%7C0.1.0%7Cjar](http://search.maven.org/#artifactdetails%7Ccom.github.cascala%7Cgalileo%7C0.1.0%7Cjar)
+
 ## Installation and running
 Galileo uses the 'sbt' build system. After cloning the repository, running
 ```
