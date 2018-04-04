@@ -1,4 +1,4 @@
-organization := "scala"
+organization := "com.github.cascala"
 
 name := "Galileo"
 
