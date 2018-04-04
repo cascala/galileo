@@ -80,6 +80,16 @@ galileo>deriv(x^2,x)
 ## Matrices and tensors
 ### Matrix manipulation
 
+The following commands are available:
+* `lu(A)` LU factorization for matrix `A`
+* `inv(A)` Inverse of matrix `A`
+* `rand(n)` Random `n`x`n` matrix; elements chosen from uniform distribution
+* `rand(n,m)` Random `n`x`m` matrix; elements chosen from uniform distribution 
+* `eye(n)` `n`x`n` Identity matrix
+* `ones(n)` `n`x`n` matrix filled with all ones
+* `linspace`
+* `logspace`
+
 ```
 galileo>A=[a b;c d]
 a    b
