@@ -16,6 +16,8 @@ libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % 
 
 // Publication to Sonatype Ivy - artefacts
 // Maven
+//useGpg := true
+
 resolvers += Resolver.url("scalasbt", new URL("http://scalasbt.artifactoryonline.com/scalasbt/sbt-plugin-releases")) (Resolver.ivyStylePatterns)
 
 publishMavenStyle := true
