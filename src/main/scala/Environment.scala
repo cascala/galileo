@@ -12,10 +12,18 @@ import scala.collection.mutable.Map
 // Nested environment structure
 // Global, session, local variables etc.
 class Environment(parent:Option[Environment]) {
+	// connvenient additional constructor
+	def this() = this( None ) 
+
+	// the main storage for all variables
 	private var variables = Map[String,Expr]() // should be pointer to subset of Expr? 
+	
+	// reset the environment, but not the parent environment
 	def clear:Unit  = {
 		variables = variables.empty
 	} 
+
+	// get the value of a variable called name
 	def get(name:String):Option[Expr] = {
 		if( variables.contains( name ) )
 			Some( variables( name ) )
@@ -27,6 +35,7 @@ class Environment(parent:Option[Environment]) {
 		}
 	}
 
+	// return a new environment instance without the variable called name
 	def getWithout(name:String):Environment = {
 		val cp = new Environment( this.parent )
 		var vars = this.variables
@@ -35,24 +44,18 @@ class Environment(parent:Option[Environment]) {
 		cp
 	}
 
-	//private def setVariables 
-
-/*
-
-	def getWithout(name:String):Environment = {
-		val cp = this.copy()
-		cp.
-	}*/
-
+	// set a single variable
 	def set(key:String,value:Expr):Unit = {
 		variables(key) = value
 	}
 
+	// return a map or all variables of this environment and its parent (recursively)
 	def allVariables:Map[String,Expr] = parent match {
 		case Some( p ) => p.allVariables ++ variables
 		case None => variables
 	}
 
+	// string representation of all variables, used in the 'who' command
 	override def toString() = {
 		//var s = variables.foreach()
 		def toType( v:Expr ):String = v match{
@@ -71,7 +74,6 @@ class Environment(parent:Option[Environment]) {
 			case _ => "Expression" 
 		}
 		val terms = allVariables map { case (k,v) => k + ":\t" + toType( v ) } 
-		"Defined variables:\n" + ( terms mkString "\n" ) //_._1 + "=" + _._2.toString() )
-		//terms mkString "\n"
+		"Defined variables:\n" + ( terms mkString "\n" )
 	}
 }
