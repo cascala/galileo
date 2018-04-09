@@ -720,7 +720,7 @@ case class DenseMatrix( rows:List[List[Expr]]) extends Expr with Matrix {
 		(lc,ur,ps)
 	}
 
-	// Solves X in this *  X = rhs
+	// Solves X in this * X = rhs
 	// X = inv( this ) * rhs, but that's not how it's calculated
 	def solve(rhs:DenseMatrix):DenseMatrix = this._lup match {
 		case (lc,ur,ps) =>
