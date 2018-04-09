@@ -82,6 +82,11 @@ class ParserTest extends FunSuite {
   		//"cos(pi)" -> Number( 0 )
   	)
 
+	val expectedEnv = Map[String,Map[String,Option[Expr]]] (
+		"a=1" -> Map[String,Option[Expr]]( "a" -> Some( Number(1) ) ),
+		"a=1;b=2;c=a+b" -> Map[String,Option[Expr]]( "c" -> Some( Number(3) ) )
+	)
+
   	val expectedString = Map[String,String](
   		"1" -> "1.0",
   		"1+10+u+1" -> "12.0+u",
@@ -150,6 +155,21 @@ class ParserTest extends FunSuite {
 						assert( r1 == r2 )
 					}
 					case err: NoSuccess   => fail( "Failure for " + s + ", " + e )
+				}
+			}
+		}
+	}
+
+	test( "expectedEnv") {
+		expectedEnv foreach { 
+			case (s:String, e:Map[String,Option[Expr]]) => {
+				var env = new Environment
+				parser.toExpr( env, s ) match {
+					case Some( l ) => {
+						for( (k,v) <- e )
+							assert( env.get( k ) == v )
+					}
+					case None => fail( "Failure for " + s + ", " + e )
 				}
 			}
 		}

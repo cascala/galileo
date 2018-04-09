@@ -22,6 +22,7 @@ class ExprHandler{
       case Clear() => { env.clear; "" }
       case s:SystemCommand => s.toString()
       case Exit() => { System.exit( 0 ); "" } // caught in Shell, rethrown there
+      // Do we need to pass e by reference?
       case e:Expr => { val ans = visit( env, e ); env.set( "ans", ans ); ans.toString }
     }
   }

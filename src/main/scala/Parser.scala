@@ -1,18 +1,20 @@
 package galileo.parser
 
-import scala.util.parsing.combinator.JavaTokenParsers
-import scala.util.parsing.combinator.ImplicitConversions // really useful...
 import java.io.IOException
+import scala.util.parsing.combinator.ImplicitConversions // really useful...
+import scala.util.parsing.combinator.JavaTokenParsers
 
+import galileo.environment.Environment
 import galileo.expr._
+import galileo.exprhandler.ExprHandler
 import galileo.linalg._
 import galileo.logic._
-import galileo.proof.Proof
 import galileo.manipulate.{Expand,Factor,Simplify}
-import galileo.solve.Solve
-import galileo.trigonometry._
-import galileo.tensor._
+import galileo.proof.Proof
 import galileo.rand.Rand
+import galileo.solve.Solve
+import galileo.tensor._
+import galileo.trigonometry._
 
 class Parser extends builtinParser with exprParser { 
 	// lexer can be used to reserve keywords
@@ -34,6 +36,23 @@ override def selector:Parser[Expr] =
   // VERY IMPORTANT
   // NEEDS parseAll rather than parse
   def parse(str:String):ParseResult[List[Expr]] = parseAll(program, str)
+  // todo: Does this change env correctly?
+  // e.g. toExpr( "a=1;a", env);
+  // Does env contain 'a=1' now?
+  def toExpr(env:Environment,str:String):Option[List[Expr]] = {
+    parse( str ) match {
+          case Success(expressions,_) => {
+            val handler = new ExprHandler
+            assert( expressions.size > 0 )
+            var list:List[Expr] = List();
+            for( expression <- expressions )
+              list :+ handler.visit( env, expression)   
+
+            Some( list )
+          }
+          case err: NoSuccess   => None
+        }
+  }
 }
 
 trait exprParser extends logicParser with functionParser with matrixParser with tensorParser {
