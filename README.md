@@ -13,8 +13,7 @@ Differentiating features:
 ## Usage as a library
 You can use Galileo as a mathematical library, using sbt, Maven etc.
 For details, see:
-[http://search.maven.org/#artifactdetails%7Ccom.github.cascala%7Cgalileo_2.11%7C0.1%7Cjar]
-(http://search.maven.org/#artifactdetails%7Ccom.github.cascala%7Cgalileo_2.11%7C0.1%7Cjar)
+[http://search.maven.org/#artifactdetails%7Ccom.github.cascala%7Cgalileo_2.11%7C0.1%7Cjar](http://search.maven.org/#artifactdetails%7Ccom.github.cascala%7Cgalileo_2.11%7C0.1%7Cjar)
 
 ## Installation and running
 Galileo uses the 'sbt' build system. After cloning the repository, running
