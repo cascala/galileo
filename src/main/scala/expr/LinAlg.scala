@@ -561,6 +561,9 @@ case class RowPermutationMatrix( ps:ListBuffer[Int] ) extends Matrix {
 	def variables:List[Variable] = List()
 }
 
+/*
+** Main matrix class - use this for small matrix operations
+*/
 case class DenseMatrix( rows:List[List[Expr]]) extends Expr with Matrix {
 	override def toString() = rows.map( l => l.mkString( "\t" ) ).mkString("\n")
 	def info(env:Option[Environment]=None) = "DenseMatrix todo"
