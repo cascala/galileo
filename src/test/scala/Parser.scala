@@ -82,9 +82,13 @@ class ParserTest extends FunSuite {
   		//"cos(pi)" -> Number( 0 )
   	)
 
+	// Note that the compiler can actually determine the type
+	// so, this would work as well
+	// val expectedEnv = Map(
 	val expectedEnv = Map[String,Map[String,Option[Expr]]] (
-		"a=1" -> Map[String,Option[Expr]]( "a" -> Some( Number(1) ) ),
-		"a=1;b=2;c=a+b" -> Map[String,Option[Expr]]( "c" -> Some( Number(3) ) )
+		"a=1" -> Map( "a" -> Some( Number(1) ) ),
+		"b=2" -> Map( "b" -> Some( Number(2) ) ),
+		"a=1;b=2;c=a+b" -> Map( "c" -> Some( Number(3) ) )
 	)
 
   	val expectedString = Map[String,String](
