@@ -132,6 +132,7 @@ case class AtanF1( e:Expr ) extends AtrigF1 {
 		case Bool( false ) => Number( 0 )
 		case Number( 1 ) => Fraction( ConstantPi(), Number( 4 ) ).eval()
 		case Bool( true ) => Fraction( ConstantPi(), Number( 4 ) ).eval()
-		case _ => evalBase() 
+		case Number( n ) => Number( operation( n ) ) // important... since atan has unbounded input range
+		case _:Expr => evalBase() 
 	}
 }
