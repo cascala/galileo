@@ -78,7 +78,7 @@ object Tensor {
 		Tensor( indices, m )
 	}
 
-	def TransformationMatrix( unprimed:List[Expr], primed:List[Expr]):Tensor = { 
+	def transformationMatrix( unprimed:List[Expr], primed:List[Expr]):Tensor = { 
 		require( primed.size == unprimed.size )
 		//var jacobian:List[Expr] = List()
 		var jacobian = primed.map( primedE => unprimed.map( unprimedE => Derivative( unprimedE, primedE ).visit() ) ).flatten
