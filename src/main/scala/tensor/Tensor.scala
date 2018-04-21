@@ -66,7 +66,7 @@ trait TensorTrait extends Expr {
 */
 
 object Tensor {
-	// All indices will assume to be of the same dimension
+	// All indices are assumed to be of the same dimension
 	def apply(kinds:List[TensorIndexKind],dimension:Int,components:List[Expr]):Tensor = Tensor(
 		kinds.map( kind => TensorIndex( kind, dimension ) ),
 		components
@@ -78,7 +78,7 @@ object Tensor {
 		Tensor( indices, m )
 	}
 
-	def TransformationMatrix( unprimed:List[Expr], primed:List[Expr]):Tensor = { 
+	def transformationMatrix( unprimed:List[Expr], primed:List[Expr]):Tensor = { 
 		require( primed.size == unprimed.size )
 		//var jacobian:List[Expr] = List()
 		var jacobian = primed.map( primedE => unprimed.map( unprimedE => Derivative( unprimedE, primedE ).visit() ) ).flatten
@@ -179,10 +179,11 @@ case class Tensor( indices:List[TensorIndex], components:List[Expr]) extends Exp
 	}
 
 	//def *(that:Expr) = Tensor( this.indices, this.components.map( component => Product( component, that ).visit() ) )
+	// element wise division
 	def /(that:Expr) = Tensor( this.indices, this.components.map( component => Fraction( component, that ).visit() ) )
 
 	// Use this to reduce rank,
-	// E.g Aj_l <- contract Ajk_kl on k, upperIndex=1, lowerIndex=2 
+	// E.g Aj_l <- contract Ajk_kl on k, upperIndex=1, lowerIndex=2 (indices go like upper j=0, upper k=1, lower k=2, lower l=3)
 	// Mechanically this means
 	// Aj_l = Aj0_0l+Aj1_1l+Aj2_2l...
 	def contract( upperIndex:Int, lowerIndex:Int ):Tensor = {
@@ -260,6 +261,7 @@ case class Tensor( indices:List[TensorIndex], components:List[Expr]) extends Exp
 	override def simplify = Tensor( indices, components.map( component => component.simplify ) )
 	override def factor = Tensor( indices, components.map( component => component.factor ) )
 
+	// todo - clearly :)
 	def select(indices:List[Expr]):Expr = {
 		Number( 3 )
 	}
