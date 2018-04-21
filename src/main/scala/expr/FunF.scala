@@ -33,7 +33,7 @@ trait FunMany extends Expr {
     // Possible variable name 
   	override def leadingVariable:Option[String] = {
     	//val lvs = this.elements.map( element => element.leadingVariable ).filter( pv => pv != None ).map( {case Some( s ) => s })
-      val lvs = this.elements.map( element => element.leadingVariable ).map( { 
+      val lvs = this.elements.map( element => element.leadingVariable ).filter( pv => pv != None ).map( { 
         case Some( s ) => s
         case _ => ""
       } )
