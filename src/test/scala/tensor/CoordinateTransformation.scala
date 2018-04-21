@@ -18,7 +18,7 @@ class CoordinateTransformationTest extends FunSuite {
 	val z = Product( r, CosF1( omega ) )
 
 	// Transformation matrix
-	val Lambda = Tensor.TransformationMatrix( 
+	val Lambda = Tensor.transformationMatrix( 
 		List( x, y, z ), // old coords, unprimed
 		List( r, omega, phi ) // new coords, primed
 	)
