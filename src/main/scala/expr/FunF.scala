@@ -30,9 +30,13 @@ trait FunF2 extends Expr {
 trait FunMany extends Expr {
  	val elements:List[Expr]
   	
-	// Possible variable name 
+    // Possible variable name 
   	override def leadingVariable:Option[String] = {
-    	val lvs = this.elements.map( element => element.leadingVariable ).filter( pv => pv != None ).map( {case Some( s ) => s })
+    	//val lvs = this.elements.map( element => element.leadingVariable ).filter( pv => pv != None ).map( {case Some( s ) => s })
+      val lvs = this.elements.map( element => element.leadingVariable ).map( { 
+        case Some( s ) => s
+        case _ => ""
+      } )
     	lvs.size > 0 match {
       		case true => Some( lvs.min )
       		case false => None
