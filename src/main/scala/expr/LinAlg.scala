@@ -33,7 +33,6 @@ trait Matrix extends Expr with Selectable {
 			case _ => ErrorExpr( "Unhandled selection" )
 		}
 	}
-
 }
 
 // for statements like 1:2:11

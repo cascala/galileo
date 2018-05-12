@@ -10,7 +10,14 @@ case class Selector( selectee:Expr,indices:Expr*) extends Expr {
 		val sel = selectee.visit( env )
 		val ind = indices.map( index => index.visit( env )).to[List]
 		sel match { 
-			case s:Selectable => s.select( ind)
+			case s:Selectable => {
+				try
+					s.select( ind )
+				catch {
+					case _:IndexOutOfBoundsException => ErrorExpr( "Index out of bounds" )
+					case _:Throwable => ErrorExpr( "Unknown error" )
+				}
+			}
 			case e:Expr => ErrorExpr( "Can not select from " + e.info())
 		}
 	}
