@@ -115,9 +115,10 @@ trait tensorParser extends JavaTokenParsers with ImplicitConversions {
     "einsteintensor" ~> "(" ~> expression <~ ")" ^^ EinsteinTensorU |
     "einsteinscalar" ~> "(" ~> expression <~ ")" ^^ EinsteinScalarU |
     "riccitensor" ~> "(" ~> expression <~ ")" ^^ RicciTensorU |
-    "ricciscalar" ~> "(" ~> expression <~ ")" ^^ RicciScalarU /*|
+    "ricciscalar" ~> "(" ~> expression <~ ")" ^^ RicciScalarU  |
+    "weyltensor" ~> "(" ~> expression <~ ")" ^^ WeylTensorU
+    /*|
     "schoutentensor" ~> "(" ~> expression <~ ")" ^^ SchoutenTensorU |
-    "weyltensor" ~> "(" ~> expression <~ ")" ^^ WeylTensorU |
     "cottontensor" ~> "(" ~> expression <~ ")" ^^ CottonTensorU |
     "lanczostensor" ~> "(" ~> expression <~ ")" ^^ LanczosTensorU  
     */  
