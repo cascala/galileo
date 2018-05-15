@@ -10,8 +10,8 @@ Differentiating features:
 * Basic framework for rules driven proofs is available (e.g. `prove(1/x==x^(-1))`)
 
 Galileo is available as both
-* a [docs/language.md](standalone, interpreted language), with its own REPL, and, 
-* a [docs/library.md](library) for use in JAVA or other JVM languages (Scala, Kotlin).
+* a [standalone, interpreted language](docs/language.md), with its own REPL, and, 
+* a [library](docs/library.md) for use in JAVA or other JVM languages (Scala, Kotlin).
 
 ## Usage as a library
 You can use Galileo as a mathematical library, using sbt, Maven etc.
@@ -41,5 +41,5 @@ will launch the galileo interactive shell (REPL).
 
 ## Detailed documentation
 Detailed documentation is available for the 
-* Galileo [docs/language.md](language), and, 
-* Galileo [docs/library.md](Scala library). 
+* Galileo [language](docs/language.md), and, 
+* Galileo [library](docs/library.md). 
