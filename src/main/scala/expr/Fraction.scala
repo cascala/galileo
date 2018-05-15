@@ -3,6 +3,7 @@ package galileo.expr
 import galileo.environment.Environment
 import galileo.linalg.Matrix
 import galileo.proof.Conversion
+import galileo.trigonometry.{CosF1, SinF1}
 
 case class Fraction(numerator:Expr, denominator:Expr) extends FunF2 {
 	val a = numerator
@@ -126,9 +127,38 @@ case class Fraction(numerator:Expr, denominator:Expr) extends FunF2 {
 		nd.visit() match {
 			case Number( 1 ) => nn.visit()
 			case Number( -1 ) => Product( Number( -1 ), nn ).visit()
+			// very specifif trigonometry cases
+			case Product( Number( 2 ), Power( SinF1(psi:Expr), Number( 2 ) ) ) => {
+				nn.visit() match {
+					case s:Sum => s.flatTerms match {
+						case ( Power( CosF1( psi2:Expr ), Number( 2 ) ) :: Product( Number( -1 ), Power( SinF1( psi3:Expr ), Number( 2 ) ) ) :: Number( -1 ) :: Nil ) if ( psi == psi2 && psi == psi3 ) => Number( -1 )
+						case _ => Fraction( nn, nd ) // no visit here - cycle
+					}
+					case _ => Fraction( nn, nd ) // no visit here - cycle
+				}
+			}case Power( SinF1(psi:Expr), Number( 2 ) ) => {
+				nn.visit() match {
+					case s:Sum => s.flatTerms match {
+						case ( Power( CosF1( psi2:Expr ), Number( 2 ) ) :: Product( Number( -1 ), Power( SinF1( psi3:Expr ), Number( 2 ) ) ) :: Number( -1 ) :: Nil ) if ( psi == psi2 && psi == psi3 ) => Number( -2 )
+						case _ => Fraction( nn, nd ) // no visit here - cycle
+					}
+					case _ => Fraction( nn, nd ) // no visit here - cycle
+				}
+			}
+		
+			case Number( 2 ) => {
+				nn.visit() match {
+					case s:Sum => s.flatTerms match {
+						case ( Product( Number( -1 ), Power( CosF1( psi1:Expr ), Number( 2 ) ) ) :: Product( Number( 5 ), Power( SinF1( psi2:Expr ), Number( 2 ) ) ) :: Number( 1 ) :: Nil ) if ( psi1 == psi2 ) => Product( Number( 3 ), Power( SinF1( psi1 ), Number( 2 ) ) )
+						case ( Power( CosF1( psi1:Expr ), Number( 2 ) ) :: Product( Number( -5 ), Power( SinF1( psi2:Expr ), Number( 2 ) ) ) :: Number( 1 ) :: Nil ) if ( psi1 == psi2 ) => Sum( Power( CosF1( psi1 ), Number( 2 ) ), Product( Number( -2 ), Power( SinF1( psi1 ), Number( 2 ) ) ) )
+						case _ => Fraction( nn, nd ).visit()
+					}
+					case _ => Fraction( nn, nd ).visit()
+				}
+			}
+			
 			case _ => Fraction( nn,nd ).visit()		
 		}
-
 		// Move negative numbers to numerator
 	}
 

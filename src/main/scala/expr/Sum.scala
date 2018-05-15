@@ -6,14 +6,14 @@ import galileo.environment.Environment
 import galileo.linalg._
 import galileo.manipulate.Simplify
 import galileo.proof.Conversion
-import galileo.trigonometry.{CosF1, SinF1}
+import galileo.trigonometry.{CosF1, SinF1, TrigF1 }
 
 object Diff {
   def apply(a: Expr, b: Expr) = Sum(a, Product(Number(-1), b))
 }
 
 object Sum {
-  val sort = { (a: Expr, b: Expr) => (a, b) match {
+  val sort:(Expr,Expr)=>Boolean = { (a: Expr, b: Expr) => (a, b) match {
     case (c: Complex, d: Complex) => false
     case (c: Constant, d: Constant) => c.shortName < d.shortName
     case (c: Constant, d: Complex) => false
@@ -27,7 +27,21 @@ object Sum {
     case (Number(x), _: Expr) => false // numbers after expressions
     case (_: Expr, _: Number) => true
     case (Product(_: Number, a: Variable), Product(_: Number, b: Variable)) => a < b
-    case (_1, _2) => _1 < _2
+    case (Product(_: Number, a: Expr), Product(_: Number, b: Expr ) ) => Sum.sort( a, b )
+    case (a: Expr, Product(_: Number, b: Expr ) ) => Sum.sort( a, b )
+    case (Product(_: Number, a: Expr), b: Expr ) => Sum.sort( a, b )
+    case (Product(_: Number, a: Expr, b:Expr), Product(_: Number, c: Expr, d:Expr ) ) if ( b == d ) => Sum.sort( a, c )
+    case (Product(a: Expr, b:Expr), Product(_: Number, c: Expr, d:Expr ) ) if ( b == d ) => Sum.sort( a, c )
+    case (Product(_: Number, a: Expr, b:Expr), Product( c: Expr, d:Expr ) ) if ( b == d ) => Sum.sort( a, c )
+
+    case (Power(a:Expr,b:Number), Product(c:Number, Power(d:Expr,e:Number))) if ( b == e ) => Sum.sort(a,d)
+    //case ()
+    case ( Power(a,_1),Power(b,_2)) => sort( a, b )
+    case ( CosF1( x ), SinF1( y ) ) if( x == y ) => true
+    case ( SinF1( x ), CosF1( y ) ) if( x == y ) => false
+    //case ( x:TrigF1, y:TrigF1 ) => sort( x, y ) // Don't do this ... creates cycle
+
+    case (_1, _2) => _1 < _2 // Expr ordering comparison, not numerical ordering
     }
   }
   val neutralElement: Number = Number(0)
@@ -60,12 +74,19 @@ case class Sum(terms: Expr*) extends FunMany {
     return rv
   }
 
-  override def simplify:Expr = Sum(flatTerms.map(term => Simplify(term).visit()).toList).visit() match {
+  // simplification of sum: simplify all individual terms
+  override def simplify:Expr = Sum( flatTerms.map(term => Simplify(term).visit()).toList).visit() match {
     case s:Sum if ( s == this ) => s
+    /*
+    case s:Sum => s.flatTerms match {
+      case ( Product( Number( -1 ), Power( CosF1( psi1:Expr ), Number( 2 ) ) ) :: Product( Number( 5 ), Power( SinF1( psi2:Expr ), Number( 2 ) ) ) :: Number( 1 ) :: Nil ) if ( psi1 == psi2 ) => Product( Number( 6 ), Power( SinF1( psi1:Expr ), Number( 2 ) ) )      
+      case _ => s
+    }
+    */
     case e => e.simplify // OK to recurse
   }
 
-  // todo, rewrite using 'scan'
+  // Uses a generic scan function, used for both sums and products
   override def visit(env: Option[Environment] = None): Expr = {
     def pairSum(a: Expr, b: Expr): Option[Expr] = (a, b) match {
       case (Number(0), e) => Some(e)
@@ -87,14 +108,22 @@ case class Sum(terms: Expr*) extends FunMany {
       case (Power(CosF1(a), Number(2)), Number(-1)) => Some(Product(Number(-1), Square(SinF1(a))))
       case (Power(SinF1(a), Number(2)), Number(-1)) => Some(Product(Number(-1), Square(CosF1(a))))
 
+      // x * cos(a)^2 + y * sin( a )^2 -> ()
       case (Product(Number(x), Power(CosF1(a), Number(2))), Product(Number(y), Power(SinF1(b), Number(2)))) if (a == b && x <= -1 && y <= -1) =>
         Some(Sum(Product(Number(x + 1), Power(CosF1(a), Number(2))), Product(Number(y + 1), Power(SinF1(b), Number(2))), Number(-1)))
-
+     
       case (Product(Number(x), Power(CosF1(a), Number(2)),b), Product(Number(y), Power(SinF1(c), Number(2)),d)) if (a == c && b == d && x <= -1 && y <= -1) =>
         Some(Sum(Product(Number(x + 1), Power(CosF1(a), Number(2)),b), Product(Number(y + 1), Power(SinF1(c), Number(2)),d), Product( d, Number(-1))) )
 
       case (Product(Number(x), Power(CosF1(a), Number(2))), Product(Number(y), Power(SinF1(b), Number(2)))) if (a == b && x >= 1 && y >= 1) =>
         Some(Sum(Product(Number(x - 1), Power(CosF1(a), Number(2))), Product(Number(y - 1), Power(SinF1(b), Number(2))), Number(1)))
+      
+      // a * x + b * x -> (a+b)*x
+      case ( Product( Number( a ), x ), Product( Number( b ), y ) ) if ( x == y ) => Some( Product( Number( a + b ), x ) )
+      // a * x + x -> (a+1) * x
+      case ( Product( Number( a ), x ), y ) if ( x == y ) => Some( Product( Number( a + 1 ), x ) )
+      // x + a * x -> (a+1) * x
+      case ( x, Product( Number( a ), y ) ) if ( x == y ) => Some( Product( Number( a + 1 ), x ) )
 
       //case (Power(SinF1(a),Number(2)),Product(Number(-1),Power(CosF1(b),Number(2))) if ( a == b ) => Some( Number( 1 ) )
       //case (Product( a, b), Fraction( c, d ) ) if ( a == c && b == Power( d, Number( -1 ) ) ) => Product( Number( 2 ), a, b )
@@ -136,7 +165,14 @@ case class Sum(terms: Expr*) extends FunMany {
     }
 
     val ts = Sum(this.terms.map(t => t.visit(env)): _*).flatTerms.sortWith(Sum.sort)
-    expressify(scan(Sum.neutralElement, ts, pairSum))
+    ts match {
+      // (-3.0)*sin(psi)^2.0+((-1.0)*cos(psi)^2.0+5.0*sin(psi)^2.0+1.0 -> 0
+      //case ( Product( Number( -3, Power( SinF1( psi1:Expr), Number( 2 ) ) ) ) ::
+      //    )
+      case ( Product( Number( -1 ), Power( CosF1( psi1:Expr ), Number( 2 ) ) ) :: Power( SinF1( psi2:Expr ), Number( 2 ) ) :: Number( 1 ) :: Nil ) if ( psi1 == psi2 ) => Product( Number( 2 ), Power( SinF1( psi1:Expr ), Number( 2 ) ) )      
+      case ( Product( Number( -1 ), Power( CosF1( psi1:Expr ), Number( 2 ) ) ) :: Product( Number( n ), Power( SinF1( psi2:Expr ), Number( 2 ) ) ) :: Number( 1 ) :: Nil ) if ( psi1 == psi2 && n > 0 ) => Product( Number( n+1 ), Power( SinF1( psi1:Expr ), Number( 2 ) ) )      
+      case _ => expressify(scan(Sum.neutralElement, ts, pairSum))
+    }
   }
 
   // turn a list of Expr into an Expr (likely a Sum)
