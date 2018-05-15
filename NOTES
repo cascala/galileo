@@ -1,0 +1,6 @@
+Publication to Sonatype
+
+#Set correct version in built.sbt, following pattern 1.2.3
+#sbt publishSigned
+#Then go to https://oss.sonatype.org, find the repo, 'Close' it, then 'Release'
+#For best practice: tag repo on github with version using the same format "1.2.3"
