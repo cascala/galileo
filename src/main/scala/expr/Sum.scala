@@ -214,10 +214,11 @@ case class Sum(terms: Expr*) extends FunMany {
         case (a :: b :: c :: Power(CosF1(d), Number(2)) :: e, f :: g :: h :: Power(SinF1(i), Number(2)) :: j) if (a == f && b == g && c == h && d == i && e == j) => Some(Product(e :+ a :+ b :+ c))
         case (a :: b :: c :: Power(SinF1(d), Number(2)) :: e, f :: g :: h :: Power(CosF1(i), Number(2)) :: j) if (a == f && b == g && c == h && d == i && e == j) => Some(Product(e :+ a :+ b :+ c))
 
+        case (Number(m) :: a, Number(n) :: b) if (a == b) => Some( Product( a:+ Number( m + n ) ).visit() )
+        case (Number(n) :: a, b) if (a == b) => Some( Product( a:+ Number( n + 1 ) ).visit() )
+        case (a, Number(n) :: b) if (a == b) => Some( Product( a:+ Number( n + 1 ) ).visit() )
 
-        case (a, c :: d) if (a == d) => Some(Product(Sum(Number(1), c) :: a).visit())
-        case (a :: b, c) if (b == c) => Some(Product(Sum(Number(1), a) :: b).visit())
-        case (a :: b, c :: d) if (b == d) => Some(Product(Sum(a, c) :: b).visit())
+
         case _ => None
       }
       case (Fraction(a: Expr, b: Expr), Fraction(c: Expr, d: Expr)) if (b == d) => Some(Fraction(Sum(a, c), b).visit())
