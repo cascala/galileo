@@ -21,17 +21,29 @@ class WeylTest extends FunSuite {
 		env.set( "theta", Number( rng.nextDouble() ) )
 		//info( "env:" + env)
 		val indices = 0 until m.dimension
-		/* Simplify needs a bit more work :( */
-		/*
-		for( i <- indices; j <- indices; k <- indices; l <- indices ) {
-			// Bianchi
-			assert( Sum( C.valueAt( i, j, k, l ), C.valueAt( k, i, j, l ), C.valueAt( j, k, i, l ) ).visit().simplify == Number( 0 ) )
-			// (a)symmetry
-			//assert( Sum( C.valueAt( i, j, k, l ), C.valueAt( j, i, k, l ) ).visit().simplify == Number( 0 ) )
-			assert( C.valueAt( i, j, k, l ).simplify.visit(Some(env)).eval ==  C.valueAt( k, l, i, j ).simplify.visit(Some(env)).eval, "i,j,k,l:" + i + "," + j + "," + k + "," + l )
 
+		var t = 0;
+		/* Simplify needs a bit more work :( */
+		for( i <- indices; j <- indices; k <- indices; l <- indices ) {
+			val t1 = Sum( C.valueAt( i, j, k, l ), C.valueAt( k, i, j, l ), C.valueAt( j, k, i, l ) ).visit().simplify == Number( 0 )
+			// Bianchi
+			if( t1 == true )
+				println( "Test " + t + " passed"  )
+			else
+				println( "Test " + t + " failed " + Sum( C.valueAt( i, j, k, l ), C.valueAt( k, i, j, l ), C.valueAt( j, k, i, l ) ).visit().simplify )
+			t = t + 1
+			//assert( Sum( C.valueAt( i, j, k, l ), C.valueAt( k, i, j, l ), C.valueAt( j, k, i, l ) ).visit().simplify == Number( 0 ) )
+
+			val t2 = C.valueAt( i, j, k, l ).simplify.visit(Some(env)).eval == C.valueAt( k, l, i, j ).simplify.visit(Some(env)).eval
+			if( t2 == true )
+				println( "Test " + t + " passed" )
+			else
+				println( "Test " + t + " failed " + C.valueAt( i, j, k, l ).simplify.visit(Some(env)).eval + C.valueAt( k, l, i, j ).simplify.visit(Some(env)).eval )
+			assert( Sum( C.valueAt( i, j, k, l ), C.valueAt( j, i, k, l ) ).visit().simplify == Number( 0 ) )
+			//assert( C.valueAt( i, j, k, l ).simplify.visit(Some(env)).eval ==  C.valueAt( k, l, i, j ).simplify.visit(Some(env)).eval, "i,j,k,l:" + i + "," + j + "," + k + "," + l )
+			//println( "Test " + t + " passed" )
+			t = t +1 
 			// Even though the expressions are not the same yet after 'visiting', we can try to evaluate them for random env and see if they simplify as expected
 		}
-		*/
 	}
 }

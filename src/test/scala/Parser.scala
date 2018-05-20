@@ -104,6 +104,8 @@ class ParserTest extends FunSuite {
 		"cos(x*1)" -> "cos(x)",
 		"cos(x*4)" -> "cos(4.0*x)",
 		"2.0*sin(psi)^2.0+sin(psi)^2.0" -> "3.0*sin(psi)^2.0",
+		"2.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^2.0+sin(psi)^2.0*cos(theta)^2.0-1.0*sin(psi)^4.0*sin(theta)^2.0-1.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^2.0" -> 
+			"cos(psi)^2.0*sin(psi)^2.0*sin(theta)^2.0-1.0*sin(psi)^4.0*sin(theta)^2.0+sin(psi)^2.0*cos(theta)^2.0",
 		"1+10+u+1" -> "u+12.0",
 		"1+10-u+1" -> "(-1.0)*u+12.0",
 		"-1*(5+5)+15" -> "5.0",

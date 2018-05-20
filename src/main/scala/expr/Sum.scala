@@ -19,8 +19,6 @@ object Sum {
     case (c: Constant, d: Constant) => c.shortName < d.shortName
     case (c: Constant, d: Complex) => false
     case (c: Constant, d: Expr) => true
-    //case ( c:ConstantE, d:ConstantPi ) => true // handled by comparing shortname
-    //case ( c:ConstantPi, d:ConstantE ) => false
     case (c: Complex, d: Number) => false // numbers go before complex numbers
     case (c: Complex, d: Expr) => true
     case (Number(x), Number(y)) => x < y
@@ -78,16 +76,24 @@ object Sum {
       case _ => false
     }
 
-    // 1 x 2
-    case (a:Expr,Product(b,c)) => (a.leadingVariable,b.leadingVariable) match {
-      //case (Some(s),Some(t)) if (a==b) => Sum.sort(b,Product(d,e))
-      //case (Some(s),Some(t)) if (s==t) => Sum.sort(a,c)
+    // 2 x 1
+    case (Product(a,b),c) => (a.leadingVariable,c.leadingVariable) match {
+      //case (Some(s),Some(t)) if (a==c) => Sum.sort(b,d)
+      case (Some(s),Some(t)) if (s==t) => Sum.sort(a,c)
       case (Some(s),Some(t)) => s < t
       case _ => false
     }
 
-    case ( Power(a,Number(c)),Power(b,Number(d)) ) if( a == b) => c > d
-    case ( Power(a,_1),Power(b,_2)) => sort( a, b )
+    // 1 x 2
+    case (a:Expr,Product(b,c)) => (a.leadingVariable,b.leadingVariable) match {
+      //case (Some(s),Some(t)) if (a==b) => Sum.sort(b,Product(d,e))
+      case (Some(s),Some(t)) if (s==t) => Sum.sort(a,b)
+      case (Some(s),Some(t)) => s < t
+      case _ => false
+    }
+
+    case ( Power(a,Number(c)),Power(b,Number(d)) ) if( a == b ) => c > d 
+    case ( Power(a,_1),Power(b,_2)) if( a != b ) => sort( a, b )
 
     //case ( a:FunF1, b:FunF1 ) => sort( a.expr, b.expr ) 
     case ( CosF1( x ), SinF1( y ) ) if( x == y ) => true
@@ -195,8 +201,12 @@ case class Sum(terms: Expr*) extends FunMany {
       case (p1: Product, p2: Product) => (p1.factors.toList, p2.factors) match {
         // Need to also simplify things like a * sin(b)^2+ a * cos( b ) ^ 2
         //case ( a :: b :: c, d :: e :: f)
-        case (a :: Power(CosF1(b), Number(2)) :: c, d :: Power(SinF1(e), Number(2)) :: f) if (a == d && b == e && c == f) => Some(Product(c :+ a))
-        case (a :: Power(SinF1(b), Number(2)) :: c, d :: Power(CosF1(e), Number(2)) :: f) if (a == d && b == e && c == f) => Some(Product(c :+ a))
+        case (Power(CosF1(a), Number(2)) :: b, Power(SinF1(c), Number(2)) :: d) if (a == c && b == d ) => Some( Product( b ) )
+
+        case (a :: Power(CosF1(b), Number(2)) :: Power(SinF1(c), Number(2)) :: d, e :: Power(SinF1(f), Number(4)) :: g)
+          if (a == e && b == c && b == f && d == g) => Some( Product(d :+ a :+ Power( SinF1(b),Number(2) ) ) )
+        case (a :: Power(CosF1(b), Number(2)) :: c, d :: Power(SinF1(e), Number(2)) :: f) if (a == d && b == e && c == f) => Some( Product( c:+ a ) )
+        case (a :: Power(SinF1(b), Number(2)) :: c, d :: Power(CosF1(e), Number(2)) :: f) if (a == d && b == e && c == f) => Some( Product( c:+ a ) )
         case (a :: Power(CosF1(b), Number(2)) :: Nil, d :: Power(SinF1(e), Number(2)) :: Nil) if (a == d && b == e) => Some(Product(a))
         case (a :: Power(SinF1(b), Number(2)) :: Nil, d :: Power(CosF1(e), Number(2)) :: Nil) if (a == d && b == e) => Some(Product(a))
         case (a :: b :: Power(CosF1(c), Number(2)) :: d, e :: f :: Power(SinF1(g), Number(2)) :: h) if (a == e && b == f && c == g && d == h) => Some(Product(d :+ a :+ b))

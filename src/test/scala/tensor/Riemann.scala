@@ -90,7 +90,8 @@ class RiemannTest extends FunSuite {
 		info( "Without visit:" + rf.valueAt(1,2,1,2).simplify.factor.toString )
 		info( "With visit:" + rf.valueAt(1,2,1,2).simplify.factor.visit().toString )
 		*/
-		assert( rf.valueAt(1,2,1,2).simplify.factor.visit().toString == "r^2.0*sin(psi)^4.0*sin(theta)^2.0" )	
+		//println( "to be simplified: " + rf.valueAt(1,2,1,2) )
+		assert( rf.valueAt(1,2,1,2).simplify.factor.visit().toString == "sin(psi)^4.0*r^2.0*sin(theta)^2.0" )	
 
 		// this does NOT tie with the CRC book
 		val ricci = RicciTensor( m3 )	 // covariant Ricci R_ab
