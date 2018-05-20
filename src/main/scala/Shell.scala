@@ -6,9 +6,7 @@ import galileo.expr._
 import galileo.linalg._
 import galileo.trigonometry.SinF1
 
-//import scala.io.StdIn.readLine
-import scala.tools.jline.console.ConsoleReader
-//import scala.Console._
+import org.jline.reader.{LineReader,LineReaderBuilder}
 
 object Shell {
   val parser = new Parser()
@@ -110,7 +108,8 @@ object Shell {
     import parser.{ Success, NoSuccess }
 
     //val consoleReader = new ConsoleReader()
-    val cr = new ConsoleReader()
+    //val cr = new ConsoleReader()
+    val cr = LineReaderBuilder.builder().build();
  
     def loop() {
       while ( true ) {
