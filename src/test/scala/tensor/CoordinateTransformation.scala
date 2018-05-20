@@ -25,7 +25,7 @@ class CoordinateTransformationTest extends FunSuite {
 
 	test( "test1") {
 		assert( Lambda.valueAt( 0, 2 ) == CosF1( omega ) )
-		assert( Lambda.valueAt( 2, 1 ) == Product( r, SinF1( omega ), CosF1( phi ) ))
+		assert( Lambda.valueAt( 2, 1 ) == Product( SinF1( omega ), CosF1( phi ), r ))
 		assert( Lambda.valueAt( 2, 2 ) == Number( 0 ) )
 	}
 }

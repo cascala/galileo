@@ -29,8 +29,8 @@ object Product {
 		case ( Variable( x ), Number( y ) ) => false
 		case ( Variable( x ), Variable( y ) ) => x < y
 		case ( Variable( x ), Power( Variable( y ), z:Expr ) ) => x < y
-    case ( Variable( x ), _:SinF1 ) => true // darn, somehow TrigF1 is not accepted
-    case ( Variable( x ), _:CosF1 ) => true
+    case ( x:Variable, SinF1(y) ) if( y ==x ) => true // darn, somehow TrigF1 is not accepted
+    case ( x:Variable, CosF1(y) ) if( y ==x ) => true
     
     // for the same variable
     // cos < asin < atan < cos < sin < tan < exp < log 
@@ -48,9 +48,11 @@ object Product {
     case ( TanF1( x ), SinF1( y ) ) if ( x == y ) => false
     case ( TanF1( x ), CosF1( y ) ) if ( x == y ) => false
 
-    // variable before trig functions
-    case (_:Variable,_:FunF1) => true
-    case (_:FunF1,_:Variable) => false
+    // ..
+    case (a:Variable,b:FunF1) if( a != b.e ) => Product.sort(a,b.e)
+    case (a:FunF1,b:Variable) if( a.e != b) => Product.sort(a.e,b)
+    case (a:FunF1,b:FunF1) if( a.e != b.e ) => Product.sort(a.e,b.e)
+
 
     // powers before for trig functions
     case (_:Power,_:FunF1) => true

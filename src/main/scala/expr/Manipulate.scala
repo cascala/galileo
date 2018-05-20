@@ -25,7 +25,8 @@ case class Expand(expr:Expr) extends Expr with Manipulate {
 // for now, only simplify fractions by removing common factors in numerator and denominator
 case class Simplify(expr:Expr) extends Expr with Manipulate {      									  // for now, add .visit add end
 	override def visit( env:Option[Environment]=None):Expr = {
-		//println( "Info, in Simplify:" + expr.visit(env).expand.simplify.visit().info() )
+		//println( "Info, in Simplify:" + expr.visit(env) )
+		//expr.visit(env).expand.simplify.visit()
 		expr.visit(env).expand.simplify.visit()
 	}
 	def info(env:Option[Environment]=None):String = "simplify(" + expr.info(env) + ")"

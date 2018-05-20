@@ -67,10 +67,10 @@ case class Power(operand:Expr, exponent:Expr) extends FunF2 {
 
   	// a^n.extractFactor(a) -> a^(n-1)
   	// a^n.extractFactor(a^m) -> a^(n-m)
-  	override def extractFactor(possibleFactor:Expr):Option[Expr] = possibleFactor match {
-  		case this.operand => Some( Power( operand, Diff( exponent, Number( 1 ) ) ).visit() )
+  	override def extractFactor(possibleFactor:Expr):Option[Expr] = (possibleFactor,exponent) match {
+  		case (this.operand,Number(n)) if( n > 1 ) => Some( Power( operand, Diff( exponent, Number( 1 ) ) ).visit() )
   		//case this => Some( Number( 1 ) )
-  		case Power(op,ex) if ( op == operand ) => Some( Power( operand, Diff( exponent, ex ) ).visit() ) 
+  		case (Power(op,Number(m)),Number(n)) if ( op == operand && n > m ) => Some( Power( operand, Number(n-m) ).visit() ) // LEads to negative powers?
   		case _ => None
   	} 
 

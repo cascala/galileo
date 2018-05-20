@@ -112,6 +112,7 @@ case class Fraction(numerator:Expr, denominator:Expr) extends FunF2 {
 		var nn = numerator.simplify
 		var nd = denominator.simplify
 		for( possibleFactor <- numerator.possibleFactors ++ denominator.possibleFactors ) {
+			//println( "possibleFactor:" + possibleFactor )
 			( nn.extractFactor( possibleFactor ), nd.extractFactor( possibleFactor ) ) match {
 				case (Some(a),Some(b)) => { nn = a; nd = b }
 				case _ => Nil
@@ -127,7 +128,7 @@ case class Fraction(numerator:Expr, denominator:Expr) extends FunF2 {
 		nd.visit() match {
 			case Number( 1 ) => nn.visit()
 			case Number( -1 ) => Product( Number( -1 ), nn ).visit()
-			// very specifif trigonometry cases
+			// very specific trigonometry cases
 			case Product( Number( 2 ), Power( SinF1(psi:Expr), Number( 2 ) ) ) => {
 				nn.visit() match {
 					case s:Sum => s.flatTerms match {
@@ -136,13 +137,17 @@ case class Fraction(numerator:Expr, denominator:Expr) extends FunF2 {
 					}
 					case _ => Fraction( nn, nd ) // no visit here - cycle
 				}
-			}case Power( SinF1(psi:Expr), Number( 2 ) ) => {
+			}
+
+			case Power( SinF1(psi:Expr), Number( 2 ) ) => {
 				nn.visit() match {
 					case s:Sum => s.flatTerms match {
+						// (((-1.0)*(cos(psi)^2.0-1.0*sin(psi)^2.0)+1.0)/sin(psi)^2.0 -> 2
+						case Product( Number( -1 ), Sum( Power( CosF1( psi2:Expr ), Number( 2 ) ), Product( Number( -1 ), Power( SinF1( psi3:Expr ), Number( 2 ) ) ) ) ) :: Number( 1 ) :: Nil  if ( psi == psi2 && psi == psi3 ) => Number( 2 )
 						case ( Power( CosF1( psi2:Expr ), Number( 2 ) ) :: Product( Number( -1 ), Power( SinF1( psi3:Expr ), Number( 2 ) ) ) :: Number( -1 ) :: Nil ) if ( psi == psi2 && psi == psi3 ) => Number( -2 )
-						case _ => Fraction( nn, nd ) // no visit here - cycle
+						case _ => Fraction( nn, nd )//.visit() // no visit here - cycle
 					}
-					case _ => Fraction( nn, nd ) // no visit here - cycle
+					case _ => Fraction( nn, nd ) //.visit() // no visit here - cycle
 				}
 			}
 		
@@ -151,6 +156,7 @@ case class Fraction(numerator:Expr, denominator:Expr) extends FunF2 {
 					case s:Sum => s.flatTerms match {
 						case ( Product( Number( -1 ), Power( CosF1( psi1:Expr ), Number( 2 ) ) ) :: Product( Number( 5 ), Power( SinF1( psi2:Expr ), Number( 2 ) ) ) :: Number( 1 ) :: Nil ) if ( psi1 == psi2 ) => Product( Number( 3 ), Power( SinF1( psi1 ), Number( 2 ) ) )
 						case ( Power( CosF1( psi1:Expr ), Number( 2 ) ) :: Product( Number( -5 ), Power( SinF1( psi2:Expr ), Number( 2 ) ) ) :: Number( 1 ) :: Nil ) if ( psi1 == psi2 ) => Sum( Power( CosF1( psi1 ), Number( 2 ) ), Product( Number( -2 ), Power( SinF1( psi1 ), Number( 2 ) ) ) )
+						case ( Power( CosF1( psi1:Expr ), Number( 2 ) ) :: Product( Number( 3 ), Power( SinF1( psi2:Expr ), Number( 2 ) ) ) :: Number( 1 ) :: Nil ) if ( psi1 == psi2 ) => Sum( Power( CosF1( psi1 ), Number( 2 ) ), Product( Number( 2 ), Power( SinF1( psi1 ), Number( 2 ) ) ) )
 						case _ => Fraction( nn, nd ).visit()
 					}
 					case _ => Fraction( nn, nd ).visit()

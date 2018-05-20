@@ -3,6 +3,7 @@ package galileo.expr
 import galileo.complex._
 import galileo.constants._
 import galileo.environment.Environment
+//import galileo.expr.FunF1
 import galileo.linalg._
 import galileo.manipulate.Simplify
 import galileo.proof.Conversion
@@ -13,7 +14,7 @@ object Diff {
 }
 
 object Sum {
-  val sort:(Expr,Expr)=>Boolean = { (a: Expr, b: Expr) => (a, b) match {
+  val sort:(Expr,Expr)=>Boolean = (a: Expr, b: Expr) => (a, b) match {
     case (c: Complex, d: Complex) => false
     case (c: Constant, d: Constant) => c.shortName < d.shortName
     case (c: Constant, d: Complex) => false
@@ -26,24 +27,82 @@ object Sum {
     case (Number(x), Variable(y)) => false // numbers after variables
     case (Number(x), _: Expr) => false // numbers after expressions
     case (_: Expr, _: Number) => true
-    case (Product(_: Number, a: Variable), Product(_: Number, b: Variable)) => a < b
-    case (Product(_: Number, a: Expr), Product(_: Number, b: Expr ) ) => Sum.sort( a, b )
-    case (a: Expr, Product(_: Number, b: Expr ) ) => Sum.sort( a, b )
-    case (Product(_: Number, a: Expr), b: Expr ) => Sum.sort( a, b )
-    case (Product(_: Number, a: Expr, b:Expr), Product(_: Number, c: Expr, d:Expr ) ) if ( b == d ) => Sum.sort( a, c )
-    case (Product(a: Expr, b:Expr), Product(_: Number, c: Expr, d:Expr ) ) if ( b == d ) => Sum.sort( a, c )
-    case (Product(_: Number, a: Expr, b:Expr), Product( c: Expr, d:Expr ) ) if ( b == d ) => Sum.sort( a, c )
 
-    case (Power(a:Expr,b:Number), Product(c:Number, Power(d:Expr,e:Number))) if ( b == e ) => Sum.sort(a,d)
-    //case ()
+    case (Product(_: Number, a: Expr), b:Expr ) => Sum.sort( a, b )
+    case (a:Expr, Product(_: Number, b:Expr ) ) => Sum.sort( a, b )
+    
+    case (Product(_:Number, a: Expr, b:Expr), c:Expr ) => Sum.sort( Product( a, b ), c )
+    case (a:Expr, Product(_:Number, b:Expr, c:Expr ) ) => Sum.sort( a, Product( b, c ) )
+
+    case (Product(_:Number, a: Expr, b:Expr, c:Expr), d:Expr ) => Sum.sort( Product( a, b, c ), d )
+    case (a:Expr, Product(_:Number, b:Expr, c:Expr, d:Expr ) ) => Sum.sort( a, Product( b, c, d ) )
+
+    // generic product handler here
+    // 3 x 3
+    case (Product(a,b,c),Product(d,e,f)) => (a.leadingVariable,d.leadingVariable) match {
+      case (Some(s),Some(t)) if (a==d) => Sum.sort(Product(b,c),Product(e,f))
+      case (Some(s),Some(t)) if (s==t) => Sum.sort(a,d)
+      case (Some(s),Some(t)) => s < t
+      case _ => false
+    }
+
+    // 2 x 3
+    case (Product(a,b),Product(c,d,e)) => (a.leadingVariable,c.leadingVariable) match {
+      case (Some(s),Some(t)) if (a==c) => Sum.sort(b,Product(d,e))
+      case (Some(s),Some(t)) if (s==t) => Sum.sort(a,c)
+      case (Some(s),Some(t)) => s < t
+      case _ => false
+    }
+
+    // 1 x 3
+    case (a:Expr,Product(b,c,d)) => (a.leadingVariable,b.leadingVariable) match {
+      //case (Some(s),Some(t)) if (a==b) => Sum.sort(b,Product(d,e))
+      //case (Some(s),Some(t)) if (s==t) => Sum.sort(a,c)
+      case (Some(s),Some(t)) => s < t
+      case _ => false
+    }
+
+    // 3 x 2
+    case (Product(a,b,c),Product(d,e)) => (a.leadingVariable,d.leadingVariable) match {
+      case (Some(s),Some(t)) if (a==d) => Sum.sort(Product(b,c),e)
+      case (Some(s),Some(t)) if (s==t) => Sum.sort(a,d)
+      case (Some(s),Some(t)) => s < t
+      case _ => false
+    }
+
+    // 2 x 2
+    case (Product(a,b),Product(c,d)) => (a.leadingVariable,c.leadingVariable) match {
+      case (Some(s),Some(t)) if (a==c) => Sum.sort(b,d)
+      case (Some(s),Some(t)) if (s==t) => Sum.sort(a,c)
+      case (Some(s),Some(t)) => s < t
+      case _ => false
+    }
+
+    // 1 x 2
+    case (a:Expr,Product(b,c)) => (a.leadingVariable,b.leadingVariable) match {
+      //case (Some(s),Some(t)) if (a==b) => Sum.sort(b,Product(d,e))
+      //case (Some(s),Some(t)) if (s==t) => Sum.sort(a,c)
+      case (Some(s),Some(t)) => s < t
+      case _ => false
+    }
+
+    case ( Power(a,Number(c)),Power(b,Number(d)) ) if( a == b) => c > d
     case ( Power(a,_1),Power(b,_2)) => sort( a, b )
+
+    //case ( a:FunF1, b:FunF1 ) => sort( a.expr, b.expr ) 
     case ( CosF1( x ), SinF1( y ) ) if( x == y ) => true
     case ( SinF1( x ), CosF1( y ) ) if( x == y ) => false
     //case ( x:TrigF1, y:TrigF1 ) => sort( x, y ) // Don't do this ... creates cycle
 
-    case (_1, _2) => _1 < _2 // Expr ordering comparison, not numerical ordering
+    // Generic
+    case (e:Expr, f:Expr) => ( e.leadingVariable, f.leadingVariable ) match {
+      case (None,Some(s)) => true
+      case (Some(s),None) => false
+      case (Some(s),Some(t)) => s < t
+      case _ => e < f // Expr ordering comparison, not numerical ordering
     }
   }
+
   val neutralElement: Number = Number(0)
 
   def apply(terms: List[Expr]): Sum = Sum(terms: _*)
@@ -74,7 +133,9 @@ case class Sum(terms: Expr*) extends FunMany {
     return rv
   }
 
-  // simplification of sum: simplify all individual terms
+  /* simplification of sum: 
+   # simplify all individual terms
+   */
   override def simplify:Expr = Sum( flatTerms.map(term => Simplify(term).visit()).toList).visit() match {
     case s:Sum if ( s == this ) => s
     /*
@@ -108,7 +169,8 @@ case class Sum(terms: Expr*) extends FunMany {
       case (Power(CosF1(a), Number(2)), Number(-1)) => Some(Product(Number(-1), Square(SinF1(a))))
       case (Power(SinF1(a), Number(2)), Number(-1)) => Some(Product(Number(-1), Square(CosF1(a))))
 
-      // x * cos(a)^2 + y * sin( a )^2 -> ()
+      // x * cos(a)^2 + y * sin(a)^2 -> ()
+      /*
       case (Product(Number(x), Power(CosF1(a), Number(2))), Product(Number(y), Power(SinF1(b), Number(2)))) if (a == b && x <= -1 && y <= -1) =>
         Some(Sum(Product(Number(x + 1), Power(CosF1(a), Number(2))), Product(Number(y + 1), Power(SinF1(b), Number(2))), Number(-1)))
      
@@ -117,7 +179,8 @@ case class Sum(terms: Expr*) extends FunMany {
 
       case (Product(Number(x), Power(CosF1(a), Number(2))), Product(Number(y), Power(SinF1(b), Number(2)))) if (a == b && x >= 1 && y >= 1) =>
         Some(Sum(Product(Number(x - 1), Power(CosF1(a), Number(2))), Product(Number(y - 1), Power(SinF1(b), Number(2))), Number(1)))
-      
+      */
+
       // a * x + b * x -> (a+b)*x
       case ( Product( Number( a ), x ), Product( Number( b ), y ) ) if ( x == y ) => Some( Product( Number( a + b ), x ) )
       // a * x + x -> (a+1) * x
@@ -165,12 +228,43 @@ case class Sum(terms: Expr*) extends FunMany {
     }
 
     val ts = Sum(this.terms.map(t => t.visit(env)): _*).flatTerms.sortWith(Sum.sort)
-    ts match {
-      // (-3.0)*sin(psi)^2.0+((-1.0)*cos(psi)^2.0+5.0*sin(psi)^2.0+1.0 -> 0
+    ts match {  
+      case ( start :: Product( Number( n ), a:Expr, b:Expr ) :: mid :: Product( c:Expr, d:Expr ) :: end ) if ( a == c && b == d ) => Sum( start :: Product( Number( n + 1 ), a, b ) :: mid :: end ).visit()
+      case ( start :: Product( a:Expr, b:Expr ) :: mid :: Product( Number( m ), c:Expr, d:Expr ) :: end ) if ( a == c && b == d ) => Sum( start :: Product( Number( 1 + m ), a, b ) :: mid :: end ).visit()
+      case ( start :: Product( Number( n ), a:Expr, b:Expr ) :: mid :: Product( Number( m ), c:Expr, d:Expr ) :: end ) if ( a == c && b == d ) => Sum( start :: Product( Number( n + m ), a, b ) :: mid :: end ).visit()
+      case ( start :: Product( Number( n ), a:Expr, b:Expr, c:Expr ) :: mid :: Product( Number( m ), d:Expr, e:Expr, f:Expr ) :: end ) if ( a == d && b == e && c == f) => Sum( start :: Product( Number( n + m ), a, b, c ) :: mid :: end ).visit()
+      case ( start :: Product( a:Expr, b:Expr ) :: mid :: Product( c:Expr, d:Expr ) :: end ) if ( a == c && b == d ) => Sum( start :: Product( Number( 2 ), a, b ) :: mid :: end ).visit()
+      case ( start :: Product( a:Expr, b:Expr, c:Expr ) :: mid :: Product( d:Expr, e:Expr, f:Expr ) :: end ) if ( a == d && b == e && c == f) => Sum( start :: Product( Number( 2 ), a, b, c ) :: mid :: end ).visit()
+  
+      case ( Product( Number( n ), a:Expr, b:Expr ) :: mid :: Product( c:Expr, d:Expr ) :: end ) if ( a == c && b == d ) => Sum( Product( Number( n + 1 ), a, b ) :: mid :: end ).visit()
+      case ( Product( a:Expr, b:Expr ) :: mid :: Product( Number( m ), c:Expr, d:Expr ) :: end ) if ( a == c && b == d ) => Sum( Product( Number( 1 + m ), a, b ) :: mid :: end ).visit()      
+      case ( Product( Number( n ), a:Expr, b:Expr ) :: mid :: Product( Number( m ), c:Expr, d:Expr ) :: end ) if ( a == c && b == d ) => Sum( Product( Number( n + m ), a, b ) :: mid :: end ).visit()
+      case ( Product( Number( n ), a:Expr, b:Expr, c:Expr ) :: mid :: Product( Number( m ), d:Expr, e:Expr, f:Expr ) :: end ) if ( a == d && b == e && c == f ) => Sum( Product( Number( n + m ), a, b, c ) :: mid :: end ).visit()
+      case ( Product( a:Expr, b:Expr, c:Expr ) :: mid :: Product( d:Expr, e:Expr, f:Expr ) :: end ) if ( a == d && b == e && c == f) => Sum( Product( Number( 2 ), a, b, c ) :: mid :: end ).visit()
+      
+      case ( start :: Product( Number( n ), a:Expr, b:Expr ) :: Product( c:Expr, d:Expr ) :: end ) if ( a == c && b == d ) => Sum( start :: Product( Number( n + 1 ), a, b ) :: end ).visit()
+      case ( start :: Product( a:Expr, b:Expr ) :: Product( Number( m ), c:Expr, d:Expr ) :: end ) if ( a == c && b == d ) => Sum( start :: Product( Number( 1 + m ), a, b ) :: end ).visit()
+      case ( start :: Product( Number( n ), a:Expr, b:Expr ) :: Product( Number( m ), c:Expr, d:Expr ) :: end ) if ( a == c && b == d ) => Sum( start :: Product( Number( n + m ), a, b ) :: end ).visit()
+      case ( start :: Product( Number( n ), a:Expr, b:Expr, c:Expr ) :: Product( Number( m ), d:Expr, e:Expr, f:Expr ) :: end ) if ( a == d && b == e && c == f) => Sum( start :: Product( Number( n + m ), a, b, c ) :: end ).visit()
+      case ( start :: Product( a:Expr, b:Expr, c:Expr ) :: Product( d:Expr, e:Expr, f:Expr ) :: end ) if ( a == d && b == e && c == f) => Sum( start :: Product( Number( 2 ), a, b, c ) :: end ).visit()
+  
+
+      /*
+      case ( start :: Product( Number( n ), a:Expr, b:Expr ) :: mid :: Product( c:Expr, d:Expr ) :: Nil ) if ( a == c && b == d ) => Sum( start :: Product( Number( n + 1 ), a, b ) :: mid ).visit()
+      case ( start :: Product( a:Expr, b:Expr ) :: mid :: Product( Number( m ), c:Expr, d:Expr ) :: Nil ) if ( a == c && b == d ) => Sum( start :: Product( Number( 1 + m ), a, b ) :: mid ).visit()
+      case ( start :: Product( Number( n ), a:Expr, b:Expr ) :: mid :: Product( Number( m ), c:Expr, d:Expr ) ) if ( a == c && b == d ) => Sum( start :: Product( Number( n + m ), a, b ) :: mid  ).visit()
+      case ( start :: Product( Number( n ), a:Expr, b:Expr, c:Expr ) :: mid :: Product( Number( m ), d:Expr, e:Expr, f:Expr ) ) if ( a == d && b == e && c == f) => Sum( start :: Product( Number( n + m ), a, b, c ) :: mid ).visit()
+      case ( start :: Product( a:Expr, b:Expr, c:Expr ) :: mid :: Product( d:Expr, e:Expr, f:Expr ) ) if ( a == d && b == e && c == f) => Sum( start :: Product( Number( 2 ), a, b, c ) :: mid  ).visit()
+      */
+
+// (-3.0)*sin(psi)^2.0+((-1.0)*cos(psi)^2.0+5.0*sin(psi)^2.0+1.0 -> 0
       //case ( Product( Number( -3, Power( SinF1( psi1:Expr), Number( 2 ) ) ) ) ::
       //    )
+  
       case ( Product( Number( -1 ), Power( CosF1( psi1:Expr ), Number( 2 ) ) ) :: Power( SinF1( psi2:Expr ), Number( 2 ) ) :: Number( 1 ) :: Nil ) if ( psi1 == psi2 ) => Product( Number( 2 ), Power( SinF1( psi1:Expr ), Number( 2 ) ) )      
       case ( Product( Number( -1 ), Power( CosF1( psi1:Expr ), Number( 2 ) ) ) :: Product( Number( n ), Power( SinF1( psi2:Expr ), Number( 2 ) ) ) :: Number( 1 ) :: Nil ) if ( psi1 == psi2 && n > 0 ) => Product( Number( n+1 ), Power( SinF1( psi1:Expr ), Number( 2 ) ) )      
+      case ( Product( Number( -2 ), Power( CosF1( psi1:Expr ), Number( 2 ) ) ) :: Product( Number( n ), Power( SinF1( psi2:Expr ), Number( 2 ) ) ) :: Number( 2 ) :: Nil ) if ( psi1 == psi2 && n > 0 ) => Product( Number( n+2 ), Power( SinF1( psi1:Expr ), Number( 2 ) ) )      
+      
       case _ => expressify(scan(Sum.neutralElement, ts, pairSum))
     }
   }
@@ -261,19 +355,28 @@ case class Sum(terms: Expr*) extends FunMany {
     if( possibleFactor == this )
       return Some( Number( 1 ) )
 
-    val extracted = terms.foldLeft((List[Expr](), true))({ case ((l: List[Expr], good: Boolean), e: Expr) => if (good) {
-      e.extractFactor(possibleFactor) match {
-        case Some(e) => (l :+ e, true)
-        case _ => (l, false)
-      }
-    }
-    else
-      (l, false)
-    })
 
-    extracted match {
-      case (l, true) => return Some(Sum(l).visit())
-      case (_, false) => None // do nothing
+    // extract sin^2 from -2cos^2+2sin^2+2
+    ( possibleFactor, this ) match {
+      case ( Power( SinF1(psi:Expr), Number( 2 ) ), Sum( Product( Number( -2 ), Power( CosF1( psi2:Expr ), Number( 2 ) ), Product( Number( 2 ), Power( SinF1( psi3:Expr ), Number( 2 ) ) ) ) ) ) if( psi == psi2 && psi == psi3 ) =>
+        Some( Product( Number(2),Power( SinF1(psi:Expr), Number( 2 ))) )
+      case _ => {
+
+        val extracted = terms.foldLeft((List[Expr](), true))({ case ((l: List[Expr], good: Boolean), e: Expr) => if (good) {
+          e.extractFactor(possibleFactor) match {
+            case Some(e) => (l :+ e, true)
+            case _ => (l, false)
+          }
+        }
+        else
+          (l, false)
+        })
+
+        extracted match {
+          case (l, true) => return Some(Sum(l).visit())
+          case (_, false) => None // do nothing
+        }
+      }
     }
   }
 }
