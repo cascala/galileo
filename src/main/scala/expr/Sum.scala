@@ -275,7 +275,36 @@ case class Sum(terms: Expr*) extends FunMany {
       case ( Product( Number( -1 ), Power( CosF1( psi1:Expr ), Number( 2 ) ) ) :: Power( SinF1( psi2:Expr ), Number( 2 ) ) :: Number( 1 ) :: Nil ) if ( psi1 == psi2 ) => Product( Number( 2 ), Power( SinF1( psi1:Expr ), Number( 2 ) ) )      
       case ( Product( Number( -1 ), Power( CosF1( psi1:Expr ), Number( 2 ) ) ) :: Product( Number( n ), Power( SinF1( psi2:Expr ), Number( 2 ) ) ) :: Number( 1 ) :: Nil ) if ( psi1 == psi2 && n > 0 ) => Product( Number( n+1 ), Power( SinF1( psi1:Expr ), Number( 2 ) ) )      
       case ( Product( Number( -2 ), Power( CosF1( psi1:Expr ), Number( 2 ) ) ) :: Product( Number( n ), Power( SinF1( psi2:Expr ), Number( 2 ) ) ) :: Number( 2 ) :: Nil ) if ( psi1 == psi2 && n > 0 ) => Product( Number( n+2 ), Power( SinF1( psi1:Expr ), Number( 2 ) ) )      
-      
+      //-1.0*sin(psi)^2.0*cos(theta)^2.0-2.0*sin(psi)^2.0*sin(theta)^2.0+sin(psi)^2.0 -> -1.0*sin(psi)^2.0*sin(theta)^2.0
+      case ( 
+        Product( Number( -1 ), Power(  SinF1(psi1:Expr ), Number( 2 ) ), Power( CosF1( theta1:Expr ), Number( 2 ) ) ) ::
+        Product( Number( -2 ), Power(  SinF1(psi2:Expr ), Number( 2 ) ), Power( SinF1( theta2:Expr ), Number( 2 ) ) ) ::
+        Power( SinF1(psi3:Expr ), Number( 2 ) ) :: Nil ) if ( psi1 == psi2 && psi1 == psi3 && theta1 == theta2 ) => Product( Number( -1 ), Power(  SinF1(psi1:Expr ), Number( 2 ) ), Power( SinF1( theta1:Expr ), Number( 2 ) ) )
+      case ( 
+        start ::
+        Product( Number( -1 ), Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( CosF1( theta1:Expr ), Number( 2 ) ) ) ::
+        Product( Number( -2 ), Power( SinF1(psi2:Expr ), Number( 2 ) ), Power( SinF1( theta2:Expr ), Number( 2 ) ) ) ::
+        Power( SinF1(psi3:Expr ), Number( 2 ) ) ::
+        end ) if ( psi1 == psi2 && psi1 == psi3 && theta1 == theta2 ) => Sum( start :: Product( Number( -1 ), Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( SinF1( theta1:Expr ), Number( 2 ) ) ) :: end ).visit()
+      // -1.0*sin(psi)^2.0+sin(psi)^2.0*cos(theta)^2.0-1.0*sin(psi)^2.0*sin(theta)^2.0 -> -2.0*sin(psi)^2.0*sin(theta)^2.0
+      case ( 
+        start ::
+        Product( Number( -1 ), Power( SinF1(psi1:Expr ), Number( 2 ) ) ) ::
+        Product(               Power( SinF1(psi2:Expr ), Number( 2 ) ), Power( CosF1( theta1:Expr ), Number( 2 ) ) ) ::
+        Product( Number( -1 ), Power( SinF1(psi3:Expr ), Number( 2 ) ), Power( SinF1( theta2:Expr ), Number( 2 ) ) ) ::
+        end ) if ( psi1 == psi2 && psi1 == psi3 && theta1 == theta2 ) => Sum( start :: Product( Number( -2 ), Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( SinF1( theta1:Expr ), Number( 2 ) ) ) :: end ).visit()
+     case ( 
+        start ::
+        Product( Number( -1 ), Power( SinF1(psi1:Expr ), Number( 2 ) ) ) ::
+        Product(               Power( SinF1(psi2:Expr ), Number( 2 ) ), Power( CosF1( theta1:Expr ), Number( 2 ) ) ) ::
+        Product( Number( -1 ), Power( SinF1(psi3:Expr ), Number( 2 ) ), Power( SinF1( theta2:Expr ), Number( 2 ) ) ) ::
+        Nil ) if ( psi1 == psi2 && psi1 == psi3 && theta1 == theta2 ) => Sum( start :: Product( Number( -2 ), Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( SinF1( theta1:Expr ), Number( 2 ) ) ) :: Nil ).visit()
+     case ( 
+        Product( Number( -1 ), Power( SinF1(psi1:Expr ), Number( 2 ) ) ) ::
+        Product(               Power( SinF1(psi2:Expr ), Number( 2 ) ), Power( CosF1( theta1:Expr ), Number( 2 ) ) ) ::
+        Product( Number( -1 ), Power( SinF1(psi3:Expr ), Number( 2 ) ), Power( SinF1( theta2:Expr ), Number( 2 ) ) ) ::
+        end ) if ( psi1 == psi2 && psi1 == psi3 && theta1 == theta2 ) => Sum( Product( Number( -2 ), Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( SinF1( theta1:Expr ), Number( 2 ) ) ) :: end ).visit()
+     
       case _ => expressify(scan(Sum.neutralElement, ts, pairSum))
     }
   }
@@ -302,7 +331,7 @@ case class Sum(terms: Expr*) extends FunMany {
         case _ => None
     }
     // expand all terms
-    val ts = flatTerms.map(term => term.expand).toList
+    val ts = flatTerms.map(term => term.expand ).toList
     expressify( scan(Sum.neutralElement, ts, expandSum ) )
     // bring all terms to a common denominator
 

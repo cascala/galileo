@@ -184,15 +184,18 @@ case class Product( factors:Expr*) extends Expr with FunMany {
   // a * ( c + d ) -> a * c + d * a
   // Product turns into sum, potentially
   override def expand = {
-    val sumIndex = factors.zipWithIndex.find( { case (f:Expr,i:Int) => f match { 
+    // find all factors thar are a sum or are products containing a sum
+    val sumIndex = flatFactors.zipWithIndex.find( //{ case (f,i) => sumFinder( f ) } )
+      { case (f:Expr,i:Int) => f match { 
       case s:Sum => true 
       case _ => false
     } } )
+
     sumIndex match {
-      // This replaces the producct into a sum
+      // This replaces the product with a sum
       // a * (b +c ) * d -> a * b * d + a * c * d
       case Some((s:Sum,i:Int)) => { 
-        Sum( s.terms.toList.map( term => Product( factors.toList.updated(i,term) ) ) ).expand.visit() // do we need visit here?
+        Sum( s.terms.toList.map( term => Product( flatFactors.toList.updated(i,term ) ) ) ).expand.visit() // do we need visit here?
       }
       case _ => this
     }

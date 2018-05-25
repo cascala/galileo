@@ -144,6 +144,8 @@ case class Fraction(numerator:Expr, denominator:Expr) extends FunF2 {
 					case s:Sum => s.flatTerms match {
 						// (((-1.0)*(cos(psi)^2.0-1.0*sin(psi)^2.0)+1.0)/sin(psi)^2.0 -> 2
 						case Product( Number( -1 ), Sum( Power( CosF1( psi2:Expr ), Number( 2 ) ), Product( Number( -1 ), Power( SinF1( psi3:Expr ), Number( 2 ) ) ) ) ) :: Number( 1 ) :: Nil  if ( psi == psi2 && psi == psi3 ) => Number( 2 )
+						case Product( Number( -4 ), Power( CosF1( psi2:Expr ), Number( 2 ) ) ) :: Number( 4 ) :: Nil  if ( psi == psi2 ) => Number( 4 )
+						case Product( Number( -6 ), Power( CosF1( psi2:Expr ), Number( 2 ) ) ) :: Number( 6 ) :: Nil  if ( psi == psi2 ) => Number( 6 )
 						case ( Power( CosF1( psi2:Expr ), Number( 2 ) ) :: Product( Number( -1 ), Power( SinF1( psi3:Expr ), Number( 2 ) ) ) :: Number( -1 ) :: Nil ) if ( psi == psi2 && psi == psi3 ) => Number( -2 )
 						case _ => Fraction( nn, nd )//.visit() // no visit here - cycle
 					}
