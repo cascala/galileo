@@ -55,7 +55,7 @@ object Sum {
     // 1 x 3
     case (a:Expr,Product(b,c,d)) => (a.leadingVariable,b.leadingVariable) match {
       case (Some(s),Some(t)) if (a==b) => true //Sum.sort(b,Product(d,e))
-      //case (Some(s),Some(t)) if (s==t) => Sum.sort(a,b)
+      case (Some(s),Some(t)) if (s==t) => Sum.sort(a,b)
       case (Some(s),Some(t)) => s < t
       case _ => false
     }
@@ -71,7 +71,7 @@ object Sum {
     // 3 x 1 
     case (Product(a,b,c),d:Expr) => (a.leadingVariable,d.leadingVariable) match {
       case (Some(s),Some(t)) if (a==d) => false 
-      //case (Some(s),Some(t)) if (s==t) => Sum.sort(a,d)
+      case (Some(s),Some(t)) if (s==t) => Sum.sort(a,d)
       case (Some(s),Some(t)) => s < t
       case _ => false
     }
@@ -390,16 +390,31 @@ case class Sum(terms: Expr*) extends FunMany {
     //println( l );
     
     l match {
+    // cos(psi)^2.0*sin(psi)^2.0*sin(theta)^2.0+sin(psi)^4.0*sin(theta)^2.0-1.0*sin(psi)^2.0+sin(psi)^2.0*cos(theta)^2.0 -> 0.0
+    case ( 
+      Product(               Power( CosF1(psi1:Expr ), Number( 2 ) ), Power( SinF1(psi2:Expr ), Number( 2 ) ), Power( SinF1(theta1:Expr ), Number( 2 ) ) ) ::
+      Product(               Power( SinF1(psi3:Expr ), Number( 4 ) ), Power( SinF1(theta2:Expr ), Number( 2 ) ) ) ::
+      Product( Number( -1 ), Power( SinF1(psi4:Expr ), Number( 2 ) ) ) ::
+      Product(               Power( SinF1(psi5:Expr ), Number( 2 ) ), Power( CosF1(theta3:Expr ), Number( 2 ) ) ) ::
+      end ) 
+      if ( psi1 == psi2 && psi1 == psi3 && psi1 == psi4 && psi1 == psi5 && theta1 == theta2 && theta1 == theta3 ) => compressTerms( end )
 
+    // (-3.0)*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^2.0+3.0*sin(psi)^4.0*sin(theta)^2.0+4.0*sin(psi)^2.0*sin(theta)^2.0 -> 6.0*sin(psi)^4*sin(theta)^2+sin(psi)^2.0*sin(theta)^2.0
+    case ( 
+      Product( Number( -3 ), Power( CosF1(psi1:Expr ), Number( 2 ) ), Power( SinF1(psi2:Expr ), Number( 2 ) ), a ) ::
+      Product( Number(  3 ), Power( SinF1(psi3:Expr ), Number( 4 ) ), b ) ::
+      Product( Number(  4 ), Power( SinF1(psi4:Expr ), Number( 2 ) ), c ) ::
+      end ) 
+      if ( psi1 == psi2 && psi1 == psi3 && psi1 == psi4 && a == b && a == c ) => Product( Number( 6 ), Power( SinF1(psi1:Expr ), Number( 4 ) ), a ) :: Product( Power( SinF1(psi1:Expr ), Number( 2 ) ), a ) :: compressTerms( end )
+      
     // (-3.0)*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^2.0+3.0*sin(psi)^4.0*sin(theta)^2.0+3.0*sin(psi)^2.0*sin(theta)^2.0 -> 6.0*sin(psi)^4*sin(theta)^2
     case ( 
       Product( Number( -3 ), Power( CosF1(psi1:Expr ), Number( 2 ) ), Power( SinF1(psi2:Expr ), Number( 2 ) ), a ) ::
       Product( Number(  3 ), Power( SinF1(psi3:Expr ), Number( 4 ) ), b ) ::
       Product( Number(  3 ), Power( SinF1(psi4:Expr ), Number( 2 ) ), c ) ::
       end ) 
-      if ( psi1 == psi2 && psi1 == psi3 && psi1 == psi4 && a == b && a == c ) => Product( Number( 6 ), Power( SinF1(psi1:Expr ), Number( 2 ) ) ) :: a :: compressTerms( end )
+      if ( psi1 == psi2 && psi1 == psi3 && psi1 == psi4 && a == b && a == c ) => Product( Number( 6 ), Power( SinF1(psi1:Expr ), Number( 4 ) ), a ) :: compressTerms( end )
     
-  
     // (-1.0)*sin(psi)^2.0+sin(psi)^2.0*sin(theta)^2.0+sin(psi)^2.0-1.0*sin(psi)^2.0*sin(theta)^2.0 -> 0.0
     case ( 
       Product( Number( -1 ), Power( SinF1(psi1:Expr ), Number( 2 ) )                                             ) ::
@@ -430,7 +445,6 @@ case class Sum(terms: Expr*) extends FunMany {
         Product( Number( 2 ),                                          Power( SinF1( theta1:Expr ), Number( 2 ) ) ) :: 
         compressTerms( end )
 
-/*  There is some error here -- but I don't see it yet :(
     // sin(psi)^2.0-1.0*sin(psi)^2.0*cos(theta)^2.0+sin(psi)^2.0*sin(theta)^2.0 -> 2.0*sin(psi)^2.0*sin(theta)^2.0  
     case ( 
       Power( SinF1(psi1:Expr ), Number( 2 ) ) ::
@@ -438,7 +452,8 @@ case class Sum(terms: Expr*) extends FunMany {
       Product( Power( SinF1(psi3:Expr ), Number( 2 ) ), Power( SinF1( theta2:Expr ), Number( 2 ) ) ) :: 
       end )
       if ( psi1 == psi2 && psi1 == psi3 && theta1 == theta2 ) => Product( Number( 2 ), Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( SinF1( theta1:Expr ), Number( 2 ) ) ) :: compressTerms( end )
-*/
+
+    
     // sin(psi)^2.0*cos(theta)^2.0-1.0*sin(psi)^2.0-1.0*sin(psi)^2.0*sin(theta)^2.0 -> -2.0*sin(psi)^2.0*sin(theta)^2.0 
     case ( 
       Product(               Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( CosF1( theta1:Expr ), Number( 2 ) ) ) ::
@@ -446,7 +461,8 @@ case class Sum(terms: Expr*) extends FunMany {
       Product( Number( -1 ), Power( SinF1(psi3:Expr ), Number( 2 ) ), Power( SinF1( theta2:Expr ), Number( 2 ) ) ) :: 
       end )
       if ( psi1 == psi2 && psi1 == psi3 && theta1 == theta2 ) => Product( Number( -2 ), Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( SinF1( theta1:Expr ), Number( 2 ) ) ) :: compressTerms( end )
-   
+    
+
     // -1.0*sin(psi)^2.0+sin(psi)^2.0*cos(theta)^2.0-1.0*sin(psi)^2.0*sin(theta)^2.0 -> -2.0*sin(psi)^2.0*sin(theta)^2.0 
     case ( 
       Product( Number( -1 ), Power( SinF1(psi1:Expr ), Number( 2 ) ) ) ::
@@ -455,6 +471,7 @@ case class Sum(terms: Expr*) extends FunMany {
       end )
       if ( psi1 == psi2 && psi1 == psi3 && theta1 == theta2 ) => Product( Number( -2 ), Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( SinF1( theta1:Expr ), Number( 2 ) ) ) :: compressTerms( end )
     
+
     // (-1.0)*cos(psi)^2.0+sin(psi)^2.0+1.0 -> 2.0 * sin(psi)^2
     case ( 
       Product( Number( -1 ), Power( CosF1(psi1:Expr ), Number( 2 ) ) ) ::
@@ -462,7 +479,8 @@ case class Sum(terms: Expr*) extends FunMany {
       Number( 1 ) :: 
       end )
       if ( psi1 == psi2 ) => Product( Number( 2 ), Power( SinF1(psi1:Expr ), Number( 2 ) ) ) :: compressTerms( end )
-   
+    
+
     // (-2.0)*cos(psi)^2.0+2.0*sin(psi)^2.0+2.0 -> 4.0*sin(psi)^2.0
     case ( 
       Product( Number( -2 ), Power( CosF1(psi1:Expr ), Number( 2 ) ) ) ::
@@ -471,6 +489,7 @@ case class Sum(terms: Expr*) extends FunMany {
       end )
       if ( psi1 == psi2 ) => Product( Number( 4 ), Power( SinF1(psi1:Expr ), Number( 2 ) ) ) :: compressTerms( end )
     
+
     // recurse into end
     case start :: end => start :: compressTerms( end ) 
     case Nil => Number( 0 ) :: Nil

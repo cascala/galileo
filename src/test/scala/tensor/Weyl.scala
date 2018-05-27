@@ -23,15 +23,9 @@ class WeylTest extends FunSuite {
 		val indices = 0 until m.dimension
 
         // Testing the Bianchi identity
-		var t = 0;
-		// Some simplifiction is still needed
 		for( i <- indices; j <- indices; k <- indices; l <- indices ) {
-			//println( "Test " + t )
-			if( t != 132 && t != 156 && t!= 204 && t != 228 ) 
-				assert( Sum( C.valueAt( i, j, k, l ), C.valueAt( k, i, j, l ), C.valueAt( j, k, i, l ) ).visit().simplify == Number( 0 ) )
-			t = t + 1
-	
-			//println( "Test " + t)
+			assert( Sum( C.valueAt( i, j, k, l ), C.valueAt( k, i, j, l ), C.valueAt( j, k, i, l ) ).visit().simplify == Number( 0 ) )
+			
 			// Numeric check, before simplification
 			val left = C.valueAt( i, j, k, l ).visit(Some(env)).eval
 			val right = C.valueAt( k, l, i, j ).visit(Some(env)).eval
@@ -54,12 +48,8 @@ class WeylTest extends FunSuite {
 				case (Number(x),Number(y)) => assert( math.abs(x-y)< 1E-8)
 				case _ => assert( C.valueAt( i, j, k, l ).simplify.visit(Some(env)).eval == C.valueAt( k, l, i, j ).simplify.visit(Some(env)).eval, "i,j,k,l:" + i + "," + j + "," + k + "," + l )
 			}
-			t = t + 1		
-	
-			//println( "Test " + t )
-			if( t!= 158 && t != 206 ) 
-				assert( Sum( C.valueAt( i, j, k, l ), C.valueAt( j, i, k, l ) ).visit().simplify == Number( 0 ) )
-			t = t + 1 
+			
+			assert( Sum( C.valueAt( i, j, k, l ), C.valueAt( j, i, k, l ) ).visit().simplify == Number( 0 ) )
 		}
 	}
 }
