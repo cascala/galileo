@@ -107,8 +107,7 @@ object Shell {
   def main(args: Array[String]) = loop()
     import parser.{ Success, NoSuccess }
 
-    //val consoleReader = new ConsoleReader()
-    //val cr = new ConsoleReader()
+    // New jline style approach for ConsoleReader
     val cr = LineReaderBuilder.builder().build();
  
     def loop() {
