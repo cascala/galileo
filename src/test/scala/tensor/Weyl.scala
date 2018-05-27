@@ -22,27 +22,42 @@ class WeylTest extends FunSuite {
 		//info( "env:" + env)
 		val indices = 0 until m.dimension
 
+        // Testing the Bianchi identity
 		var t = 0;
-		/* Simplify needs a bit more work :( */
+		// Some simplifiction is still needed
 		for( i <- indices; j <- indices; k <- indices; l <- indices ) {
-			// Testing the Bianchi identity
-			//println ("Test " + t )
-			if( t != 132 && t != 150 && t != 156 && t != 204 && t != 210 && t != 228 ) // These cases don't work yet :(
+			//println( "Test " + t )
+			if( t != 132 && t != 156 && t!= 204 && t != 228 ) 
 				assert( Sum( C.valueAt( i, j, k, l ), C.valueAt( k, i, j, l ), C.valueAt( j, k, i, l ) ).visit().simplify == Number( 0 ) )
 			t = t + 1
 	
 			//println( "Test " + t)
-			// Numeric check
-			val left = C.valueAt( i, j, k, l ).simplify.visit(Some(env)).eval
-			val right = C.valueAt( k, l, i, j ).simplify.visit(Some(env)).eval
+			// Numeric check, before simplification
+			val left = C.valueAt( i, j, k, l ).visit(Some(env)).eval
+			val right = C.valueAt( k, l, i, j ).visit(Some(env)).eval
+			// Numeric check, after simplification
+			val le = C.valueAt( i, j, k, l ).simplify.visit(Some(env)).eval
+			val ri = C.valueAt( k, l, i, j ).simplify.visit(Some(env)).eval
 			(left, right) match {
 				case (Number(x),Number(y)) => assert( math.abs(x-y)< 1E-8)
 				case _ => assert( C.valueAt( i, j, k, l ).simplify.visit(Some(env)).eval == C.valueAt( k, l, i, j ).simplify.visit(Some(env)).eval, "i,j,k,l:" + i + "," + j + "," + k + "," + l )
 			}
-			t = t +1		
+			(le, ri) match {
+				case (Number(x),Number(y)) => assert( math.abs(x-y)< 1E-8)
+				case _ => assert( C.valueAt( i, j, k, l ).simplify.visit(Some(env)).eval == C.valueAt( k, l, i, j ).simplify.visit(Some(env)).eval, "i,j,k,l:" + i + "," + j + "," + k + "," + l )
+			}
+			(left, le) match {
+				case (Number(x),Number(y)) => assert( math.abs(x-y)< 1E-8, C.valueAt(i,j,k,l))
+				case _ => assert( C.valueAt( i, j, k, l ).simplify.visit(Some(env)).eval == C.valueAt( k, l, i, j ).simplify.visit(Some(env)).eval, "i,j,k,l:" + i + "," + j + "," + k + "," + l )
+			}
+			(right, ri) match {
+				case (Number(x),Number(y)) => assert( math.abs(x-y)< 1E-8)
+				case _ => assert( C.valueAt( i, j, k, l ).simplify.visit(Some(env)).eval == C.valueAt( k, l, i, j ).simplify.visit(Some(env)).eval, "i,j,k,l:" + i + "," + j + "," + k + "," + l )
+			}
+			t = t + 1		
 	
-			//println ("Test " + t )
-			if( t != 152 && t != 158 && t != 206 ) // t != 101 && t != 105 && t != 137 && t!= 141) // These cases don't work yet :(
+			//println( "Test " + t )
+			if( t!= 158 && t != 206 ) 
 				assert( Sum( C.valueAt( i, j, k, l ), C.valueAt( j, i, k, l ) ).visit().simplify == Number( 0 ) )
 			t = t + 1 
 		}
