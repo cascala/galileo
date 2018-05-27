@@ -153,9 +153,7 @@ case class Sum(terms: Expr*) extends FunMany {
     case e => e.simplify // OK to recurse
   }
 
-  // Uses a generic scan function, used for both sums and products
-  override def visit(env: Option[Environment] = None): Expr = {
-    def pairSum(a: Expr, b: Expr): Option[Expr] = (a, b) match {
+  private def pairSum(a: Expr, b: Expr): Option[Expr] = (a, b) match {
       case (Number(0), e) => Some(e)
       case (e, Number(0)) => Some(e)
       case (Number(a), Number(b)) => Some(Number(a + b))
@@ -165,7 +163,9 @@ case class Sum(terms: Expr*) extends FunMany {
       case (l: Expr, r: Matrix) => Some((r.toDenseMatrix + l).visit())
       case (a, b) if (a == b) => Some(Product(Number(2), a).visit())
       case (a, Product(b, c)) if (a == c) => Some(Product(Sum(Number(1), b), c).visit())
-      case (Product(a, b), Product(c, d)) if (b == d) => Some(Product(Sum(a, c), b).visit())
+      case (Product(Number(m), a), Product(Number(n), b)) if (a == b) => Some(Product( Number(m+n), a).visit()) // this applies factorization - not desired
+      
+      //case (Product(a, b), Product(c, d)) if (b == d) => Some(Product(Sum(a, c), b).visit()) // this applies factorization - not desired
       // Basic trig.
       case (Number(1), Product(Number(-1), Power(CosF1(b), Number(2)))) => Some(Square(SinF1(b)))
       case (Product(Power(CosF1(b), Number(2)), Number(-1)), Number(1)) => Some(Square(SinF1(b)))
@@ -238,7 +238,14 @@ case class Sum(terms: Expr*) extends FunMany {
       case (a, b) => None
     }
 
+  // Uses a generic scan function, used for both sums and products
+  override def visit(env: Option[Environment] = None): Expr = {
     val ts = Sum(this.terms.map(t => t.visit(env)): _*).flatTerms.sortWith(Sum.sort)
+    expressify( scan( Sum.neutralElement, compressTerms( ts ).sortWith( Sum.sort ), pairSum ) ) 
+    //match {
+    //  case Sum( s ) => .sortWith( Sum.sort )
+
+/*
     ts match {  
       case ( start :: Product( Number( n ), a:Expr, b:Expr ) :: mid :: Product( c:Expr, d:Expr ) :: end ) if ( a == c && b == d ) => Sum( start :: Product( Number( n + 1 ), a, b ) :: mid :: end ).visit()
       case ( start :: Product( a:Expr, b:Expr ) :: mid :: Product( Number( m ), c:Expr, d:Expr ) :: end ) if ( a == c && b == d ) => Sum( start :: Product( Number( 1 + m ), a, b ) :: mid :: end ).visit()
@@ -259,6 +266,9 @@ case class Sum(terms: Expr*) extends FunMany {
       case ( start :: Product( Number( n ), a:Expr, b:Expr, c:Expr ) :: Product( Number( m ), d:Expr, e:Expr, f:Expr ) :: end ) if ( a == d && b == e && c == f) => Sum( start :: Product( Number( n + m ), a, b, c ) :: end ).visit()
       case ( start :: Product( a:Expr, b:Expr, c:Expr ) :: Product( d:Expr, e:Expr, f:Expr ) :: end ) if ( a == d && b == e && c == f) => Sum( start :: Product( Number( 2 ), a, b, c ) :: end ).visit()
   
+
+      // the cases below are TOO specific
+      // needs to be cleaned up (replace by simple search in list)
 
       /*
       case ( start :: Product( Number( n ), a:Expr, b:Expr ) :: mid :: Product( c:Expr, d:Expr ) :: Nil ) if ( a == c && b == d ) => Sum( start :: Product( Number( n + 1 ), a, b ) :: mid ).visit()
@@ -286,19 +296,89 @@ case class Sum(terms: Expr*) extends FunMany {
         Product( Number( -2 ), Power( SinF1(psi2:Expr ), Number( 2 ) ), Power( SinF1( theta2:Expr ), Number( 2 ) ) ) ::
         Power( SinF1(psi3:Expr ), Number( 2 ) ) ::
         end ) if ( psi1 == psi2 && psi1 == psi3 && theta1 == theta2 ) => Sum( start :: Product( Number( -1 ), Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( SinF1( theta1:Expr ), Number( 2 ) ) ) :: end ).visit()
+
+      // sin(psi)^2.0*cos(theta)^2.0-1.0*sin(psi)^2.0-1.0*sin(psi)^2.0*sin(theta)^2.0)
+      case ( 
+        start ::
+        Product(               Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( CosF1( theta1:Expr ), Number( 2 ) ) ) ::
+        Product( Number( -1 ), Power( SinF1(psi2:Expr ), Number( 2 ) )                                             ) ::
+        Product( Number( -1 ), Power( SinF1(psi3:Expr ), Number( 2 ) ), Power( SinF1( theta2:Expr ), Number( 2 ) ) ) ::
+        end ) if ( psi1 == psi2 && psi1 == psi3 && theta1 == theta2 ) => Sum( start :: Product( Number( -1 ), Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( SinF1( theta1:Expr ), Number( 2 ) ) ) :: end ).visit()
+
+      case ( 
+        start ::
+        Product(               Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( CosF1( theta1:Expr ), Number( 2 ) ) ) ::
+        Product( Number( -1 ), Power( SinF1(psi2:Expr ), Number( 2 ) )                                             ) ::
+        Product( Number( -1 ), Power( SinF1(psi3:Expr ), Number( 2 ) ), Power( SinF1( theta2:Expr ), Number( 2 ) ) ) ::
+        Nil ) if ( psi1 == psi2 && psi1 == psi3 && theta1 == theta2 ) => Sum( start :: Product( Number( -1 ), Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( SinF1( theta1:Expr ), Number( 2 ) ) ) :: Nil ).visit()
+
+      case ( 
+        Product(               Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( CosF1( theta1:Expr ), Number( 2 ) ) ) ::
+        Product( Number( -1 ), Power( SinF1(psi2:Expr ), Number( 2 ) )                                             ) ::
+        Product( Number( -1 ), Power( SinF1(psi3:Expr ), Number( 2 ) ), Power( SinF1( theta2:Expr ), Number( 2 ) ) ) ::
+        Nil ) if ( psi1 == psi2 && psi1 == psi3 && theta1 == theta2 ) => Product( Number( -1 ), Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( SinF1( theta1:Expr ), Number( 2 ) ) ).visit()
+
+
+      // (-1.0)*cos(psi)^2.0*sin(theta)^2.0+sin(psi)^2.0*sin(theta)^2.0+3.0*sin(theta)^2.0 -> 2.0*sin(theta)^2 + 2*sin(psi)^2.0*sin(theta)^2.0
+      case (
+        start ::
+        Product( Number( -1 ), Power( CosF1(psi1:Expr ), Number( 2 ) ), Power( SinF1( theta1:Expr ), Number( 2 ) ) ) ::
+        Product(               Power( SinF1(psi2:Expr ), Number( 2 ) ), Power( SinF1( theta2:Expr ), Number( 2 ) ) ) ::
+        Product( Number(  3 ),                                          Power( SinF1( theta3:Expr ), Number( 2 ) ) ) ::
+        end ) if ( psi1 == psi2 && theta1 == theta2 && theta1 == theta3 ) => Sum( start :: Product( Number( 2 ), Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( SinF1( theta1:Expr ), Number( 2 ) ) ) :: Product( Number( 2 ), Power( SinF1( theta1:Expr ), Number( 2 ) ) ) :: end ).visit()
+
+      case (
+        Product( Number( -1 ), Power( CosF1(psi1:Expr ), Number( 2 ) ), Power( SinF1( theta1:Expr ), Number( 2 ) ) ) ::
+        Product(               Power( SinF1(psi2:Expr ), Number( 2 ) ), Power( SinF1( theta2:Expr ), Number( 2 ) ) ) ::
+        Product( Number(  3 ),                                          Power( SinF1( theta3:Expr ), Number( 2 ) ) ) ::
+        Nil ) if ( psi1 == psi2 && theta1 == theta2 && theta1 == theta3 ) => Sum( Product( Number( 2 ), Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( SinF1( theta1:Expr ), Number( 2 ) ) ) :: Product( Number( 2 ), Power( SinF1( theta1:Expr ), Number( 2 ) ) ) :: Nil ).visit()
+
+
       // -1.0*sin(psi)^2.0+sin(psi)^2.0*cos(theta)^2.0-1.0*sin(psi)^2.0*sin(theta)^2.0 -> -2.0*sin(psi)^2.0*sin(theta)^2.0
+      case ( 
+        s1 :: s2 :: 
+        Product( Number( -1 ), Power( SinF1(psi1:Expr ), Number( 2 ) ) ) ::
+        Product(               Power( SinF1(psi2:Expr ), Number( 2 ) ), Power( CosF1( theta1:Expr ), Number( 2 ) ) ) ::
+        Product( Number( -1 ), Power( SinF1(psi3:Expr ), Number( 2 ) ), Power( SinF1( theta2:Expr ), Number( 2 ) ) ) :: 
+        Nil )
+        if ( psi1 == psi2 && psi1 == psi3 && theta1 == theta2 ) => Sum( s1 :: s2 :: Product( Number( -2 ), Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( SinF1( theta1:Expr ), Number( 2 ) ) ) :: Nil ).visit()
+    
+      case ( 
+        s1 :: s2 ::
+        Product( Number( -1 ), Power( SinF1(psi1:Expr ), Number( 2 ) ) ) ::
+        Product(               Power( SinF1(psi2:Expr ), Number( 2 ) ), Power( CosF1( theta1:Expr ), Number( 2 ) ) ) ::
+        Product( Number( -1 ), Power( SinF1(psi3:Expr ), Number( 2 ) ), Power( SinF1( theta2:Expr ), Number( 2 ) ) ) ::
+        end ) if ( psi1 == psi2 && psi1 == psi3 && theta1 == theta2 ) => Sum( s1 :: s2 :: Product( Number( -2 ), Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( SinF1( theta1:Expr ), Number( 2 ) ) ) :: end ).visit()
+    
       case ( 
         start ::
         Product( Number( -1 ), Power( SinF1(psi1:Expr ), Number( 2 ) ) ) ::
         Product(               Power( SinF1(psi2:Expr ), Number( 2 ) ), Power( CosF1( theta1:Expr ), Number( 2 ) ) ) ::
         Product( Number( -1 ), Power( SinF1(psi3:Expr ), Number( 2 ) ), Power( SinF1( theta2:Expr ), Number( 2 ) ) ) ::
         end ) if ( psi1 == psi2 && psi1 == psi3 && theta1 == theta2 ) => Sum( start :: Product( Number( -2 ), Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( SinF1( theta1:Expr ), Number( 2 ) ) ) :: end ).visit()
-     case ( 
+      
+      case ( 
         start ::
         Product( Number( -1 ), Power( SinF1(psi1:Expr ), Number( 2 ) ) ) ::
         Product(               Power( SinF1(psi2:Expr ), Number( 2 ) ), Power( CosF1( theta1:Expr ), Number( 2 ) ) ) ::
         Product( Number( -1 ), Power( SinF1(psi3:Expr ), Number( 2 ) ), Power( SinF1( theta2:Expr ), Number( 2 ) ) ) ::
         Nil ) if ( psi1 == psi2 && psi1 == psi3 && theta1 == theta2 ) => Sum( start :: Product( Number( -2 ), Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( SinF1( theta1:Expr ), Number( 2 ) ) ) :: Nil ).visit()
+     
+      case ( 
+        s1 :: s2 :: s3 ::
+        Product( Number( -1 ), Power( SinF1(psi1:Expr ), Number( 2 ) ) ) ::
+        Product(               Power( SinF1(psi2:Expr ), Number( 2 ) ), Power( CosF1( theta1:Expr ), Number( 2 ) ) ) ::
+        Product( Number( -1 ), Power( SinF1(psi3:Expr ), Number( 2 ) ), Power( SinF1( theta2:Expr ), Number( 2 ) ) ) ::
+        Nil ) if ( psi1 == psi2 && psi1 == psi3 && theta1 == theta2 ) => Sum( s1 :: s2 :: s3 :: Product( Number( -2 ), Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( SinF1( theta1:Expr ), Number( 2 ) ) ) :: Nil ).visit()
+     
+     case ( 
+        s1 :: s2 :: s3 :: s4 ::
+        Product( Number( -1 ), Power( SinF1(psi1:Expr ), Number( 2 ) ) ) ::
+        Product(               Power( SinF1(psi2:Expr ), Number( 2 ) ), Power( CosF1( theta1:Expr ), Number( 2 ) ) ) ::
+        Product( Number( -1 ), Power( SinF1(psi3:Expr ), Number( 2 ) ), Power( SinF1( theta2:Expr ), Number( 2 ) ) ) ::
+        Nil ) if ( psi1 == psi2 && psi1 == psi3 && theta1 == theta2 ) => Sum( s1 :: s2 :: s3 :: s4 :: Product( Number( -2 ), Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( SinF1( theta1:Expr ), Number( 2 ) ) ) :: Nil ).visit()
+     
+
      case ( 
         Product( Number( -1 ), Power( SinF1(psi1:Expr ), Number( 2 ) ) ) ::
         Product(               Power( SinF1(psi2:Expr ), Number( 2 ) ), Power( CosF1( theta1:Expr ), Number( 2 ) ) ) ::
@@ -307,45 +387,90 @@ case class Sum(terms: Expr*) extends FunMany {
      
       case _ => expressify(scan(Sum.neutralElement, ts, pairSum))
     }
+    */
   }
 
-  // turn a list of Expr into an Expr (likely a Sum)
-  def expressify(l: List[Expr]): Expr = l.filter(factor => factor != Number(0)) match {
+  // see if we can combine terms, as part of simplification
+  private def compressTerms(l:List[Expr]):List[Expr] = { 
+    //println( l );
+    
+    l match {
+    //(-1.0)*sin(psi)^2.0*cos(theta)^2.0-1.0*sin(psi)^2.0+sin(psi)^2.0*cos(theta)^2.0+sin(psi)^2.0 -> 0.0
+    case ( 
+      Product( Number( -1 ), Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( CosF1( theta1:Expr ), Number( 2 ) ) ) ::
+      Product( Number( -1 ), Power( SinF1(psi2:Expr ), Number( 2 ) )                                             ) ::
+      Product(               Power( SinF1(psi3:Expr ), Number( 2 ) ), Power( CosF1( theta2:Expr ), Number( 2 ) ) ) ::
+      Power( SinF1( psi4:Expr ), Number( 2 ) ) :: 
+      end ) 
+      if ( psi1 == psi2 && psi1 == psi3 && psi1 == psi4 && theta1 == theta2 ) => Number( 0 ) :: compressTerms( end )
+    
+    // (-1.0)*cos(psi)^2.0*sin(theta)^2.0+sin(psi)^2.0*sin(theta)^2.0+3.0*sin(theta)^2.0 -> 2.0*sin(psi)^2.0*sin(theta)^2.0+2.0*sin(theta)^2.0
+    case ( 
+      Product( Number( -1 ), Power( CosF1(psi1:Expr ), Number( 2 ) ), Power( SinF1( theta1:Expr ), Number( 2 ) ) ) ::
+      Product(               Power( SinF1(psi2:Expr ), Number( 2 ) ), Power( SinF1( theta2:Expr ), Number( 2 ) ) ) ::
+      Product( Number(  3 ),                                          Power( SinF1( theta3:Expr ), Number( 2 ) ) ) :: 
+      end )
+      if ( psi1 == psi2 && theta1 == theta2 && theta1 == theta3 ) => 
+        Product( Number( 2 ), Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( SinF1( theta1:Expr ), Number( 2 ) ) ) :: 
+        Product( Number( 2 ),                                          Power( SinF1( theta1:Expr ), Number( 2 ) ) ) :: 
+        compressTerms( end )
+   
+    // sin(psi)^2.0*cos(theta)^2.0-1.0*sin(psi)^2.0-1.0*sin(psi)^2.0*sin(theta)^2.0 -> -2.0*sin(psi)^2.0*sin(theta)^2.0 
+    case ( 
+      Product(               Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( CosF1( theta1:Expr ), Number( 2 ) ) ) ::
+      Product( Number( -1 ), Power( SinF1(psi2:Expr ), Number( 2 ) )                                             ) ::
+      Product( Number( -1 ), Power( SinF1(psi3:Expr ), Number( 2 ) ), Power( SinF1( theta2:Expr ), Number( 2 ) ) ) :: 
+      end )
+      if ( psi1 == psi2 && psi1 == psi3 && theta1 == theta2 ) => Product( Number( -2 ), Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( SinF1( theta1:Expr ), Number( 2 ) ) ) :: compressTerms( end )
+   
+    // -1.0*sin(psi)^2.0+sin(psi)^2.0*cos(theta)^2.0-1.0*sin(psi)^2.0*sin(theta)^2.0 -> -2.0*sin(psi)^2.0*sin(theta)^2.0 
+    case ( 
+      Product( Number( -1 ), Power( SinF1(psi1:Expr ), Number( 2 ) ) ) ::
+      Product(               Power( SinF1(psi2:Expr ), Number( 2 ) ), Power( CosF1( theta1:Expr ), Number( 2 ) ) ) ::
+      Product( Number( -1 ), Power( SinF1(psi3:Expr ), Number( 2 ) ), Power( SinF1( theta2:Expr ), Number( 2 ) ) ) :: 
+      end )
+      if ( psi1 == psi2 && psi1 == psi3 && theta1 == theta2 ) => Product( Number( -2 ), Power( SinF1(psi1:Expr ), Number( 2 ) ), Power( SinF1( theta1:Expr ), Number( 2 ) ) ) :: compressTerms( end )
+    
+    // (-1.0)*cos(psi)^2.0+sin(psi)^2.0+1.0 -> 2.0 * sin(psi)^2
+    case ( 
+      Product( Number( -1 ), Power( CosF1(psi1:Expr ), Number( 2 ) ) ) ::
+      Power( SinF1(psi2:Expr ), Number( 2 ) ) ::
+      Number( 1 ) :: 
+      end )
+      if ( psi1 == psi2 ) => { println( "Hit1" ); Product( Number( 2 ), Power( SinF1(psi1:Expr ), Number( 2 ) ) ) :: compressTerms( end ) }
+   
+    // (-2.0)*cos(psi)^2.0+2.0*sin(psi)^2.0+2.0 -> 4.0*sin(psi)^2.0
+    case ( 
+      Product( Number( -2 ), Power( CosF1(psi1:Expr ), Number( 2 ) ) ) ::
+      Product( Number(  2 ), Power( SinF1(psi2:Expr ), Number( 2 ) ) ) ::
+      Number( 2 ) :: 
+      end )
+      if ( psi1 == psi2 ) => { println( "Hit2" ); Product( Number( 4 ), Power( SinF1(psi1:Expr ), Number( 2 ) ) ) :: compressTerms( end ) }
+    
+    // recurse into end
+    case start :: end => start :: compressTerms( end ) 
+    case Nil => Number( 0 ) :: Nil
+    case _ => l 
+  } }
+
+  // turn a list of terms into an Expr (likely a Sum)
+  def expressify(l: List[Expr]):Expr = l.filter(factor => factor != Number(0)) match {
     case Nil => Number(0)
     case a :: Nil => a
-    case b => Sum(b)
+    case b => Sum( b )
   }
-
-  // 2 * a + 2 * b -> 2 * (a + b)
-  /*override def factor:Expr = this.factors match {
-    case Some( e:Expr ) => e
-    case None => this
-  }
-  */
 
   override def expand: Expr = {
-      def expandSum(left: Expr, right: Expr): Option[Expr] = (left, right) match {
+      def expandSum(left: Expr, right: Expr):Option[Expr] = (left, right) match {
         case (Fraction(a,b), Fraction( c, d )) => Some( Fraction( Sum( Product( a, d ), Product( b, c ) ), Product( b, d ) ).visit() )
         case (Fraction(a,b),c) => Some( Fraction( Sum( a, Product( b, c ) ), b ).visit() )
         case (a,Fraction(b,c)) => Some( Fraction( Sum( Product( a, c ), b ), c ).visit() )
         case _ => None
     }
+
     // expand all terms
     val ts = flatTerms.map(term => term.expand ).toList
     expressify( scan(Sum.neutralElement, ts, expandSum ) )
-    // bring all terms to a common denominator
-
-    /*
-    // then, to the extent there are fractions, put everything on a common denominator
-    // a/b + c/d + e/f => ( a*d*f + c*b*f + e*b*d ) / (b*d*f)
-    val denominators = rv.flatTerms.collect( { case Fraction(_,d) => d } )
-    val nt = rv.flatTerms.map( {
-      case Fraction( n, d ) => Product( n, Product( denominators.filter( denominator => denominator != d ) ) ).visit()
-      case e => Product( e, Product( denominators ) ).visit()
-    } )
-
-    Fraction( Sum( nt ), Product( denominators ).expand ).visit()
-    */
   }
 
   override def possibleFactors = List( this ) ++ terms(0).possibleFactors

@@ -105,11 +105,13 @@ class ExpandTest extends FunSuite {
 
 	val expected = Map[String,String](
 		"a*(a+b)" -> "a^2.0+a*b",
+		"(a+b)*c" -> "a*c+b*c",
 		"(a+b)*(a+b)" -> "a^2.0+2.0*a*b+b^2.0",
 		"a*(b+(c+d))" -> "a*b+a*c+a*d",
 		"a*(b+(c+d)*f)" -> "a*b+a*c*f+a*d*f",
 		"(a+b)*(a-b)" -> "a^2.0-1.0*b^2.0",
-		"1" -> "1.0"	
+		"1" -> "1.0",
+		"(sin(psi)^2.0+3.0)*sin(theta)^2.0"	-> "sin(psi)^2.0*sin(theta)^2.0+3.0*sin(theta)^2.0"
 	)
 	val genv = new Environment( None ) 
 

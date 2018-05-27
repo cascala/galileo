@@ -228,7 +228,7 @@ case class Fraction(numerator:Expr, denominator:Expr) extends FunF2 {
 		Fraction(Product(newn),Product(newd)).visit()
 	}
 
-	override def expand = Fraction( numerator.expand, denominator.expand )
+	override def expand = Fraction( numerator.expand, denominator.expand ).visit()
 
 	override def extractFactor(possibleFactor:Expr):Option[Expr] = possibleFactor match {
 		case Fraction(n,d) => (numerator.extractFactor(n),denominator.extractFactor(d)) match {

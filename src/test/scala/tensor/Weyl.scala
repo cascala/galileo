@@ -42,7 +42,7 @@ class WeylTest extends FunSuite {
 			t = t +1		
 	
 			//println ("Test " + t )
-			if( t != 152 && t != 158 && t != 206 && t != 212 ) // t != 101 && t != 105 && t != 137 && t!= 141) // These cases don't work yet :(
+			if( t != 152 && t != 158 && t != 206 ) // t != 101 && t != 105 && t != 137 && t!= 141) // These cases don't work yet :(
 				assert( Sum( C.valueAt( i, j, k, l ), C.valueAt( j, i, k, l ) ).visit().simplify == Number( 0 ) )
 			t = t + 1 
 		}
