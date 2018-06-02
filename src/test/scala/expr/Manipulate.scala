@@ -54,12 +54,12 @@ class SimplifyTest extends FunSuite {
 		} }
 	}
 
-	val expected2 = Map[String,String](
+	val expectedMin = Map[String,String](
 		"cos(x)^2.0+2.0*sin(x)^2.0-1.0" -> "sin(x)^2.0"
 	)
 
 	test( "simplifyMin") {
-		expected foreach { case (in:String, out:String) => {
+		expectedMin foreach { case (in:String, out:String) => {
 			parser.parse( "simplify(" + in + ",min)" ) match { 
 				case Success(expressions,_) => {
 						assert( expressions.size == 1 )
