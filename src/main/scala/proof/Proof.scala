@@ -142,8 +142,7 @@ case class Proof( relation:Relation, steps:List[Rule]=List(), status:Proof.Statu
 		case Some( p ) => p
 		case None => this
 	}
-	override def toString():String = /* relation.rules.mkString( "\n") */
-	status match {
+	override def toString():String = status match {
 		case Proof.Proven => "The statement " + relation + " is true, proven in the following steps\n" + steps.mkString( "\n")
 		case Proof.Disproved => "The statement " + relation + " is false, shown in the following steps " + steps.mkString( "\n")
 		case Proof.Unproven => "The veracity of statement " + relation + " can not be determined"

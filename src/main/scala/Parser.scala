@@ -9,7 +9,7 @@ import galileo.expr._
 import galileo.exprhandler.ExprHandler
 import galileo.linalg._
 import galileo.logic._
-import galileo.manipulate.{Expand,Factor,Simplify}
+import galileo.manipulate._
 import galileo.proof.Proof
 import galileo.rand.Rand
 import galileo.solve.Solve
@@ -215,7 +215,9 @@ trait functionParser extends JavaTokenParsers {
     "sqrt" ~> "(" ~> expression <~ ")" ^^ { e:Expr => Sqrt( e ) } |
     "info" ~> "(" ~> expression <~ ")" ^^ Info |
     "eval" ~> "(" ~> expression <~ ")" ^^ Eval |
+    "complexity" ~> "(" ~> expression <~ ")" ^^ Complexity |
     "simplify" ~> "(" ~> expression <~ ")" ^^ Simplify |
+    "simplify" ~> "(" ~> expression <~ "," ~ "min" ~ ")" ^^ SimplifyMin | // Minimize expression complexity
     "expand" ~> "(" ~> expression <~ ")" ^^ Expand |
     "factor" ~> "(" ~> expression <~ ")" ^^ Factor
 }

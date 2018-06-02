@@ -1,7 +1,8 @@
 package galileo.manipulate
 
 import galileo.environment.Environment
-import galileo.expr.{Expr,Fraction,Variable}
+import galileo.constants._
+import galileo.expr._
 
 // functions like:
 // * expand
@@ -23,13 +24,32 @@ case class Expand(expr:Expr) extends Expr with Manipulate {
 }
 
 // for now, only simplify fractions by removing common factors in numerator and denominator
-case class Simplify(expr:Expr) extends Expr with Manipulate {      									  // for now, add .visit add end
-	override def visit( env:Option[Environment]=None):Expr = {
-		//println( "Info, in Simplify:" + expr.visit(env) )
-		//expr.visit(env).expand.simplify.visit()
-		expr.visit(env).expand.simplify.visit()
+case class Simplify(expr:Expr) extends Expr with Manipulate {      									 
+	override def visit(env:Option[Environment]=None):Expr = {
+		val simplifier = new ClosedFormSimplifier	
+		simplifier.simplify( expr.visit(env) )
 	}
-	def info(env:Option[Environment]=None):String = "simplify(" + expr.info(env) + ")"
+
+	def info(env:Option[Environment]=None):String = "Simplify(" + expr.info(env) + ")"
+}
+
+
+case class Complexity(expr:Expr) extends Expr with Manipulate {      									 
+	override def visit(env:Option[Environment]=None):Expr = {
+		val simplifier = new ComplexityMinimizingSimplifier	
+		Number( simplifier.complexity( expr.visit(env) ) )
+	}
+
+	def info(env:Option[Environment]=None):String = "Simplify(" + expr.info(env) + ")"
+}
+
+case class SimplifyMin(expr:Expr) extends Expr with Manipulate {      									
+	override def visit(env:Option[Environment]=None):Expr = {
+		val simplifier = new ComplexityMinimizingSimplifier
+		simplifier.simplify( expr.visit(env) )
+	}
+
+	def info(env:Option[Environment]=None):String = "SimplifyMin(" + expr.info(env) + ")"
 }
 
 // factor 4*a*b+5*a*b -> 9*a*b

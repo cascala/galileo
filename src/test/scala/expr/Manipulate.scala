@@ -53,6 +53,25 @@ class SimplifyTest extends FunSuite {
 			}
 		} }
 	}
+
+	val expected2 = Map[String,String](
+		"cos(x)^2.0+2.0*sin(x)^2.0-1.0" -> "sin(x)^2.0"
+	)
+
+	test( "simplifyMin") {
+		expected foreach { case (in:String, out:String) => {
+			parser.parse( "simplify(" + in + ",min)" ) match { 
+				case Success(expressions,_) => {
+						assert( expressions.size == 1 )
+						//println( "info" + expressions(0).info() )
+						val r = handler.eval( genv, expressions(0))		
+						assert( r != "" )
+						assert( out == r )
+					}
+				case err: NoSuccess   => fail( "Failure for " + in + ", " + out )
+			}
+		} }
+	}
 }
 
 class FactorTest extends FunSuite {
