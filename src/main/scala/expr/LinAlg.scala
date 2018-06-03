@@ -33,6 +33,7 @@ trait Matrix extends Expr with Selectable {
 			case _ => ErrorExpr( "Unhandled selection" )
 		}
 	}
+	//def components:List[Expr] = toDenseMatrix.rows.flatMap
 }
 
 // for statements like 1:2:11
