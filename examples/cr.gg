@@ -1,4 +1,9 @@
 // Demonstration of the chain rule as used for derivatives
 
+// to use the files, launch the galileo interpreter
+// then, type 'load(examples/cr.gg)', without the quotes
+// galileo>load(examples/cr.gg)
+
+
 deriv(sin(x^3),x)
 
