@@ -1,3 +1,7 @@
+// to use the files, launch the galileo interpreter
+// then, type 'load(examples/linalg.gg)', without the quotes
+// galileo>load(examples/linalg.gg)
+
 clear;
 A=[a b;c d];
 [L,U,P]=lu(A);
