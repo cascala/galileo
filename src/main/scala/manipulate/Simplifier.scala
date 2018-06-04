@@ -17,13 +17,15 @@ class ClosedFormSimplifier extends SimplifierTrait {
 	def simplify(expr:Expr,depth:Int=10,width:Int=5):Expr = expr.expand.simplify.visit()
 }
 object ComplexityMinimizingSimplifier {
+	// todo: restrict size of cache ... 
+	// otherwise, mem hog
 	val complexityCache = collection.mutable.Map[Expr,Int]()
 }
 // Simplify by creating an expression with a low complexity
 class ComplexityMinimizingSimplifier extends SimplifierTrait {
 	// each expression has a complexity score
 	// this simplifier attempts to simplify expressions by lowering that score
-	def simplify(expr:Expr,depth:Int=10,width:Int=5):Expr = {
+	def simplify(expr:Expr,depth:Int=3,width:Int=5):Expr = {
 		if( depth == 0 )
 			return expr
 
@@ -128,7 +130,7 @@ class ComplexityMinimizingSimplifier extends SimplifierTrait {
 				}
 				rv
 			}
-			case f:Fraction => //f.conversions( depth )
+			case f:Fraction => f.conversions( depth )
 			case p:Power => {
 				var rv:List[Conversion] = List() //List(Conversion( "this", p))
 				(p.operand,p.exponent) match {
