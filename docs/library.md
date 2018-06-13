@@ -14,7 +14,11 @@ The Galileo math library currently has the following mathematical objects:
   * OnesMatrix
   * EyeMatrix
   * DiagMatrix
-* Tensor, supporting contraction of lower/upper indices
+* Tensor. The tensor object is written with a view towards physics applications. The following operations are supported:
+  * Raising and lowering of indices
+  * Coordinate transformations
+  * Templated creation for several common metrics (two sphere, three sphere, Schwarzschild, Minkowski...)
+  * Differential geometry features include calculation of Ricci tensor, Ricci curvature, Riemann tensor, Weyl tensor; Christoffel symbols (first and second kind)
 
 All of these objects implement the generic _Expr_ trait.
 
