@@ -43,13 +43,13 @@ class TensorTest extends FunSuite {
 	}
 
 	test( "product") {
-		//                       (0,0,:,:)  (0,1,:,:) 
-		//	1  2     1 2 3        1  2  3    2  4  6
+        //                       (0,0,:,:)  (0,1,:,:) 
+        //  1  2     1 2 3        1  2  3    2  4  6
 		//	                      4  3  1    8  6  2
         //        x          = 
         //                       (1,0,:,:)  (1,1,:,:)
-		//	3  4     4 3 1        6 12 18    4  8 12
-		//	                     12  9  3   16 12  4
+        //	3  4     4 3 1        6 12 18    4  8 12
+        //	                     12  9  3   16 12  4
 		val p1:Tensor = t1 * t2
 		assert( p1.rank == t1.rank + t2.rank )
 		assert( p1.valueAt( 0,1,0,1 ) == Number(  4 ) )
