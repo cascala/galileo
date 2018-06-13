@@ -42,7 +42,7 @@ class TensorTest extends FunSuite {
 		assert( s2.valueAt( 0, 0 ) == Number( 6 ) )
 	}
 
-	test( "product") {
+    test( "product") {
         //                       (0,0,:,:)  (0,1,:,:) 
         //  1  2     1 2 3        1  2  3    2  4  6
         //	                      4  3  1    8  6  2
@@ -50,15 +50,15 @@ class TensorTest extends FunSuite {
         //                       (1,0,:,:)  (1,1,:,:)
         //	3  4     4 3 1        6 12 18    4  8 12
         //	                     12  9  3   16 12  4
-		val p1:Tensor = t1 * t2
-		assert( p1.rank == t1.rank + t2.rank )
-		assert( p1.valueAt( 0,1,0,1 ) == Number(  4 ) )
-		assert( p1.valueAt( 1,0,1,0 ) == Number( 12 ) )
+        val p1:Tensor = t1 * t2
+        assert( p1.rank == t1.rank + t2.rank )
+        assert( p1.valueAt( 0,1,0,1 ) == Number(  4 ) )
+        assert( p1.valueAt( 1,0,1,0 ) == Number( 12 ) )
 
-		val t3 = t1 * t2
-		val p3 = t3.valuesAtIndex( 1, 0 ) * t3.valuesAtIndex(2,0)
-		//info( "p3.indices:\n" + p3.indices )
-	}
+        val t3 = t1 * t2
+        val p3 = t3.valuesAtIndex( 1, 0 ) * t3.valuesAtIndex(2,0)
+        //info( "p3.indices:\n" + p3.indices )
+    }
 
 	test( "contract") {
 		val t3 = t1 * t2 
