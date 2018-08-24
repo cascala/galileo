@@ -10,29 +10,8 @@ object TensorIndexKind extends Enumeration {
 	val Upper, Lower = Value
 }
 
-//case class TensorDimension(n:Int)
-
 import TensorIndexKind._
 
-/*
-trait TensorIndexTrait{
-	def dimension:Int
-	def inverse:TensorIndexTrait
-	val kind:TensorIndexKind
-	//def variables:List[Variable]
-}
-
-case class TensorIndexNamed(kind:TensorIndexKind, vars:Variable* ) extends TensorIndexTrait {
-	def dimension = vars.size
-	def variables = vars.toList
-	def inverse = kind match {
-		case Upper => TensorIndexNamed( Lower, this.vars:_* )
-		case Lower => TensorIndexNamed( Upper, this.vars:_* )
-	}
-}
-*/
-
-//case class TensorIndex( kind:TensorIndexKind, dimension:Int) extends TensorIndexTrait {
 case class TensorIndex( kind:TensorIndexKind, dimension:Int) {
 	def inverse = kind match {
 		case Upper => TensorIndex( Lower, dimension )
@@ -48,22 +27,6 @@ trait TensorTrait {
 		List()
 	}
 }
-
-/*
-trait TensorTrait extends Expr {
-	override def info(env:Option[Environment]=None) = "TensorTrait"
-	def components:List[Expr]
-	def indices:List[TensorIndex]
-	def rank:TensorRank = TensorRank( indices.filter( x => x.kind == Upper ).size, indices.filter( x => x.kind == Lower ).size )
-	def valueAt(location:Int*):Expr
-	def swapIndices(left:Int,right:Int):TensorTrait 
-	def contract( upperIndex:Int, lowerIndex:Int ):TensorTrait
-	def *(that:Expr):TensorTrait
-	def +(that:Expr):TensorTrait
-	def +(that:Tensor):Tensor
-	//def +(that:Tensor):Tensor
-}
-*/
 
 object Tensor {
 	// All indices are assumed to be of the same dimension

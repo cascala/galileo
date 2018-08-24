@@ -70,6 +70,7 @@ class Environment(parent:Option[Environment]) {
 			case c:Constant => "Constant" + " " + toType( c.value )
 			case p:Product => "Product expression"
 			case m:Metric => "Metric:" + m.variables.mkString(",")
+			case t:Tensor => "Tensor:" + t.indices.mkString(",")
 			//case ps:ProductSeries => "ProductSeries expression"
 			case _ => "Expression" 
 		}
