@@ -100,6 +100,7 @@ trait tensorParser extends JavaTokenParsers with ImplicitConversions {
   val expression:Parser[Expr]
   def tensor = metric | christoffel | tensors
   def metric:Parser[Metric] = "metric.generate(" ~> metrictemplate <~ ")" ^^ { 
+    case "minkowski" => Metric.minkowski()
     case "two-sphere" => Metric.twoSphere( Variable( "r" ) )
     case "three-sphere" => Metric.threeSphere( Variable( "r" ) )
     case "schwarzschild" => Metric.schwarzschild( Variable( "r") )
@@ -170,7 +171,7 @@ trait matrixParser extends JavaTokenParsers with ImplicitConversions {
   def variableV:Parser[Variable] = ident ^^ Variable
   def variableE:Parser[Expr] = ident ^^ Variable
   //def vectorT:Parser[Expr] = vector <~ ''' ^^ { case Vector( l ) => Matrix( l.map( e=> List(e) ) ) }//VecT //| matrix <~ ''' MatT
-  def matrixT:Parser[Expr] = matrix <~ ''' ^^ { case DenseMatrix( ll ) => DenseMatrix( ll.transpose ) }
+  def matrixT:Parser[Expr] = matrix <~ '\'' ^^ { case DenseMatrix( ll ) => DenseMatrix( ll.transpose ) }
   //def vector:Parser[Expr] = "[" ~> rep1sep( factor, ' ' ) <~ "]" ^^ { case l => Matrix( List( l ) }
   def row:Parser[Expr] = "[" ~> rep1sep( m_expression, " " ) <~ "]" ^^ { case l:List[Expr] => DenseMatrix( List( l ) ) }
   def matrixCore:Parser[Expr] = "[" ~> rep1sep( rep1sep( m_expression, ' ' ), ";" ) <~ "]" ^^ Mat
@@ -189,7 +190,7 @@ trait matrixParser extends JavaTokenParsers with ImplicitConversions {
   def matrix:Parser[Expr] = 
     eye | 
     ones | zeros | rand | linspace | logspace | transpose |
-    matrixCore <~ ''' ^^ { case DenseMatrix( ll ) => DenseMatrix( ll.transpose ) } | 
+    matrixCore <~ '\'' ^^ { case DenseMatrix( ll ) => DenseMatrix( ll.transpose ) } | 
     matrixCore 
   def transpose:Parser[Expr] = "transpose" ~> "(" ~> m_expression <~ ")" ^^ { case e => Transpose( e ) }
   
