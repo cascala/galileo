@@ -18,6 +18,18 @@ object Metric {
 		)
 	}
 
+	def minkowski():Metric = Metric(
+		Tensor( List( Lower, Lower ), 4, 
+			List( 
+				Number( -1 ), Number( 0 ), Number( 0 ), Number( 0 ),
+				Number( 0 ), Number( 1 ), Number( 0 ), Number( 0 ),
+				Number( 0 ), Number( 0 ), Number( 1 ), Number( 0 ),
+				Number( 0 ), Number( 0 ), Number( 0 ), Number( 1 ) 
+			) 
+		),
+		List()
+	)
+
 	// x^2+y^2+z^2=r^2
 	// x = r*sin(theta)*cos(phi)
 	// y = r*sin(theta)*sin(phi)
