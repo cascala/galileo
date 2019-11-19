@@ -1,11 +1,14 @@
 Publication to Sonatype
 
-#Set correct version in built.sbt, following pattern 1.2.3
-#sbt publishSigned
-#Then go to https://oss.sonatype.org, find the repo, 'Close' it, then 'Release'
-#For best practice: tag repo on github with version using the same format "1.2.3"
+Set the correct version in built.sbt, following pattern 0.1.2
+>sbt publishSigned
+
+Then go to https://oss.sonatype.org, find the repo, 'Close' it, then 'Release'
+As a best practice, tag the repo on github with version using the same format "0.1.2"
 
 For Docker:
->docker build -t galileo:0.1.1 . 
-You can use something else instead of 0.1.1, or something else instead of galileo: It's just the name of the target
+>docker build -t galileo:0.1.2 . 
+You can use something else instead of 0.1.2, or something else instead of galileo: It's just the name of the target
+>docker run -it galileo
+
 

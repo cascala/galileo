@@ -7,16 +7,14 @@ libraryDependencies += "org.scalatest" % "scalatest_2.12" % "3.0.8" % "test"
 libraryDependencies += "org.jline" % "jline" % "3.13.1"
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
 
-// Publication to Sonatype Ivy - artefacts
 // Maven
 resolvers += "Artima Maven Repository" at "http://repo.artima.com/releases"
 resolvers += Resolver.url("scalasbt", new URL("http://scalasbt.artifactoryonline.com/scalasbt/sbt-plugin-releases")) (Resolver.ivyStylePatterns)
 resolvers += Resolver.url("sbt-assembly", new URL("https://dl.bintray.com/sbt/sbt-plugin-releases")) (Resolver.ivyStylePatterns)
 
-//lazy val util = enablePlugins(AssemblyPlugin).settings(site.settings)
-  
+// Publication to Sonatype Ivy - artefacts
 publishMavenStyle := true
-
+useGpg := false
 publishTo := { 
 	val nexus = "https://oss.sonatype.org/"
 	if ( isSnapshot.value ) 
