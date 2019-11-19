@@ -124,8 +124,8 @@ object Sum {
 }
 
 case class Sum(terms: Expr*) extends FunMany {
-  override lazy val flatTerms: List[Expr] = this.terms.map(term => term.flatTerms).toList.flatten
-  val elements = terms.toList
+  override lazy val flatTerms: List[Expr] = this.terms.map(term => term.flatTerms).to(List).flatten
+  val elements = terms.to(List)
 
   def info(env: Option[Environment] = None) = "Sum(" + terms.map(term => term.info(env)).mkString(",") + ")"
 
@@ -151,7 +151,7 @@ case class Sum(terms: Expr*) extends FunMany {
   /* simplification of sum: 
    # simplify all individual terms
    */
-  override def simplify:Expr = Sum( flatTerms.map(term => Simplify(term).visit()).toList).visit() match {
+  override def simplify:Expr = Sum( flatTerms.map(term => Simplify(term).visit()).to(List) ).visit() match {
     case s:Sum if ( s == this ) => s
     /*
     case s:Sum => s.flatTerms match {
@@ -207,7 +207,7 @@ case class Sum(terms: Expr*) extends FunMany {
       //case (Product( a, b), Fraction( c, d ) ) if ( a == c && b == Power( d, Number( -1 ) ) ) => Product( Number( 2 ), a, b )
       // Nice application of pattern matching to help with factorization
       // 7 * a * b + 3 * a * b -> 10 * a * b
-      case (p1: Product, p2: Product) => (p1.factors.toList, p2.factors) match {
+      case (p1: Product, p2: Product) => (p1.factors.to(List), p2.factors) match {
         // Need to also simplify things like a * sin(b)^2+ a * cos( b ) ^ 2
         //case ( a :: b :: c, d :: e :: f)
         case (Power(CosF1(a), Number(2)) :: b, Power(SinF1(c), Number(2)) :: d) if (a == c && b == d ) => Some( Product( b ) )
@@ -512,7 +512,7 @@ case class Sum(terms: Expr*) extends FunMany {
     }
 
     // expand all terms
-    val ts = flatTerms.map(term => term.expand ).toList
+    val ts = flatTerms.map(term => term.expand ).to(List)
     expressify( scan(Sum.neutralElement, ts, expandSum ) )
   }
 

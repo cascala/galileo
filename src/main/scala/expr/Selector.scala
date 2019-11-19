@@ -8,7 +8,7 @@ case class Selector( selectee:Expr,indices:Expr*) extends Expr {
 	def info(env:Option[Environment]=None) = "Selector(" + selectee + "[" + indices.mkString( "," ) + "])"
 	override def visit(env:Option[Environment]=None):Expr = {
 		val sel = selectee.visit( env )
-		val ind = indices.map( index => index.visit( env )).to[List]
+		val ind = indices.map( index => index.visit( env )).to(List)
 		sel match { 
 			case s:Selectable => {
 				try

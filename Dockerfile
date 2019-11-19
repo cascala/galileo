@@ -1,7 +1,7 @@
 # Start from openjdk and name this stage 'build'
 FROM openjdk:8 AS build
 
-ENV SBT_VERSION 0.13.12
+ENV SBT_VERSION 1.3.3
 
 RUN \
   curl -L -o sbt-$SBT_VERSION.deb http://dl.bintray.com/sbt/debian/sbt-$SBT_VERSION.deb && \
@@ -21,7 +21,7 @@ RUN sbt assembly
 
 FROM openjdk:8
 COPY --from=build \
-    /galileo/target/scala-2.12/Galileo-assembly-0.1.2.jar galileo.jar
+    /galileo/target/scala-2.13/Galileo-assembly-0.1.3.jar galileo.jar
 
 CMD [ "java", "-jar", "galileo.jar" ]
 

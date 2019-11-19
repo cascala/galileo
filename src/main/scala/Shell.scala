@@ -110,7 +110,7 @@ object Shell {
     // New jline style approach for ConsoleReader
     val cr = LineReaderBuilder.builder().build();
  
-    def loop() {
+    def loop(): Unit = {
       while ( true ) {
         val exprSrc = cr.readLine( "galileo> ")
         parser.parse(exprSrc) match {   

@@ -7,7 +7,7 @@ import galileo.expr.{Expr,Fraction,Number,Product,Sum}
 object Kronecker {
 	def apply(indices:TensorIndex*) = { 
 		val sz = indices.map( index => index.dimension ).foldLeft( Int.MaxValue )(math.min(_,_))
-		DiagTensor(indices.toList, List.fill( sz )( Number( 1 ) ) )//.toTensor
+		DiagTensor(indices.to(List), List.fill( sz )( Number( 1 ) ) )//.toTensor
 	}
 }
 
@@ -63,9 +63,9 @@ case class DiagTensor( indices:List[TensorIndex], elements:List[Expr] ) extends 
 	def valueAt( location:Int*) = {
 		val dims = indices.map( index => index.dimension )
 		// check dimensionality
-		location.toList.zip( dims ).foreach( { case (x,y) => require ( x < y ) } )
+		location.to(List).zip( dims ).foreach( { case (x,y) => require ( x < y ) } )
 		val head = location.head
-		location.toList.foldRight( true )( (_1,_2) => _2 && ( _1 == head ) ) match {
+		location.to(List).foldRight( true )( (_1,_2) => _2 && ( _1 == head ) ) match {
 			case true => elements( head )
 			case false => Number( 0 )
 		}

@@ -5,7 +5,7 @@ import galileo.environment.Environment
 case class Max( exprs:Expr* ) extends Expr {
 	override def eval() = Max( exprs.map( expr => expr.eval() ):_* ).visit()
 
-	override def visit(env:Option[Environment]) = exprs.map( expr => expr.visit( env ) ).to[List] match {
+	override def visit(env:Option[Environment]) = exprs.map( expr => expr.visit( env ) ).to(List) match {
 		case Nil => this
 		case e :: Nil => e // Max of list with one entry
 		case Number( a ) :: Number( b ) :: Nil => Number( Math.max( a, b ) )
@@ -22,7 +22,7 @@ case class Max( exprs:Expr* ) extends Expr {
 	}
 	override def toString() = "max(" + exprs.mkString( "," ) + ")"
 	override def info(env:Option[Environment]=None):String = "Max(" + exprs.mkString(",") + ")"
-	def variables:List[Variable] = exprs.toList.flatMap( expr => expr.variables )
+	def variables:List[Variable] = exprs.to(List).flatMap( expr => expr.variables )
 }
 
 case class Abs( e:Expr ) extends Expr {

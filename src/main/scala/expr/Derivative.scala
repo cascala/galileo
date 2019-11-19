@@ -33,7 +33,7 @@ case class Derivative( y:Expr, x:Expr ) extends Expr {
 			var leftFactors:List[Expr] = Nil
 			for( i <- 0 until p.factors.size ) {
 				val factor:Expr = p.factors( i )
-				val rightFactors:List[Expr] = p.factors.takeRight( p.factors.size - i - 1 ).to[List]
+				val rightFactors:List[Expr] = p.factors.takeRight( p.factors.size - i - 1 ).to(List)
 				val term = Product( leftFactors ++ rightFactors :+ Derivative( factor, b ) ).visit()
 				terms = terms :+ term
 				leftFactors = leftFactors :+ factor  

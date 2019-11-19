@@ -28,7 +28,7 @@ object Rand{
 
 case class Rand(exprs:Expr*) extends Expr with Statement {
 	def info(env:Option[Environment]=None) = "Rand(" + exprs.map( e => e.info(env)).mkString(",") + ")"
-	override def visit(env:Option[Environment]) = exprs.map( expr => expr.visit( env ) ).to[List] match {
+	override def visit(env:Option[Environment]) = exprs.map( expr => expr.visit( env ) ).to(List) match {
 		case Number( d ) :: Nil if ( d%1 == 0 ) => Rand( d.toInt )
 		case Number( d ) :: Nil => ErrorExpr( "rand(arg) only works for integer values of arg" )
 		case Number( d1 ) :: Number( d2 ) :: Nil if( d1%1 == 0 && d2%1== 0 ) => Rand( d1.toInt, d2.toInt )

@@ -19,7 +19,7 @@ class TensorTest extends FunSuite {
         assert( t1.rank.toInt == 2 )
         assert( t1.valueAt( 0, 0 ) == Number( 1 ) )
         assert( t1.valueAt( 0, 1 ) == Number( 2 ) )
-        //assert( t1.totalSize == 4 )
+        //assert( t1.to(List)alSize == 4 )
         
         assert( t2.rank.toInt == 2 )
         assert( t2.valueAt( 0, 0 ) == Number( 1 ) )

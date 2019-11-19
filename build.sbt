@@ -1,15 +1,15 @@
 organization := "com.github.cascala"
 name := "Galileo"
-version := "0.1.2"
-scalaVersion := "2.12.8"
+version := "0.1.3"
+scalaVersion := "2.13.1"
 scalacOptions ++= Seq( "-deprecation", "-feature" )
-libraryDependencies += "org.scalatest" % "scalatest_2.12" % "3.0.8" % "test"
+libraryDependencies += "org.scalatest" % "scalatest_2.13" % "3.0.8" % "test"
 libraryDependencies += "org.jline" % "jline" % "3.13.1"
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
 
 // Maven
-resolvers += "Artima Maven Repository" at "http://repo.artima.com/releases"
-resolvers += Resolver.url("scalasbt", new URL("http://scalasbt.artifactoryonline.com/scalasbt/sbt-plugin-releases")) (Resolver.ivyStylePatterns)
+resolvers += "Artima Maven Repository" at "https://repo.artima.com/releases"
+resolvers += Resolver.url("scalasbt", new URL("https://scalasbt.artifactoryonline.com/scalasbt/sbt-plugin-releases")) (Resolver.ivyStylePatterns)
 resolvers += Resolver.url("sbt-assembly", new URL("https://dl.bintray.com/sbt/sbt-plugin-releases")) (Resolver.ivyStylePatterns)
 
 // Publication to Sonatype Ivy - artefacts

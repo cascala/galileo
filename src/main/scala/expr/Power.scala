@@ -11,10 +11,10 @@ case class Power(operand:Expr, exponent:Expr) extends FunF2 {
 	val b = exponent
 	override def toString() = {
 		def factorToString( e : Expr) = e match {
-			case Sum(_, _) ⇒ "(" + e.toString() + ")"
+			case Sum(_, _) => "(" + e.toString() + ")"
 			case Product(_,_) => "(" + e.toString() + ")"
 			case c:Complex => "(" + c.toString() + ")"
-			case _ ⇒ e.toString()
+			case _ => e.toString()
 		}
 		factorToString( operand ) + "^" + factorToString(exponent)
 	}
@@ -34,7 +34,7 @@ case class Power(operand:Expr, exponent:Expr) extends FunF2 {
 		case ( Number( l ), Number( r ) ) => Number( math.pow(l, r ) )
 		case ( Power( o, el ), er ) => Power( o, Product( el, er ) ).visit()
 		case ( Complex( r:Number, i:Number ), n:Number ) => ( Complex( r, i ) ^ n ).visit() // env )
-		case ( p:Product,e) => Product( p.factors.map( f => Power( f, e ) ).toList ).visit()
+		case ( p:Product,e) => Product( p.factors.map( f => Power( f, e ) ).to(List) ).visit()
 		//case (c:Complex(Number(l),Number(r)), Number( e ) ) => c^r
 		case ( m:Matrix, Number( n ) ) if ( n == 2 ) => Product( m, m ).visit()
 		case ( m:Matrix, Number( n ) ) if ( n % 1 == 0 && n > 2 ) => Product( Product( m, m ), Power( m, Number( n - 2 ) ) ).visit()

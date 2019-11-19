@@ -66,10 +66,10 @@ case class Tensor( indices:List[TensorIndex], components:List[Expr]) extends Exp
 	def info(env:Option[Environment]=None) = "Tensor(" + indices + "," + components + ")"
 	def toMatrix:Matrix = {
 		require( indices.size == 2 )
-		DenseMatrix( components.grouped(indices(1).dimension ).toList )
+		DenseMatrix( components.grouped(indices(1).dimension ).to(List) )
 	}
 
-	def valueAt( location:Int* ):Expr = this.valueAt( location.to[List] )
+	def valueAt( location:Int* ):Expr = this.valueAt( location.to(List) )
 	private def valueAt( location:List[Int]):Expr = {
 		require( location.size == rankInt )
 		for( i <- 0 until rankInt ) {
@@ -87,7 +87,7 @@ case class Tensor( indices:List[TensorIndex], components:List[Expr]) extends Exp
 		require( right < this.rankInt )
 
 		val swappedIndices = this.indices.updated(left,this.indices(right)).updated(right,this.indices(left))
-		//val allAddresses = ( 0 until this.totalSize )
+		//val allAddresses = ( 0 until this.to(List)alSize )
 		var swappedComponents:List[Expr] = List()
 		for( i <- 0 until this.totalSize ) {
 			var loc = this.location( i )
@@ -102,7 +102,7 @@ case class Tensor( indices:List[TensorIndex], components:List[Expr]) extends Exp
 		require( index < this.rankInt )
 		require( value >= 0 )
 		require( value < indices(index).dimension )
-		Tensor( indices.patch( index, Nil, 1 ), locations( index, value ).map( location => this.valueAt( location ) ).to[List] )
+		Tensor( indices.patch( index, Nil, 1 ), locations( index, value ).map( location => this.valueAt( location ) ).to(List) )
 	}
 
 	// all locations for all indices associated with index set to value

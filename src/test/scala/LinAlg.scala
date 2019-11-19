@@ -73,13 +73,13 @@ class LinAlgTest001 extends FunSuite {
 	}
 
 	val rng = new Random()
-	def checker( mat:DenseMatrix, sz:Int ):Unit = {
+	def checker( mat:DenseMatrix, sz:Int ): Unit = {
 		assert( mat.numRows == sz )
 		assert( mat.numCols == sz )
 
-		def colChecker(nc:Int=1){
+		def colChecker(nc:Int=1): Unit = {
 			var rhs = ( 0 until sz ).map( elem => List.fill(nc){elem} ) //.to[ListBuffer]
-			val b1 = DenseMatrix( Mapper( rhs.map( row => row.map( elem => ( 5 + elem ) * rng.nextDouble() ) ).to[List] ) )
+			val b1 = DenseMatrix( Mapper( rhs.map( row => row.map( elem => ( 5 + elem ) * rng.nextDouble() ) ).to(List) ) )
 
 			val x = mat.solve( b1 )
 			val b2 = ( mat * x ).visit()

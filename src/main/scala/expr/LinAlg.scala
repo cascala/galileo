@@ -53,7 +53,7 @@ object LinSpace {
 // to handle b:e and b:i:end
 case class RowVector( begin:Expr, end:Expr, incr:Expr ) extends Expr {
 	override def visit(env:Option[Environment]=None) = (begin.visit(env), end.visit(env), incr.visit(env)) match {
-		case (Number(b),Number(e),Number(i)) => DenseMatrix( List( ( b to e by i ).map( n => Number( n ) ).to[List] ) )
+		case (Number(b),Number(e),Number(i)) => DenseMatrix( List( ( BigDecimal( b ) to BigDecimal( e ) by BigDecimal( i ) ).map( n => Number( n.toDouble ) ).to(List) ) )
 		case (b,e,i) => RowVector(b,e,i)
 	}
 	def info(env:Option[Environment]=None) = "RowVector(" + begin + "," + end + "," + incr + ")"
@@ -277,11 +277,11 @@ case class LowerTriangularMatrix( cols:List[List[Expr]] ) extends Expr with Matr
 	*  ...
 	*/
 	def solve( rhs:DenseMatrix ):DenseMatrix = {
-		var x:List[List[Expr]] = Nil//rhs.rows.map( row => row.to[ListBuffer] ).to[ListBuffer]
+		var x:List[List[Expr]] = Nil//rhs.rows.map( row => row.to(ListBuffer) ).to(ListBuffer)
 		// Forward substitution
 		for( i <- 0 until this.numRows )
 		{
-			var xi = rhs.rows( i ).to[ListBuffer]
+			var xi = rhs.rows( i ).to(ListBuffer)
 			for( k <- 0 until xi.size )
 			{
 				var xik:Expr=xi(k)
@@ -294,7 +294,7 @@ case class LowerTriangularMatrix( cols:List[List[Expr]] ) extends Expr with Matr
 				//x(i) = x(i).map( elem => Sum( elem, Product( Product( Number( -1 ), cols(j)(i-j) ), x(i)(j) ) ) )
 			}
 			// not strictly needed as diag is always 1...
-			x = x :+ xi.map( elem => Fraction( elem, cols(i)(0) ).visit() ).to[List] 
+			x = x :+ xi.map( elem => Fraction( elem, cols(i)(0) ).visit() ).to(List) 
 		}
 		DenseMatrix( x )
 	}
@@ -356,11 +356,11 @@ case class UpperTriangularMatrix( rows:List[List[Expr]] ) extends Matrix {
 	
 	// TODO: Improve implementation
 	def solve( rhs:DenseMatrix ):DenseMatrix = {
-		var x:ListBuffer[List[Expr]] = ListBuffer.fill(rhs.numRows){ List.fill(rhs.numCols){ Number( 0 ) } } //rhs.rows.map( row => row.to[ListBuffer] ).to[ListBuffer]
+		var x:ListBuffer[List[Expr]] = ListBuffer.fill(rhs.numRows){ List.fill(rhs.numCols){ Number( 0 ) } } //rhs.rows.map( row => row.to(ListBuffer) ).to(ListBuffer)
 		// Backward substitution
 		for( i <- this.numRows - 1 to 0 by -1 ) //until this.numRows )
 		{
-			var xi = rhs.rows( i ).to[ListBuffer]
+			var xi = rhs.rows( i ).to(ListBuffer)
 			for( k <- 0 until xi.size )
 			{
 				var xik:Expr = xi(k)
@@ -369,9 +369,9 @@ case class UpperTriangularMatrix( rows:List[List[Expr]] ) extends Matrix {
 
 				xi = xi.updated( k, xik )
 			}
-			x( i ) = xi.map( elem => Fraction( elem, rows(i)(0) ).visit() ).to[List] // ::: x :: Nil// divide by diagonal
+			x( i ) = xi.map( elem => Fraction( elem, rows(i)(0) ).visit() ).to(List) // ::: x :: Nil// divide by diagonal
 		}
-		DenseMatrix( x.to[List] )
+		DenseMatrix( x.to(List) )
 	}
 
 	lazy val toDenseMatrix:DenseMatrix = {
@@ -441,7 +441,7 @@ case class RowPermutationMatrixInverse( ps:ListBuffer[Int] ) extends Matrix {
 	override def visit(env:Option[Environment]=None) = this
 
 	lazy val rowPositions:ListBuffer[Int] = {
-		var rp = (0 until ps.size ).to[ListBuffer]
+		var rp = (0 until ps.size ).to(ListBuffer)
 		for( i <- ps.size - 1 to 0 by -1 ) { 
 			val p = ps(i)
 				if( p != i )
@@ -523,7 +523,7 @@ case class RowPermutationMatrix( ps:ListBuffer[Int] ) extends Matrix {
 	override def visit(env:Option[Environment]=None) = this
 
 	lazy val rowPositions:ListBuffer[Int] = {
-		var rp = (0 until ps.size ).to[ListBuffer]
+		var rp = (0 until ps.size ).to(ListBuffer)
 		for( i <- 0 until ps.size ) { 
 			val p = ps(i)
 				if( p != i )
@@ -664,7 +664,7 @@ case class DenseMatrix( rows:List[List[Expr]]) extends Expr with Matrix {
 	lazy val _lup = {
 		var lc:List[List[Expr]] = Nil // List of list of expr, cols of L
 		var ur:List[List[Expr]] = Nil // List of list of expr, rows of U
-		val ps:ListBuffer[Int] = ( 0 until this.numRows ).to[ListBuffer] // P, permutatations
+		val ps:ListBuffer[Int] = ( 0 until this.numRows ).to(ListBuffer) // P, permutatations
 		//println( "ps: " + ps )
 		var rs = rows
 		var nr = rows

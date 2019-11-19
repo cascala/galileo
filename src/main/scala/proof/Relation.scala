@@ -58,7 +58,7 @@ case class Equality(left:Expr, right:Expr ) extends Relation {
 			for( cr <- crs )
 			{
 				if( cl.expr == cr.expr )
-					rv = rv :+ Rule( "LHS rule: " + cl.description + ", RHS rule: " + cr.description, Truth( cl.expr + "=" + cr.expr ) )
+					rv = rv :+ Rule( "LHS rule: " + cl.description + ", RHS rule: " + cr.description, Truth( cl.expr.toString + "=" + cr.expr.toString ) )
 				else
 					rv = rv :+ Rule( "LHS rule: " + cl.description + ", RHS rule: " + cr.description, Equality( cl.expr, cr.expr ) )
 			}
@@ -136,10 +136,10 @@ case class Equality(left:Expr, right:Expr ) extends Relation {
 		(left,right) match {
 			//case Number(a), Number(b) if ( a == b ) => rv = rv :+ Rule( "Equality of numbers", Truth( a + "=" + b ) )
 			case (a:LogF1,b:LogF1) => rv = rv :+ Rule( "Inverse of log on both sides", Equality( a.e, b.e ) ) 
-			case (a:Expr,b:Expr) if ( a == b ) => rv = rv :+ Rule( "Equality of expressions", Truth( a + "=" + b ) )
+			case (a:Expr,b:Expr) if ( a == b ) => rv = rv :+ Rule( "Equality of expressions", Truth( a.toString + "=" + b.toString ) )
 			case (Product( a, b), Product( c, d) ) if ( a == c ) => rv = rv :+ Rule( "Removal of common factor " + a, Equality( b, d ) )
 			case (a:Expr, Product( Number( -1 ), b:Expr ) ) if ( a == b ) => rv = rv :+ Rule( "Removal of -1", Equality( a , Number( 0 ) ) )
-			case (Number(a), Number(b)) => rv = rv :+ Rule( "Inequality of numbers", Falsitude( a + "!=" + b ) )
+			case (Number(a), Number(b)) => rv = rv :+ Rule( "Inequality of numbers", Falsitude( a.toString + "!=" + b.toString ) )
 			/*case (v:Variable, Number( 0 ) ) => rv = rv :+ Rule( "Conditional truth if " + v " equals 0", Conditional( 
 				(Condition( Equality( v, Number( 0 ) ), Truth( v + "=" 0 ), 
 				(Condition( InEquality( v, Number( 0 ) ), Equaltity( v, Number( 0 ) ) )
@@ -147,9 +147,9 @@ case class Equality(left:Expr, right:Expr ) extends Relation {
 				*/
 			case (Variable(a),Variable(b)) => rv = rv :+ Rule( "Inequality of variables", Falsitude( a + "!=" + b ) )
 			case (Sum( a, b ), c:Expr) if ( a == c ) => rv = rv :+ Rule( "Removal of common term " + a, Equality( b, Number( 0 ) ) )
-			case ( Fraction( Number( 1 ), a:Expr ), Power( b:Expr, Number( -1 ) ) ) if ( a == b ) => rv = rv :+ Rule( "1/x=x^(-1)", Truth( left + "=" + right ) )
+			case ( Fraction( Number( 1 ), a:Expr ), Power( b:Expr, Number( -1 ) ) ) if ( a == b ) => rv = rv :+ Rule( "1/x=x^(-1)", Truth( left.toString + "=" + right.toString ) )
 			case ( Fraction( Number( 1 ), Power( a:Expr, e:Expr ) ), Power( b:Expr, f:Expr ) ) if ( a == b && e == -f ) => 
-				rv = rv :+ Rule( "1/x^n=x^(-n)", Truth( left + "=" + right ) )
+				rv = rv :+ Rule( "1/x^n=x^(-n)", Truth( left.toString + "=" + right.toString ) )
 			//case (Number( a ), Sum( Number( b ), c ) ) if ( b == a ) => rv = rv :+ Rule( "Removal of common term " + a, Equality( Number( 0 ), c ) )
 			//case (Number( a ), Sum( Number( b ), c ) ) if ( a > b ) => rv = rv :+ Rule( "Subtract " + Number( b ) + "from both sides", Equality( Number( a - b ), c ) )
 			//case (Number( a ), Sum( Number( b ), c ) ) if ( a < b ) => rv = rv :+ Rule( "Subtract " + Number( a ) + "from both sides", Equality( Number( 0 ), Sum( Number( b - a ), c ) ) )

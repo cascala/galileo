@@ -41,7 +41,7 @@ trait Christoffel extends Expr {
 	def info(env:Option[Environment]=None) = this.getClass.getSimpleName + "(" + variables.mkString + "," + components.mkString + ")"
 
 	val dimension = variables.size
-	def valueAt( location:Int* ):Expr = this.valueAt( location.to[List] )
+	def valueAt( location:Int* ):Expr = this.valueAt( location.to(List) )
 	private def valueAt( location:List[Int]):Expr = {
 		require( location.size == 3 )
 		for( i <- 0 until 3 ) {

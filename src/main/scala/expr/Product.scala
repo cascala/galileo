@@ -78,7 +78,7 @@ object Product {
 case class Product( factors:Expr*) extends Expr with FunMany {
 	override def toString():String = factors.map( factor => factor.factorToString() ).mkString( "*" ) // be careful -- there is a lower * as well...
 	def info(env:Option[Environment]=None) = "Product(" + factors.map( factor => factor.info(env) ).mkString(",") + ")"
-  val elements = factors.toList
+  val elements = factors.to(List)
   override def denominatorToString():String = "(" + toString() + ")"
   override def toStringWithSign() = factors(0) match {
 		case Number( v ) if v > 0  => "+" + this.toString() //" * " + e2.factorToString()
@@ -93,7 +93,7 @@ case class Product( factors:Expr*) extends Expr with FunMany {
 
     // non-nested product factors
     // this is like flatten
-  	override lazy val flatFactors:List[Expr] = this.factors.map( factor => factor.flatFactors ).toList.flatten
+  	override lazy val flatFactors:List[Expr] = this.factors.map( factor => factor.flatFactors ).to(List).flatten
 
   	override def eval() = Product( factors.map( factor => factor.eval() ):_* ).visit() // eval will replace all vars and constants, the rest is just turning it into numbers
 
@@ -168,7 +168,7 @@ case class Product( factors:Expr*) extends Expr with FunMany {
 
     found match { 
       // Found one - splice factors and re-insert
-      case Some((Some(e),i:Int)) => Some( expressify( factors.toList.updated( i, e ) ) )
+      case Some((Some(e),i:Int)) => Some( expressify( factors.to(List).updated( i, e ) ) )
       case Some(_) => None
       case None => None
     }
@@ -199,7 +199,7 @@ case class Product( factors:Expr*) extends Expr with FunMany {
       // This replaces the product with a sum
       // a * (b +c ) * d -> a * b * d + a * c * d
       case Some((s:Sum,i:Int)) => { 
-        Sum( s.flatTerms.toList.map( term => Product( flatFactors.toList.updated(i,term ) ) ) ).expand.visit()
+        Sum( s.flatTerms.to(List).map( term => Product( flatFactors.to(List).updated(i,term ) ) ) ).expand.visit()
       }
       case _ => this
     }
@@ -215,5 +215,5 @@ case class Product( factors:Expr*) extends Expr with FunMany {
       expressify( scan( Product.neutralElement, factors, factorPair ) )
     } 
 
-  override def simplify:Expr = Product( this.flatFactors.map( factor => Simplify( factor ) ).toList ).visit()
+  override def simplify:Expr = Product( this.flatFactors.map( factor => Simplify( factor ) ).to(List) ).visit()
 }

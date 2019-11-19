@@ -14,8 +14,8 @@ object LeviCevita {
 
 		}
 
-		val rv = Tensor( indices.toList, List[Expr]() )
+		val rv = Tensor( indices.to(List), List[Expr]() )
 		val allAddresses = ( 0 until rv.totalSize )
-		Tensor( indices.toList, allAddresses.map( address => rv.location( address ) ).map( lcValue ).toList )
+		Tensor( indices.to(List), allAddresses.map( address => rv.location( address ) ).map( lcValue ).to(List) )
 	}
 }
