@@ -32,20 +32,20 @@ sbt run
 ## Usage as a library
 You can use Galileo as a mathematical library in any JVM language (Java, Kotlin, Scala...).
 For details, see:
-[http://search.maven.org/#artifactdetails%7Ccom.github.cascala%7Cgalileo_2.11%7C0.1%7Cjar](http://search.maven.org/#artifactdetails%7Ccom.github.cascala%7Cgalileo_2.11%7C0.1%7Cjar)
+[https://search.maven.org/search?q=g:com.github.cascala](https://search.maven.org/search?q=g:com.github.cascala)
 
 For Maven, one can use:
 ```
 <dependency>
     <groupId>com.github.cascala</groupId>
-    <artifactId>galileo_2.11</artifactId>
-    <version>0.1.1</version>
+    <artifactId>galileo_2.13</artifactId>
+    <version>0.1.3</version>
 </dependency>
 ```
 
 For sbt, one can use:
 ```
-libraryDependencies += "com.github.cascala" %% "galileo" % "0.1.1"
+libraryDependencies += "com.github.cascala" %% "galileo" % "0.1.3"
 ```
 
 
