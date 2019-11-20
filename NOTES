@@ -11,4 +11,7 @@ For Docker:
 You can use something else instead of 0.1.2, or something else instead of galileo: It's just the name of the target
 >docker run -it galileo
 
+To upload the Docker image to Docker hub:
+https://ropenscilabs.github.io/r-docker-tutorial/04-Dockerhub.html
+
 

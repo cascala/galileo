@@ -11,10 +11,26 @@ Differentiating features:
 
 Galileo is available as both
 * a [standalone, interpreted language](docs/language.md), with its own REPL, and, 
-* a [library](docs/library.md) for use in JAVA or other JVM languages (Scala, Kotlin).
+* a [library](docs/library.md) for use in JAVA or other JVM languages (Scala, Kotlin)
+
+## Usage as a standalone tool (REPL)
+
+### Running a pre-built Docker image
+A Docker image of Galileo is available on Docker hub, and can be run as follows (on Mac or Linux):
+```
+docker run -it --rm cascala/galileo:0.1.3
+```
+
+### Building from source
+
+Galileo can also be built from its source files using the 'sbt' build system:
+```
+git clone https://github.com/cascala/galileo.git
+sbt run
+```
 
 ## Usage as a library
-You can use Galileo as a mathematical library, using sbt, Maven etc.
+You can use Galileo as a mathematical library in any JVM language (Java, Kotlin, Scala...).
 For details, see:
 [http://search.maven.org/#artifactdetails%7Ccom.github.cascala%7Cgalileo_2.11%7C0.1%7Cjar](http://search.maven.org/#artifactdetails%7Ccom.github.cascala%7Cgalileo_2.11%7C0.1%7Cjar)
 
@@ -32,12 +48,6 @@ For sbt, one can use:
 libraryDependencies += "com.github.cascala" %% "galileo" % "0.1.1"
 ```
 
-## Usage as a standalone tool (REPL)
-Galileo uses the 'sbt' build system. After cloning the repository, running
-```
-sbt run
-```
-will launch the galileo interactive shell (REPL).
 
 ## Detailed documentation
 Detailed documentation is available for the 

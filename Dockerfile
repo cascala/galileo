@@ -15,9 +15,8 @@ WORKDIR /galileo
 
 ADD . /galileo
 
-# This works inside the docker image; not locally (at least not for me)
+# Build the 'fat' jar
 RUN sbt assembly
-
 
 FROM openjdk:8
 COPY --from=build \
