@@ -18,15 +18,15 @@ Galileo is available as both
 ### Running a pre-built Docker image
 A Docker image of Galileo is available on Docker hub, and can be run as follows (on Mac or Linux):
 ```
-docker run -it --rm cascala/galileo:0.1.3
+$ docker run -it --rm cascala/galileo:0.1.3
 ```
 
 ### Building from source
 
 Galileo can also be built from its source files using the 'sbt' build system:
 ```
-git clone https://github.com/cascala/galileo.git
-sbt run
+$ git clone https://github.com/cascala/galileo.git
+$ sbt run
 ```
 
 ## Usage as a library
