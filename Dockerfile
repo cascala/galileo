@@ -20,7 +20,7 @@ RUN sbt assembly
 
 FROM openjdk:8
 COPY --from=build \
-    /galileo/target/scala-2.13/Galileo-assembly-0.1.3.jar galileo.jar
+    /galileo/target/scala-2.13/Galileo-assembly-0.1.3-SNAPSHOT.jar galileo.jar
 
 CMD [ "java", "-jar", "galileo.jar" ]
 
