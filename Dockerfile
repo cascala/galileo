@@ -18,9 +18,10 @@ ADD . /galileo
 # Build the 'fat' jar
 RUN sbt assembly
 
-FROM openjdk:8
+FROM openjdk:8-jre
+ENV VERSION 0.1.4-SNAPSHOT
 COPY --from=build \
-    /galileo/target/scala-2.13/Galileo-assembly-0.1.4-SNAPSHOT.jar galileo.jar
+    /galileo/target/scala-2.13/Galileo-assembly-$VERSION.jar galileo.jar
 
 CMD [ "java", "-jar", "galileo.jar" ]
 
