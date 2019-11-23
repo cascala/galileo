@@ -1,4 +1,7 @@
 # Galileo
+
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.github.cascala/galileo_2.13/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.github.cascala/galileo_2.13/)
+
 Galileo is the genesis of a symbolic and numerical math tool written in Scala; a Computer Algebra System (CAS).
 It's similar to matlab or octave, but has many features of maple and mathematica as well in the sense that it supports variables and symbolic calculations.
 
