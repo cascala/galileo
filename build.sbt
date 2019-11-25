@@ -14,7 +14,7 @@ resolvers += Resolver.url("sbt-assembly", new URL("https://dl.bintray.com/sbt/sb
 
 // Publication to Sonatype Ivy - artefacts
 publishMavenStyle := true
-useGpg := false
+//useGpg := false
 publishTo := { 
 	val nexus = "https://oss.sonatype.org/"
 	if ( isSnapshot.value ) 
