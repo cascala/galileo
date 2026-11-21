@@ -5,7 +5,8 @@
 Galileo is a computer algebra system (CAS) written in Scala. It works with numbers like Matlab or Octave, and with symbols like Maple or Mathematica: variables can stay unknown, and expressions are simplified, differentiated and solved symbolically.
 
 What sets it apart:
-* **Tensors and differential geometry:** metrics, Christoffel symbols, and the Riemann, Ricci, Einstein and Weyl tensors
+* **Tensors and differential geometry:** metrics (custom, ready-made, or induced on a surface), Christoffel symbols, the Riemann, Ricci, Einstein and Weyl tensors, Gaussian and Kretschmann curvature, and geodesics, with results simplified and typeset
+* **Differential equations:** numerical geodesics and ODE solutions, drawn in 2D or 3D (`geodesic`, `odeplot`, `odesolve`)
 * **Simplification rules**, through the `simplify` command
 * **Symbolic matrices:** you can invert a matrix that contains symbols
 * **Plotting:** 2D curves, parametric curves, 3D surfaces and space curves (`plot`, `parametric`, `plot3d`, `surface`, `parametric3d`, `show`)
@@ -82,6 +83,6 @@ Build the image locally with `docker build -t cascala/galileo .`. To publish bot
 
 ## Documentation
 
-* [Language reference](docs/language.md): numbers, variables, simplification, calculus, plotting, matrices and tensors
+* [Language reference](docs/language.md): numbers, variables, simplification, calculus, plotting, matrices, tensors and differential geometry
 * [Library reference](docs/library.md)
 * Example scripts are in [examples/](examples/)

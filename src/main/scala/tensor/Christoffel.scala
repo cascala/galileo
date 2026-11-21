@@ -86,8 +86,9 @@ trait ChristoffelU extends Expr with Statement {
 	def info(env:Option[Environment]=None) = this.getClass.getSimpleName + "(" + expr + ")"
 	val expr:Expr
 	val generator:Metric=>Christoffel
+	// results are simplified and shown as a list of non-zero components
 	override def visit(env:Option[Environment]=None) = expr.visit( env ) match {
-		case metric:Metric => generator( metric )
+		case metric:Metric => galileo.geometry.Named.christoffel( this.getClass.getSimpleName, metric )
 		case a => this //.apply(a)
 	}
 }

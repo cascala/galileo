@@ -236,8 +236,9 @@ trait TensorU extends Expr with Statement {
 	def info(env:Option[Environment]=None) = this.getClass.getSimpleName + "(" + expr + ")"
 	val expr:Expr
 	val generator:Metric=>Tensor
+	// results are simplified and shown as a list of non-zero components (scalars as expressions)
 	override def visit(env:Option[Environment]=None) = expr.visit( env ) match {
-		case metric:Metric => generator( metric )
+		case metric:Metric => galileo.geometry.Named.tensor( this.getClass.getSimpleName, metric )
 		case a => this //.apply(a)
 	}
 }
