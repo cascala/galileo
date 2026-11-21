@@ -39,7 +39,7 @@ object Metric {
 		Tensor( List( Lower, Lower ), 2, 
 			List( Square( radius ), Number( 0 ), Number( 0 ), Product( Square( radius ), Square( SinF1( Variable ( "theta" ) ) ) ) )
 		),
-		List( "theta", "phi " ).map( x => Variable( x ) )
+		List( "theta", "phi" ).map( x => Variable( x ) )
 	)
 
 	// x^2+y^2+z^2+w^2=r^2
@@ -55,7 +55,7 @@ object Metric {
 				Number( 0 ), Number( 0 ), Product( Square( radius ), Square( SinF1( Variable ( "psi" ) ) ), Square( SinF1( Variable ( "theta" ) ) ) )
 			)
 		),
-		List( "psi", "theta", "phi " ).map( x => Variable( x ) )
+		List( "psi", "theta", "phi" ).map( x => Variable( x ) )
 	)
 
 	// Schwarzschild metric
@@ -68,7 +68,7 @@ object Metric {
 					Product( Number( -1 ), Fraction( radius - r_s, radius ) ), Number( 0 ), Number( 0 ), Number( 0 ),
 					Number( 0 ), Fraction( radius, radius - r_s ), Number( 0 ), Number( 0 ),
 					Number( 0 ), Number( 0 ), Square( radius ), Number( 0 ),
-					Number( 0 ), Number( 0 ), Number( 0 ), Product( Square( radius ), Square( SinF1( Variable( "phi" ) ) ) )
+					Number( 0 ), Number( 0 ), Number( 0 ), Product( Square( radius ), Square( SinF1( Variable( "theta" ) ) ) )
 				)
 			),
 			List( "t", "r", "theta", "phi" ).map( x => Variable( x ) )
@@ -77,8 +77,15 @@ object Metric {
 }
 
 // g^ab
-case class Metric private(tensor:Tensor,variables:List[Variable]) extends Expr {
+case class Metric private(tensor:Tensor,variables:List[Variable]) extends Expr with galileo.plot.Displayable {
 	def info(env:Option[Environment]=None) = "Metric(" + tensor + ",[" + variables.mkString(",") + "])"
+	// shown as a line element, ds^2 = g_ab dx^a dx^b
+	override def toString() = galileo.geometry.LineElement.text( this )
+	def mimeBundle:Map[String,String] = Map(
+		"text/plain" -> toString(),
+		"text/latex" -> galileo.geometry.LineElement.latex( this ),
+		"text/markdown" -> galileo.geometry.LineElement.latex( this )
+	)
 	def inverse:Metric = {
 		val indices = tensor.indices.map( index => index.inverse )
 		val m = tensor.toMatrix.inverse.toDenseMatrix.rows.flatten

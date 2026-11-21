@@ -6,7 +6,7 @@ Galileo is the genesis of a symbolic and numerical math tool written in Scala; a
 It's similar to matlab or octave, but has many features of maple and mathematica as well in the sense that it supports variables and symbolic calculations.
 
 Differentiating features:
-* Support for tensor operations and differential geometry operations (Christoffel symbols, Ricci and Riemann tensors)
+* Differential geometry: metrics (custom, ready-made or induced on surfaces), Christoffel symbols, Riemann, Ricci, Einstein and Weyl tensors, Gaussian and Kretschmann curvature, geodesic equations, and numerical geodesics and ODEs with 2D/3D plots
 * Powerful simplification rules (accessible using the `simplify` command)
 * Symbolic matrix manipulation (you can invert a matrix containing symbols)
 * Support for logic operations

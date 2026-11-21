@@ -11,8 +11,9 @@ case class Power(operand:Expr, exponent:Expr) extends FunF2 {
 	val b = exponent
 	override def toString() = {
 		def factorToString( e : Expr) = e match {
-			case Sum(_, _) => "(" + e.toString() + ")"
-			case Product(_,_) => "(" + e.toString() + ")"
+			case _:Sum => "(" + e.toString() + ")"
+			case _:Product => "(" + e.toString() + ")"
+			case _:Fraction => "(" + e.toString() + ")"
 			case c:Complex => "(" + c.toString() + ")"
 			case _ => e.toString()
 		}

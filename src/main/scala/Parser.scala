@@ -15,6 +15,7 @@ import galileo.proof.Proof
 import galileo.rand.Rand
 import galileo.solve.Solve
 import galileo.tensor._
+import galileo.geometry._
 import galileo.trigonometry._
 
 class Parser extends builtinParser with exprParser { 
@@ -99,17 +100,33 @@ trait exprParser extends logicParser with functionParser with matrixParser with 
 // Tensor related Parser functionality
 trait tensorParser extends JavaTokenParsers with ImplicitConversions {
   val expression:Parser[Expr]
-  def tensor = metric | christoffel | tensors
-  def metric:Parser[Metric] = "metric.generate(" ~> metrictemplate <~ ")" ^^ { 
-    case "minkowski" => Metric.minkowski()
+  def tensor = metric | christoffel | tensors | geometry
+  def metric:Parser[Expr] = "metric.generate(" ~> metrictemplate <~ ")" ^^ { 
+    case "minkowski" => MetricTemplates.minkowski
     case "two-sphere" => Metric.twoSphere( Variable( "r" ) )
     case "three-sphere" => Metric.threeSphere( Variable( "r" ) )
     case "schwarzschild" => Metric.schwarzschild( Variable( "r") )
-  } 
-  def metrictemplate:Parser[String] = "two-sphere" | "three-sphere" | "schwarzschild"
+    case "polar" => MetricTemplates.polar
+    case "euclidean" => MetricTemplates.euclidean
+    case "spherical" => MetricTemplates.spherical
+    case "torus" => MetricTemplates.torus
+    case "hyperbolic" => MetricTemplates.hyperbolic
+  } |
+  // metric( [x1 x2 ...], [g11 g12 ...; g21 g22 ...; ...] )
+  ( "metric" ~ "(" ~> expression ) ~ ( "," ~> expression <~ ")" ) ^^ { case c~m => MetricU( c, m ) }
+  def metrictemplate:Parser[String] = "two-sphere" | "three-sphere" | "schwarzschild" | "minkowski" | "polar" | "euclidean" | "spherical" | "torus" | "hyperbolic"
   def christoffel = // these are not tensors - small technicality
     "christoffelfirst(" ~> expression <~ ")" ^^ ChristoffelFirstU |
-    "christoffelsecond(" ~> expression <~ ")" ^^ ChristoffelSecondU
+    "christoffelsecond(" ~> expression <~ ")" ^^ ChristoffelSecondU |
+    "christoffel" ~ "(" ~> expression <~ ")" ^^ ChristoffelSecondU
+  def args:Parser[List[Expr]] = "(" ~> repsep( expression, "," ) <~ ")"
+  // differential geometry and differential equations
+  def geometry:Parser[Expr] =
+    "inducedmetric" ~ "(" ~> expression ~ ( "," ~> expression <~ ")" ) ^^ { case x~u => InducedMetricU( x, u ) } |
+    ( "gausscurvature" | "kretschmann" | "geodesics" | "inverse" ) ~ ( "(" ~> expression <~ ")" ) ^^ { case n~e => MetricFunctionU( n, e ) } |
+    "geodesic" ~> args ^^ { a => GeodesicU( a ) } |
+    "odeplot" ~> args ^^ { a => OdeU( true, a ) } |
+    "odesolve" ~> args ^^ { a => OdeU( false, a ) }
 
   def tensors = 
     "riemannfirst" ~> "(" ~> expression <~ ")" ^^ RiemannFirstU |
@@ -175,7 +192,8 @@ trait matrixParser extends JavaTokenParsers with ImplicitConversions {
   def matrixT:Parser[Expr] = matrix <~ '\'' ^^ { case DenseMatrix( ll ) => DenseMatrix( ll.transpose ) }
   //def vector:Parser[Expr] = "[" ~> rep1sep( factor, ' ' ) <~ "]" ^^ { case l => Matrix( List( l ) }
   def row:Parser[Expr] = "[" ~> rep1sep( m_expression, " " ) <~ "]" ^^ { case l:List[Expr] => DenseMatrix( List( l ) ) }
-  def matrixCore:Parser[Expr] = "[" ~> rep1sep( rep1sep( m_expression, ' ' ), ";" ) <~ "]" ^^ Mat
+  // elements are separated by spaces or commas: [a b c] or [a, -b, c] (a space before a minus sign means subtraction: [a -b] is [a-b])
+  def matrixCore:Parser[Expr] = "[" ~> rep1sep( rep1sep( m_expression, opt( ',' ) ), ";" ) <~ "]" ^^ Mat
   def rowVector:Parser[Expr] = 
     m_expression ~ ":" ~ m_expression ~ ":" ~ m_expression ^^ { case a~_~b~_~c => RowVector( a, c, b ) } |
     m_expression ~ ":" ~ m_expression                      ^^ { case a~_~b     => RowVector( a, b, Number( 1 ) ) }
