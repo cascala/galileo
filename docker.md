@@ -1,11 +1,10 @@
 Docker Instructions
 
-Building phase:
->docker build -t galileo:0.1.1 . 
+Build:
+>docker build -t cascala/galileo:0.2.0 -t cascala/galileo:latest .
 
-You can use something else instead of 0.1.1, or something else instead of galileo: It's just the name of the target
+Run:
+>docker run -it --rm cascala/galileo
 
-Run phase:
->docker run -it galileo:0.1.1
-
-
+Publish (after `docker login`), for Intel and Apple Silicon at once:
+>docker buildx build --platform linux/amd64,linux/arm64 -t cascala/galileo:0.2.0 -t cascala/galileo:latest --push .

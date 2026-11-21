@@ -72,6 +72,41 @@ galileo>deriv(x^2,x)
 2.0*x 
 ```
 
+## Plotting
+`plot` samples one or more expressions over a range of a variable.
+```
+galileo>plot(sin(x), x, 0, 2*pi)
+galileo>plot(sin(x), cos(x), x^2/10, x, -pi, pi)
+galileo>f = x^3 - 2*x
+galileo>plot(f, deriv(f, x), x)
+```
+The range is optional and defaults to -10 .. 10. User-defined variables and constants (pi, e) are substituted, and poles (such as `1/x` or `tan(x)`) are clipped rather than stretching the chart.
+
+`parametric` plots a curve given by two expressions of one parameter:
+```
+galileo>parametric(cos(3*t), sin(2*t), t, 0, 2*pi)
+```
+
+### 3D plots
+```
+galileo>plot3d(sin(x)*cos(y), x, -pi, pi, y, -pi, pi)
+galileo>surface(sin(u)*cos(v), sin(u)*sin(v), cos(u), u, 0, pi, v, 0, 2*pi)
+galileo>parametric3d(cos(t), sin(t), t/(2*pi), t, 0, 6*pi)
+```
+* `plot3d(f, x, a, b, y, c, d)` draws the surface z = f(x, y)
+* `surface(fx, fy, fz, u, a, b, v, c, d)` draws a parametric surface
+* `parametric3d(fx, fy, fz, t, a, b)` draws a curve in space
+
+### Combining plots
+Plots are values, so they can be stored in variables. `show` overlays several 2D plots, or several 3D plots:
+```
+galileo>p = plot(exp(-x^2), x, -3, 3)
+galileo>q = plot(1/(1+x^2), x, -3, 3)
+galileo>show(p, q)
+galileo>show(surface((2+0.7*cos(v))*cos(u), (2+0.7*cos(v))*sin(u), 0.7*sin(v), u, 0, 2*pi, v, 0, 2*pi), parametric3d((2+0.7*cos(3*t))*cos(2*t), (2+0.7*cos(3*t))*sin(2*t), 0.7*sin(3*t), t, 0, 2*pi))
+```
+In Jupyter (iGalileo), plots are interactive: you can zoom, pan, and rotate 3D plots. An SVG copy is stored with the notebook. In the REPL, 2D plots are drawn as text charts, and 3D plots print a short summary.
+
 ## Matrices and tensors
 ### Matrix manipulation
 

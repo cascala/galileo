@@ -10,6 +10,7 @@ import galileo.exprhandler.ExprHandler
 import galileo.linalg._
 import galileo.logic._
 import galileo.manipulate._
+import galileo.plot.{Plot,Show}
 import galileo.proof.Proof
 import galileo.rand.Rand
 import galileo.solve.Solve
@@ -55,11 +56,11 @@ override def selector:Parser[Expr] =
   }
 }
 
-trait exprParser extends logicParser with functionParser with matrixParser with tensorParser {
+trait exprParser extends logicParser with functionParser with matrixParser with tensorParser with plotParser {
   val expression:Parser[Expr] = chainl1( term, "+" ^^^ Sum2 | "-" ^^^ Sub | "||" ^^^ Or2 ) 
   def term:Parser[Expr] = chainl1( power, "*" ^^^ Product2 | "/" ^^^ Div | "&&" ^^^ And2 ) 
   def power:Parser[Expr] = chainl1( factor, "^" ^^^ Power ) 
-  def factor:Parser[Expr] = selector | mats | tensor | function | deriv | boolOps |
+  def factor:Parser[Expr] = plotting | selector | mats | tensor | function | deriv | boolOps |
     rowVector |
     floatingPointNumber ^^ NumD | 
     bool | 
@@ -248,4 +249,17 @@ trait builtinParser extends JavaTokenParsers {
   def who:Parser[Expr] = "who" ^^ { case(_:String) => new Who() }
   def whos:Parser[Expr] = "whos" ^^ { case(_:String) => new Whos() }
   def path:Parser[String] = "[^)]+".r // ^^ { _.toString }
+}
+
+// Plotting commands; they are expressions, so p = plot(...) and show(p, q) work
+trait plotParser extends JavaTokenParsers {
+  val expression:Parser[Expr]
+  private def args:Parser[List[Expr]] = "(" ~> rep1sep( expression, "," ) <~ ")"
+  def plotting:Parser[Expr] =
+    "plot3d" ~> args ^^ Plot.plot3dFromArgs |
+    "parametric3d" ~> args ^^ Plot.parametric3dFromArgs |
+    "parametric" ~> args ^^ Plot.parametricFromArgs |
+    "surface" ~> args ^^ Plot.surfaceFromArgs |
+    "show" ~> args ^^ { a => Show( a ) } |
+    "plot" ~> args ^^ Plot.fromArgs
 }

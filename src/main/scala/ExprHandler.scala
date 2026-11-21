@@ -15,15 +15,19 @@ import galileo.trigonometry._
 // Used by the Shell to handle expressions (Abstract Syntax Tree)
 // I need to add an explicit eval step (replacing variables etc)
 class ExprHandler{
-  def eval(env:Environment, expr:Expr):String = {
+  def eval(env:Environment, expr:Expr):String = evaluate( env, expr ).toString
+
+  // Like eval, but returns the resulting expression rather than its string form,
+  // so that callers (e.g. a Jupyter kernel) can render rich output such as plots
+  def evaluate(env:Environment, expr:Expr):Expr = {
     expr match {
-      case Who() => env.toString
-      case Whos() => env.toString
-      case Clear() => { env.clear; "" }
-      case s:SystemCommand => s.toString()
-      case Exit() => { System.exit( 0 ); "" } // caught in Shell, rethrown there
+      case Who() => StringExpr( env.toString )
+      case Whos() => StringExpr( env.toString )
+      case Clear() => { env.clear; StringExpr( "" ) }
+      case s:SystemCommand => StringExpr( s.toString() )
+      case Exit() => { System.exit( 0 ); StringExpr( "" ) } // caught in Shell, rethrown there
       // Do we need to pass e by reference?
-      case e:Expr => { val ans = visit( env, e ); env.set( "ans", ans ); ans.toString }
+      case e:Expr => { val ans = visit( env, e ); env.set( "ans", ans ); ans }
     }
   }
 
