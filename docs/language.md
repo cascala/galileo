@@ -41,21 +41,12 @@ The commands 'simplify', 'factor' and 'expand' can be used to manipulate express
 
 The 'simplify' command simplifies an expression:
 ```
-m=metric.generate(three-sphere)
-et=einsteintensor(m)
+galileo>simplify(sin(y)^2 + cos(y)^2)
+1.0
+galileo>simplify(r/(r-r_s)*(r-r_s)/r)
+1.0
 ```
-The Einstein tensor for any metric contains combinations of second order derivatives of the metric expression, which can be quite complex before simplification:
-```
-Tensor(List(TensorIndex(Lower,3), TensorIndex(Lower,3)),List(((-1.0)*(2.0*(2.0*r^2.0*cos(psi)^2.0-2.0*r^2.0*sin(psi)^2.0)*r^2.0*sin(psi)^2.0-8.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0)-4.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0)/(4.0*r^4.0*sin(psi)^4.0)+((-1.0)*(2.0*(2.0*r^2.0*cos(psi)^2.0*sin(theta)^2.0-2.0*r^2.0*sin(psi)^2.0*sin(theta)^2.0)*r^2.0*sin(psi)^2.0*sin(theta)^2.0-8.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^4.0)-4.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^4.0)/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^4.0)+(-1.0)*((((-1.0)*(2.0*(2.0*r^2.0*cos(psi)^2.0-2.0*r^2.0*sin(psi)^2.0)*r^2.0*sin(psi)^2.0-8.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0)-4.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0)/(4.0*r^4.0*sin(psi)^4.0)+((-1.0)*(2.0*(2.0*r^2.0*cos(psi)^2.0*sin(theta)^2.0-2.0*r^2.0*sin(psi)^2.0*sin(theta)^2.0)*r^2.0*sin(psi)^2.0*sin(theta)^2.0-8.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^4.0)-4.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^4.0)/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^4.0))/r^2.0+(2.0*((-2.0)*r^2.0*cos(psi)^2.0+2.0*r^2.0*sin(psi)^2.0)*r^2.0/(4.0*r^4.0)+4.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0/(4.0*r^4.0*sin(psi)^2.0)+(-1.0)*(2.0*(2.0*r^2.0*sin(psi)^2.0*cos(theta)^2.0-2.0*r^2.0*sin(psi)^2.0*sin(theta)^2.0)*r^2.0*sin(psi)^2.0*sin(theta)^2.0-8.0*r^4.0*sin(psi)^4.0*cos(theta)^2.0*sin(theta)^2.0)/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^4.0)+(-4.0)*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^2.0/(4.0*r^4.0*sin(psi)^2.0*sin(theta)^2.0)+(-4.0)*r^4.0*sin(psi)^4.0*cos(theta)^2.0*sin(theta)^2.0/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^4.0))/(r^2.0*sin(psi)^2.0)+(2.0*((-2.0)*r^2.0*cos(psi)^2.0*sin(theta)^2.0+2.0*r^2.0*sin(psi)^2.0*sin(theta)^2.0)*r^2.0/(4.0*r^4.0)+4.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^4.0/(4.0*r^4.0*sin(psi)^2.0*sin(theta)^2.0)+2.0*((-2.0)*r^2.0*sin(psi)^2.0*cos(theta)^2.0+2.0*r^2.0*sin(psi)^2.0*sin(theta)^2.0)*r^2.0*sin(psi)^2.0/(4.0*r^4.0*sin(psi)^4.0)+(-4.0)*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^2.0/(4.0*r^4.0*sin(psi)^2.0)+4.0*r^4.0*sin(psi)^4.0*cos(theta)^2.0*sin(theta)^2.0/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^2.0)+(-4.0)*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^4.0/(4.0*r^4.0*sin(psi)^2.0*sin(theta)^2.0)+(-4.0)*r^4.0*sin(psi)^4.0*cos(theta)^2.0*sin(theta)^2.0/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^2.0)+4.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^4.0/(4.0*r^4.0*sin(psi)^2.0*sin(theta)^2.0)+4.0*r^4.0*sin(psi)^4.0*cos(theta)^2.0*sin(theta)^2.0/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^2.0))/(r^2.0*sin(psi)^2.0*sin(theta)^2.0))*r^2.0/2.0, 4.0*r^4.0*sin(psi)^2.0*cos(psi)*sin(psi)*cos(theta)*sin(theta)/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^2.0)+(-4.0)*r^4.0*sin(psi)^2.0*sin(theta)^2.0*cos(psi)*sin(psi)*cos(theta)*sin(theta)/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^4.0), 0.0, 4.0*r^4.0*sin(psi)^2.0*cos(psi)*sin(psi)*cos(theta)*sin(theta)/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^2.0)+(-4.0)*r^4.0*sin(psi)^2.0*sin(theta)^2.0*cos(psi)*sin(psi)*cos(theta)*sin(theta)/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^4.0), 2.0*((-2.0)*r^2.0*cos(psi)^2.0+2.0*r^2.0*sin(psi)^2.0)*r^2.0/(4.0*r^4.0)+4.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0/(4.0*r^4.0*sin(psi)^2.0)+(-1.0)*(2.0*(2.0*r^2.0*sin(psi)^2.0*cos(theta)^2.0-2.0*r^2.0*sin(psi)^2.0*sin(theta)^2.0)*r^2.0*sin(psi)^2.0*sin(theta)^2.0-8.0*r^4.0*sin(psi)^4.0*cos(theta)^2.0*sin(theta)^2.0)/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^4.0)+(-4.0)*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^2.0/(4.0*r^4.0*sin(psi)^2.0*sin(theta)^2.0)+(-4.0)*r^4.0*sin(psi)^4.0*cos(theta)^2.0*sin(theta)^2.0/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^4.0)+(-1.0)*r^2.0*sin(psi)^2.0*((((-1.0)*(2.0*(2.0*r^2.0*cos(psi)^2.0-2.0*r^2.0*sin(psi)^2.0)*r^2.0*sin(psi)^2.0-8.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0)-4.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0)/(4.0*r^4.0*sin(psi)^4.0)+((-1.0)*(2.0*(2.0*r^2.0*cos(psi)^2.0*sin(theta)^2.0-2.0*r^2.0*sin(psi)^2.0*sin(theta)^2.0)*r^2.0*sin(psi)^2.0*sin(theta)^2.0-8.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^4.0)-4.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^4.0)/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^4.0))/r^2.0+(2.0*((-2.0)*r^2.0*cos(psi)^2.0+2.0*r^2.0*sin(psi)^2.0)*r^2.0/(4.0*r^4.0)+4.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0/(4.0*r^4.0*sin(psi)^2.0)+(-1.0)*(2.0*(2.0*r^2.0*sin(psi)^2.0*cos(theta)^2.0-2.0*r^2.0*sin(psi)^2.0*sin(theta)^2.0)*r^2.0*sin(psi)^2.0*sin(theta)^2.0-8.0*r^4.0*sin(psi)^4.0*cos(theta)^2.0*sin(theta)^2.0)/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^4.0)+(-4.0)*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^2.0/(4.0*r^4.0*sin(psi)^2.0*sin(theta)^2.0)+(-4.0)*r^4.0*sin(psi)^4.0*cos(theta)^2.0*sin(theta)^2.0/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^4.0))/(r^2.0*sin(psi)^2.0)+(2.0*((-2.0)*r^2.0*cos(psi)^2.0*sin(theta)^2.0+2.0*r^2.0*sin(psi)^2.0*sin(theta)^2.0)*r^2.0/(4.0*r^4.0)+4.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^4.0/(4.0*r^4.0*sin(psi)^2.0*sin(theta)^2.0)+2.0*((-2.0)*r^2.0*sin(psi)^2.0*cos(theta)^2.0+2.0*r^2.0*sin(psi)^2.0*sin(theta)^2.0)*r^2.0*sin(psi)^2.0/(4.0*r^4.0*sin(psi)^4.0)+(-4.0)*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^2.0/(4.0*r^4.0*sin(psi)^2.0)+4.0*r^4.0*sin(psi)^4.0*cos(theta)^2.0*sin(theta)^2.0/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^2.0)+(-4.0)*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^4.0/(4.0*r^4.0*sin(psi)^2.0*sin(theta)^2.0)+(-4.0)*r^4.0*sin(psi)^4.0*cos(theta)^2.0*sin(theta)^2.0/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^2.0)+4.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^4.0/(4.0*r^4.0*sin(psi)^2.0*sin(theta)^2.0)+4.0*r^4.0*sin(psi)^4.0*cos(theta)^2.0*sin(theta)^2.0/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^2.0))/(r^2.0*sin(psi)^2.0*sin(theta)^2.0))/2.0, 0.0, 0.0, 0.0, 2.0*((-2.0)*r^2.0*cos(psi)^2.0*sin(theta)^2.0+2.0*r^2.0*sin(psi)^2.0*sin(theta)^2.0)*r^2.0/(4.0*r^4.0)+4.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^4.0/(4.0*r^4.0*sin(psi)^2.0*sin(theta)^2.0)+2.0*((-2.0)*r^2.0*sin(psi)^2.0*cos(theta)^2.0+2.0*r^2.0*sin(psi)^2.0*sin(theta)^2.0)*r^2.0*sin(psi)^2.0/(4.0*r^4.0*sin(psi)^4.0)+(-4.0)*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^2.0/(4.0*r^4.0*sin(psi)^2.0)+4.0*r^4.0*sin(psi)^4.0*cos(theta)^2.0*sin(theta)^2.0/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^2.0)+(-4.0)*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^4.0/(4.0*r^4.0*sin(psi)^2.0*sin(theta)^2.0)+(-4.0)*r^4.0*sin(psi)^4.0*cos(theta)^2.0*sin(theta)^2.0/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^2.0)+4.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^4.0/(4.0*r^4.0*sin(psi)^2.0*sin(theta)^2.0)+4.0*r^4.0*sin(psi)^4.0*cos(theta)^2.0*sin(theta)^2.0/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^2.0)+(-1.0)*r^2.0*sin(psi)^2.0*((((-1.0)*(2.0*(2.0*r^2.0*cos(psi)^2.0-2.0*r^2.0*sin(psi)^2.0)*r^2.0*sin(psi)^2.0-8.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0)-4.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0)/(4.0*r^4.0*sin(psi)^4.0)+((-1.0)*(2.0*(2.0*r^2.0*cos(psi)^2.0*sin(theta)^2.0-2.0*r^2.0*sin(psi)^2.0*sin(theta)^2.0)*r^2.0*sin(psi)^2.0*sin(theta)^2.0-8.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^4.0)-4.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^4.0)/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^4.0))/r^2.0+(2.0*((-2.0)*r^2.0*cos(psi)^2.0+2.0*r^2.0*sin(psi)^2.0)*r^2.0/(4.0*r^4.0)+4.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0/(4.0*r^4.0*sin(psi)^2.0)+(-1.0)*(2.0*(2.0*r^2.0*sin(psi)^2.0*cos(theta)^2.0-2.0*r^2.0*sin(psi)^2.0*sin(theta)^2.0)*r^2.0*sin(psi)^2.0*sin(theta)^2.0-8.0*r^4.0*sin(psi)^4.0*cos(theta)^2.0*sin(theta)^2.0)/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^4.0)+(-4.0)*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^2.0/(4.0*r^4.0*sin(psi)^2.0*sin(theta)^2.0)+(-4.0)*r^4.0*sin(psi)^4.0*cos(theta)^2.0*sin(theta)^2.0/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^4.0))/(r^2.0*sin(psi)^2.0)+(2.0*((-2.0)*r^2.0*cos(psi)^2.0*sin(theta)^2.0+2.0*r^2.0*sin(psi)^2.0*sin(theta)^2.0)*r^2.0/(4.0*r^4.0)+4.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^4.0/(4.0*r^4.0*sin(psi)^2.0*sin(theta)^2.0)+2.0*((-2.0)*r^2.0*sin(psi)^2.0*cos(theta)^2.0+2.0*r^2.0*sin(psi)^2.0*sin(theta)^2.0)*r^2.0*sin(psi)^2.0/(4.0*r^4.0*sin(psi)^4.0)+(-4.0)*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^2.0/(4.0*r^4.0*sin(psi)^2.0)+4.0*r^4.0*sin(psi)^4.0*cos(theta)^2.0*sin(theta)^2.0/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^2.0)+(-4.0)*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^4.0/(4.0*r^4.0*sin(psi)^2.0*sin(theta)^2.0)+(-4.0)*r^4.0*sin(psi)^4.0*cos(theta)^2.0*sin(theta)^2.0/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^2.0)+4.0*r^4.0*cos(psi)^2.0*sin(psi)^2.0*sin(theta)^4.0/(4.0*r^4.0*sin(psi)^2.0*sin(theta)^2.0)+4.0*r^4.0*sin(psi)^4.0*cos(theta)^2.0*sin(theta)^2.0/(4.0*r^4.0*sin(psi)^4.0*sin(theta)^2.0))/(r^2.0*sin(psi)^2.0*sin(theta)^2.0))*sin(theta)^2.0/2.0))
-```
-The 'simplify' command reduces the complexity of this expression:
-```
-simplify(einsteintensor(metric.generate(three-sphere)))
-```
-returns a mere
-```
-Tensor(List(TensorIndex(Lower,3), TensorIndex(Lower,3)),List(-1.0, 0.0, 0.0, 0.0, (-1.0)*sin(psi)^2.0, 0.0, 0.0, 0.0, (-4.0)*sin(psi)^2.0*sin(theta)^2.0/4.0))
-```
+Curvature results (Christoffel symbols, Riemann and Ricci tensors, ...) are simplified automatically; see [Differential geometry](#differential-geometry).
 
 ## Logic operations
 ```
@@ -73,7 +64,7 @@ galileo>deriv(x^2,x)
 ```
 
 ## Plotting
-`plot` samples one or more expressions over a range of a variable. In the REPL it draws a text chart; in a Jupyter notebook (iGalileo) it renders as an SVG image.
+`plot` samples one or more expressions over a range of a variable.
 ```
 galileo>plot(sin(x), x, 0, 2*pi)
 galileo>plot(sin(x), cos(x), x^2/10, x, -pi, pi)
@@ -86,6 +77,26 @@ The range is optional and defaults to -10 .. 10. User-defined variables and cons
 ```
 galileo>parametric(cos(3*t), sin(2*t), t, 0, 2*pi)
 ```
+
+### 3D plots
+```
+galileo>plot3d(sin(x)*cos(y), x, -pi, pi, y, -pi, pi)
+galileo>surface(sin(u)*cos(v), sin(u)*sin(v), cos(u), u, 0, pi, v, 0, 2*pi)
+galileo>parametric3d(cos(t), sin(t), t/(2*pi), t, 0, 6*pi)
+```
+* `plot3d(f, x, a, b, y, c, d)` draws the surface z = f(x, y)
+* `surface(fx, fy, fz, u, a, b, v, c, d)` draws a parametric surface
+* `parametric3d(fx, fy, fz, t, a, b)` draws a curve in space
+
+### Combining plots
+Plots are values, so they can be stored in variables. `show` overlays several 2D plots, or several 3D plots:
+```
+galileo>p = plot(exp(-x^2), x, -3, 3)
+galileo>q = plot(1/(1+x^2), x, -3, 3)
+galileo>show(p, q)
+galileo>show(surface((2+0.7*cos(v))*cos(u), (2+0.7*cos(v))*sin(u), 0.7*sin(v), u, 0, 2*pi, v, 0, 2*pi), parametric3d((2+0.7*cos(3*t))*cos(2*t), (2+0.7*cos(3*t))*sin(2*t), 0.7*sin(3*t), t, 0, 2*pi))
+```
+In Jupyter (iGalileo), plots are interactive: you can zoom, pan, and rotate 3D plots. An SVG copy is stored with the notebook. In the REPL, 2D plots are drawn as text charts, and 3D plots print a short summary.
 
 ## Matrices and tensors
 ### Matrix manipulation
@@ -170,6 +181,7 @@ Curvature results are simplified automatically and listed as their non-zero, ind
 | `odesolve([f1 f2], [y1 y2], t, [y1_0 y2_0], t0, t1)` | the values y(t1) |
 
 Matrix elements are separated by spaces or commas; use commas when an element starts with a minus sign (`[v, -x]`), because `[v -x]` means `[v-x]`.
+Coordinates stay symbolic in `metric(...)` and `inducedmetric(...)` even if a variable with the same name has a value.
 
 ```
 galileo> g = metric.generate(two-sphere)
@@ -191,5 +203,5 @@ galileo> r = 1
 galileo> geodesic(g, [pi/2 0], [1 1], 6, [sin(theta)*cos(phi) sin(theta)*sin(phi) cos(theta)])
 ```
 The last command draws a great circle on the unit sphere (a 3D graphic in Jupyter).
-See the [iGalileo differential geometry tour](https://github.com/cascala/igalileo/blob/master/examples/differential-geometry-tour.ipynb) for 3D graphics and physics examples, including the perihelion precession of Mercury.
+The [iGalileo differential geometry tour](https://github.com/cascala/igalileo/blob/master/examples/differential-geometry-tour.ipynb) has 3D graphics and physics examples, including the perihelion precession of Mercury and light bending around a black hole.
 

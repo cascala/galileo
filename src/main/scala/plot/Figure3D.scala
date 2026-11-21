@@ -170,13 +170,13 @@ case class Figure3D(
     }
     for ( ( c, ci ) <- curves.zipWithIndex; Seq( a, b ) <- c.points.sliding( 2 ) if finite3( a ) && finite3( b ) ) {
       val ( na, nb ) = ( norm( a ), norm( b ) )
-      val depth = ( project( na )._3 + project( nb )._3 ) / 2 - 0.03 // slightly in front of the surface it lies on
+      val depth = ( project( na )._3 + project( nb )._3 ) / 2 - 0.06 // slightly in front of the surface it lies on
       val color = curveColors( ci % curveColors.size )
       prims += ( ( depth, s"""<line x1="${pt( na ).split( "," )( 0 )}" y1="${pt( na ).split( "," )( 1 )}" x2="${pt( nb ).split( "," )( 0 )}" y2="${pt( nb ).split( "," )( 1 )}" stroke="$color" stroke-width="2.5" stroke-linecap="round"/>""" ) )
     }
     prims.sortBy( -_._1 ).foreach( p => sb ++= p._2 )
 
-    // axis labels on the three front edges from the nearest bottom corner (-, -, -)
+    // axis labels: x and y along the bottom edges nearest to the viewer, z on the leftmost vertical edge
     def esc( t: String ) = t.replace( "&", "&amp;" ).replace( "<", "&lt;" ).replace( ">", "&gt;" )
     val ( ( bx0, bx1 ), ( by0, by1 ), ( bz0, bz1 ) ) = bounds
     def fmt( d: Double ) = { val v = if ( math.abs( d ) < 1e-9 ) 0.0 else d; if ( math.abs( v ) >= 1e4 || ( v != 0 && math.abs( v ) < 1e-2 ) ) f"$v%.1e" else f"$v%.2f".reverse.dropWhile( _ == '0' ).reverse.stripSuffix( "." ) }
@@ -184,11 +184,20 @@ case class Figure3D(
       val ( a, b ) = scr( p )
       sb ++= s"""<text x="${r( a + dx )}" y="${r( b + dy )}" text-anchor="$anchor" fill="${if ( bold ) "#111827" else "#475569"}"${if ( bold ) " font-weight=\"bold\"" else ""}>${esc( text )}</text>"""
     }
-    label( ( -ex, -ey, -ez ), fmt( bx0 ), "end", -4, 14 ); label( ( ex, -ey, -ez ), fmt( bx1 ), "start", 2, 14 )
-    label( ( 0, -ey, -ez ), labels._1, "middle", 0, 22, bold = true )
-    label( ( -ex, ey, -ez ), fmt( by1 ), "end", -6, 4 )
-    label( ( -ex, 0, -ez ), labels._2, "end", -10, 14, bold = true )
-    label( ( -ex, -ey, ez ), fmt( bz1 ), "end", -6, 4 ); label( ( -ex, -ey, 0 ), labels._3, "end", -10, 4, bold = true )
+    val bottom = corners.filter( _._3 < 0 )
+    val near = bottom.minBy( c => project( c )._3 )
+    val ( nx, ny ) = ( near._1, near._2 )
+    def side( p: ( Double, Double, Double ) ) = if ( scr( p )._1 < scr( near )._1 ) "end" else "start"
+    // x edge: from near corner along x
+    val xa = ( -ex, ny, -ez ); val xb = ( ex, ny, -ez )
+    label( xa, fmt( bx0 ), side( xa ), if ( side( xa ) == "end" ) -4 else 4, 14 ); label( xb, fmt( bx1 ), side( xb ), if ( side( xb ) == "end" ) -4 else 4, 14 )
+    label( ( 0, ny, -ez ), labels._1, "middle", 0, 24, bold = true )
+    val ya = ( nx, -ey, -ez ); val yb = ( nx, ey, -ez )
+    label( ya, fmt( by0 ), side( ya ), if ( side( ya ) == "end" ) -4 else 4, 14 ); label( yb, fmt( by1 ), side( yb ), if ( side( yb ) == "end" ) -4 else 4, 14 )
+    label( ( nx, 0, -ez ), labels._2, "middle", 0, 24, bold = true )
+    val left = bottom.minBy( c => scr( c )._1 )
+    label( ( left._1, left._2, -ez ), fmt( bz0 ), "end", -8, 0 ); label( ( left._1, left._2, ez ), fmt( bz1 ), "end", -8, 8 )
+    label( ( left._1, left._2, 0 ), labels._3, "end", -10, 4, bold = true )
     // legend
     val entries = surfaces.zipWithIndex.map { case ( su, i ) => ( su.label, if ( i == 0 ) rgb( viridis( 0.5 ), 1 ) else rgb( solidColors( ( i - 1 ) % solidColors.size ), 1 ) ) } ++
       curves.zipWithIndex.map { case ( c, i ) => ( c.label, curveColors( i % curveColors.size ) ) }
