@@ -1,6 +1,6 @@
 organization := "com.github.cascala"
 name := "Galileo"
-version := "0.2.0"
+version := "0.1.4"
 scalaVersion := "2.13.16"
 scalacOptions ++= Seq( "-deprecation", "-feature" )
 libraryDependencies += "org.scalatest" % "scalatest_2.13" % "3.0.8" % "test"
