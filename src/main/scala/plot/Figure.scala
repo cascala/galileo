@@ -8,16 +8,69 @@ case class Series( label: String, points: Vector[ ( Double, Double ) ] ) {
   private def isFinite( d: Double ) = !d.isNaN && !d.isInfinite
 }
 
-// The result of a plot command: rendered as SVG in notebooks and as ASCII art in the REPL
-case class Figure( series: List[ Series ], xLabel: String, title: String ) extends Expr with Statement with Displayable {
+// The result of a 2D plot command: interactive (Plotly) or SVG in notebooks, ASCII art in the REPL
+case class Figure( series: List[ Series ], xLabel: String, title: String, yLabel: String = "", equalAspect: Boolean = false )
+    extends Expr with Statement with Displayable {
   def info( env: Option[ Environment ] = None ) = "Figure(" + series.map( _.label ).mkString( "," ) + ")"
+  override def variables: List[ Variable ] = Nil
 
   override def toString() = ascii()
 
   def mimeBundle: Map[ String, String ] = Map(
     "text/plain" -> ascii(),
-    "image/svg+xml" -> svg()
+    "image/svg+xml" -> svg(),
+    "application/vnd.plotly.v1+json" -> plotly
   )
+
+  // Combine with another figure (labels and title of the first win when set)
+  def overlay( other: Figure ): Figure = Figure(
+    series ++ other.series,
+    if ( xLabel.nonEmpty ) xLabel else other.xLabel,
+    if ( title.nonEmpty ) title else other.title,
+    if ( yLabel.nonEmpty ) yLabel else other.yLabel,
+    equalAspect || other.equalAspect )
+
+  // Points of a series split into drawable runs: breaks at NaN/infinity and at poles that cross the visible range
+  def runs( s: Series ): List[ Vector[ ( Double, Double ) ] ] = {
+    val out = List.newBuilder[ Vector[ ( Double, Double ) ] ]
+    var cur = Vector.newBuilder[ ( Double, Double ) ]
+    var n = 0
+    var prev: Option[ Double ] = None
+    def flush(): Unit = { if ( n > 0 ) out += cur.result(); cur = Vector.newBuilder; n = 0 }
+    for ( ( x, y ) <- s.points ) {
+      val ok = !x.isNaN && !y.isNaN && !x.isInfinite && !y.isInfinite
+      val jump = prev.exists( p => ok && ( ( p > yMax && y < yMin ) || ( p < yMin && y > yMax ) ) )
+      if ( !ok || jump ) flush()
+      if ( ok ) { cur += ( ( x, y ) ); n += 1; prev = Some( y ) } else prev = None
+    }
+    flush()
+    out.result()
+  }
+
+  // Plotly figure specification (rendered interactively by JupyterLab with the plotly extension)
+  def plotly: String = {
+    import JsonOut._
+    val traces = series.zipWithIndex.map { case ( s, i ) =>
+      val rs = runs( s )
+      val xs = rs.flatMap( r => r.map( _._1 ) :+ Double.NaN )
+      val ys = rs.flatMap( r => r.map( _._2 ) :+ Double.NaN )
+      obj( "type" -> str( "scatter" ), "mode" -> str( "lines" ), "name" -> str( s.label ),
+        "x" -> nums( xs ), "y" -> nums( ys ), "line" -> obj( "color" -> str( palette( i % palette.size ) ), "width" -> "2" ) )
+    }
+    val yaxis = List( "range" -> nums( List( yMin, yMax ) ), "zeroline" -> "true", "title" -> obj( "text" -> str( yLabel ) ) ) ++
+      ( if ( equalAspect ) List( "scaleanchor" -> str( "x" ), "scaleratio" -> "1" ) else Nil )
+    val layout = obj(
+      "title" -> obj( "text" -> str( title ) ),
+      "xaxis" -> obj( "title" -> obj( "text" -> str( xLabel ) ), "zeroline" -> "true" ),
+      "yaxis" -> obj( yaxis: _* ),
+      "showlegend" -> "true",
+      "legend" -> obj( "x" -> "0.01", "y" -> "0.99", "bgcolor" -> str( "rgba(255,255,255,0.8)" ) ),
+      "margin" -> obj( "l" -> "60", "r" -> "20", "t" -> ( if ( title.isEmpty ) "20" else "50" ), "b" -> "50" ),
+      "width" -> "700", "height" -> "440",
+      "template" -> obj( "layout" -> obj( "plot_bgcolor" -> str( "white" ), "xaxis" -> obj( "gridcolor" -> str( "#e5e7eb" ) ), "yaxis" -> obj( "gridcolor" -> str( "#e5e7eb" ) ) ) )
+    )
+    obj( "data" -> arr( traces ), "layout" -> layout )
+  }
 
   // Colors for successive series
   val palette = Vector( "#2563eb", "#dc2626", "#16a34a", "#9333ea", "#ea580c", "#0891b2", "#be185d", "#4d7c0f" )
@@ -38,7 +91,15 @@ case class Figure( series: List[ Series ], xLabel: String, title: String ) exten
       val pad = ( yb - ya ) * 0.05
       val ( xa, xb ) = ( xs.min, xs.max )
       val ( xa1, xb1 ) = if ( xb - xa < 1e-12 ) ( xa - 1, xb + 1 ) else ( xa, xb )
-      ( xa1, xb1, ya - pad, yb + pad )
+      if ( !equalAspect ) ( xa1, xb1, ya - pad, yb + pad )
+      else {
+        // same units per pixel on both axes (plot area of the default SVG is 560 x 336)
+        val ( ratio, xp, yp ) = ( 336.0 / 560.0, ( xb1 - xa1 ) * 0.05, pad )
+        val ( w, h ) = ( xb1 - xa1 + 2 * xp, yb - ya + 2 * yp )
+        val ( cx, cy ) = ( ( xa1 + xb1 ) / 2, ( ya + yb ) / 2 )
+        if ( h / w > ratio ) { val w2 = h / ratio; ( cx - w2 / 2, cx + w2 / 2, cy - h / 2, cy + h / 2 ) }
+        else { val h2 = w * ratio; ( cx - w / 2, cx + w / 2, cy - h2 / 2, cy + h2 / 2 ) }
+      }
     }
   }
 
@@ -111,6 +172,7 @@ case class Figure( series: List[ Series ], xLabel: String, title: String ) exten
     // labels
     if ( title.nonEmpty ) sb ++= s"""<text x="${r( ml + pw / 2 )}" y="24" text-anchor="middle" font-size="14" fill="#111827">${esc( title )}</text>"""
     if ( xLabel.nonEmpty ) sb ++= s"""<text x="${r( ml + pw / 2 )}" y="${r( height - 8.0 )}" text-anchor="middle" fill="#111827">${esc( xLabel )}</text>"""
+    if ( yLabel.nonEmpty ) sb ++= s"""<text x="14" y="${r( mt + ph / 2 )}" text-anchor="middle" fill="#111827" transform="rotate(-90 14 ${r( mt + ph / 2 )})">${esc( yLabel )}</text>"""
     // legend, on a light backdrop so curves do not run through the labels
     if ( series.nonEmpty ) {
       val w = 46 + 7 * series.map( _.label.length ).max

@@ -1,5 +1,6 @@
 # Build stage: JDK 21 + sbt (sbt is fetched from its GitHub release)
-FROM eclipse-temurin:21-jdk AS build
+# The build stage runs on the build machine's own platform: the jars it makes run anywhere
+FROM --platform=$BUILDPLATFORM eclipse-temurin:21-jdk AS build
 
 ARG SBT_VERSION=1.10.7
 RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && \

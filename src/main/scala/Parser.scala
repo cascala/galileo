@@ -10,7 +10,7 @@ import galileo.exprhandler.ExprHandler
 import galileo.linalg._
 import galileo.logic._
 import galileo.manipulate._
-import galileo.plot.{Plot,ParametricPlot}
+import galileo.plot.{Plot,Show}
 import galileo.proof.Proof
 import galileo.rand.Rand
 import galileo.solve.Solve
@@ -20,16 +20,9 @@ import galileo.trigonometry._
 class Parser extends builtinParser with exprParser { 
 	// lexer can be used to reserve keywords
   def program = rep1sep(statement, ";") <~ opt(";")
-  def statement:Parser[Expr] =  builtin | prove | plot | assignment | expression // | selector // | expression // | selector
+  def statement:Parser[Expr] =  builtin | prove | assignment | expression // | selector // | expression // | selector
   def builtin:Parser[Expr] = comment | whos | who | clear | ls | cd | pwd | load | exit
   def prove:Parser[Expr] = "prove" ~ "(" ~> expression ~ ( "=" | ">" | "<" | "!=" ) ~ expression <~ ")" ^^ { case l~o~r => Proof( l, o, r ) }
-  // plot( f1, f2, ..., x, from, to ) and parametric( fx, fy, t, from, to )
-  def plot:Parser[Expr] =
-    "plot" ~ "(" ~> rep1sep( expression, "," ) <~ ")" ^^ { args => Plot.fromArgs( args ) } |
-    "parametric" ~ "(" ~> rep1sep( expression, "," ) <~ ")" ^^ {
-      case List( fx, fy, v:Variable, from, to ) => ParametricPlot( fx, fy, v, from, to )
-      case _ => ErrorExpr( "usage: parametric(fx, fy, t, from, to)" )
-    }
   // Assignment and array assignment (AssignmentN)
   def assignment:Parser[Expr] = 
     ( "[" ~> ident <~ "," ) ~ (ident <~ "," ) ~ ( ident <~ "]" ) ~ ( "=" ~> expression ) ^^ { case a~b~c~e => Assignment3( a, b, c, e ) } |
@@ -63,11 +56,11 @@ override def selector:Parser[Expr] =
   }
 }
 
-trait exprParser extends logicParser with functionParser with matrixParser with tensorParser {
+trait exprParser extends logicParser with functionParser with matrixParser with tensorParser with plotParser {
   val expression:Parser[Expr] = chainl1( term, "+" ^^^ Sum2 | "-" ^^^ Sub | "||" ^^^ Or2 ) 
   def term:Parser[Expr] = chainl1( power, "*" ^^^ Product2 | "/" ^^^ Div | "&&" ^^^ And2 ) 
   def power:Parser[Expr] = chainl1( factor, "^" ^^^ Power ) 
-  def factor:Parser[Expr] = selector | mats | tensor | function | deriv | boolOps |
+  def factor:Parser[Expr] = plotting | selector | mats | tensor | function | deriv | boolOps |
     rowVector |
     floatingPointNumber ^^ NumD | 
     bool | 
@@ -256,4 +249,17 @@ trait builtinParser extends JavaTokenParsers {
   def who:Parser[Expr] = "who" ^^ { case(_:String) => new Who() }
   def whos:Parser[Expr] = "whos" ^^ { case(_:String) => new Whos() }
   def path:Parser[String] = "[^)]+".r // ^^ { _.toString }
+}
+
+// Plotting commands; they are expressions, so p = plot(...) and show(p, q) work
+trait plotParser extends JavaTokenParsers {
+  val expression:Parser[Expr]
+  private def args:Parser[List[Expr]] = "(" ~> rep1sep( expression, "," ) <~ ")"
+  def plotting:Parser[Expr] =
+    "plot3d" ~> args ^^ Plot.plot3dFromArgs |
+    "parametric3d" ~> args ^^ Plot.parametric3dFromArgs |
+    "parametric" ~> args ^^ Plot.parametricFromArgs |
+    "surface" ~> args ^^ Plot.surfaceFromArgs |
+    "show" ~> args ^^ { a => Show( a ) } |
+    "plot" ~> args ^^ Plot.fromArgs
 }
