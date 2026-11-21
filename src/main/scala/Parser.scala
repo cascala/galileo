@@ -22,7 +22,7 @@ class Parser extends builtinParser with exprParser {
 	// lexer can be used to reserve keywords
   def program = rep1sep(statement, ";") <~ opt(";")
   def statement:Parser[Expr] =  builtin | prove | assignment | expression // | selector // | expression // | selector
-  def builtin:Parser[Expr] = comment | whos | who | clear | ls | cd | pwd | load | exit
+  def builtin:Parser[Expr] = comment | help | whos | who | clear | ls | cd | pwd | load | exit
   def prove:Parser[Expr] = "prove" ~ "(" ~> expression ~ ( "=" | ">" | "<" | "!=" ) ~ expression <~ ")" ^^ { case l~o~r => Proof( l, o, r ) }
   // Assignment and array assignment (AssignmentN)
   def assignment:Parser[Expr] = 
@@ -264,6 +264,9 @@ trait builtinParser extends JavaTokenParsers {
   def cd:Parser[Expr] = "cd" ~> path ^^ { p => SystemCommand( "cd " + p ) }
   def pwd:Parser[Expr] = "pwd" ^^ { case _ => SystemCommand( "pwd ") }
   def load:Parser[Expr] = "load" ~ "(" ~> path <~ ")" ^^ { case filename => Load( filename ) } 
+  def help:Parser[Expr] =
+    "help" ~ "(" ~> "[A-Za-z0-9_.\\-]+".r <~ ")" ^^ { n => galileo.help.HelpRequest( Some( n ) ) } |
+    "help\\b".r ^^ { _ => galileo.help.HelpRequest( None ) }
   def who:Parser[Expr] = "who" ^^ { case(_:String) => new Who() }
   def whos:Parser[Expr] = "whos" ^^ { case(_:String) => new Whos() }
   def path:Parser[String] = "[^)]+".r // ^^ { _.toString }

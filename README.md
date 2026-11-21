@@ -17,6 +17,8 @@ Galileo comes as
 * a [Jupyter kernel, iGalileo](https://github.com/cascala/igalileo), where plots are interactive, and
 * a [library](docs/library.md) for Java and other JVM languages (Scala, Kotlin).
 
+Type `help` for a list of commands, or `help(name)` for one of them.
+
 ```
 galileo> f = x^3 - 2*x
 x^3.0-2.0*x

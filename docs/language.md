@@ -1,6 +1,9 @@
 In the galileo shell, you can interact with mathematical expresssions.
 The examples below illustrate the currently available features.
 
+## Getting help
+`help` lists all commands by topic, and `help(name)` describes one command with an example, e.g. `help(plot3d)`. In a Jupyter notebook, Shift+Tab on a name shows the same text.
+
 ## Basics
 ### Working with numbers
 ```
