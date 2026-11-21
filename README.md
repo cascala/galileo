@@ -56,7 +56,7 @@ git clone https://github.com/cascala/galileo.git
 cd galileo
 sbt test       # run the test suite
 sbt run        # start the REPL
-sbt assembly   # standalone jar: java -jar target/scala-2.13/Galileo-assembly-0.1.4.jar
+sbt assembly   # standalone jar: java -jar target/scala-2.13/Galileo-assembly-0.2.1.jar
 ```
 
 ## As a library
@@ -75,7 +75,7 @@ libraryDependencies += "com.github.cascala" %% "galileo" % "0.1.3"
 </dependency>
 ```
 
-Version 0.1.4, which adds plotting and the current Scala and sbt versions, isn't published yet. Install it into your local repository with `sbt publishLocal` and depend on `"com.github.cascala" %% "galileo" % "0.1.4"`.
+Version 0.2.1, which adds plotting and the current Scala and sbt versions, isn't published yet. Install it into your local repository with `sbt publishLocal` and depend on `"com.github.cascala" %% "galileo" % "0.2.1"`.
 
 ## Docker images
 
