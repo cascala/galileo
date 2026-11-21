@@ -2,6 +2,8 @@
 
 # Galileo
 
+> **Galileo now lives on in Rust:** [cascala/galileo-rs](https://github.com/cascala/galileo-rs). The `cascala/galileo` and `cascala/igalileo` Docker images from 0.3.0 on use the Rust engine; tags 0.2.1 and earlier are this Scala version.
+
 Galileo is a computer algebra system (CAS) written in Scala. It works with numbers like Matlab or Octave, and with symbols like Maple or Mathematica: variables can stay unknown, and expressions are simplified, differentiated and solved symbolically.
 
 What sets it apart:
