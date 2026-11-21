@@ -1,4 +1,3 @@
-[![Docker version](https://images.microbadger.com/badges/version/cascala/galileo:0.1.3.svg)](https://microbadger.com/images/cascala/galileo:0.1.3)
 [![GitHub issues](https://img.shields.io/github/issues/cascala/galileo.svg)](https://github.com/cascala/galileo/issues)
 
 # Galileo
@@ -12,6 +11,7 @@ Differentiating features:
 * Symbolic matrix manipulation (you can invert a matrix containing symbols)
 * Support for logic operations
 * Basic framework for rules driven proofs is available (e.g. `prove(1/x==x^(-1))`)
+* Plotting of expressions and parametric curves (`plot(sin(x), cos(x), x, 0, 2*pi)`): text charts in the REPL, SVG in Jupyter notebooks via [iGalileo](https://github.com/cascala/igalileo)
 
 Galileo is available as both
 * a [standalone, interpreted language](docs/language.md), with its own REPL, and, 
@@ -22,20 +22,24 @@ Galileo is available as both
 ### Running a pre-built Docker image
 A Docker image of Galileo is available on Docker hub, and can be run as follows (on Mac or Linux):
 ```
-$ docker run -it --rm cascala/galileo:0.1.3
+$ docker run -it --rm cascala/galileo
 ```
+To build the image yourself: `docker build -t cascala/galileo .`
 
 ### Building from source
 
-Galileo can also be built from its source files using the 'sbt' build system:
+Galileo can also be built from its source files using the [sbt](https://www.scala-sbt.org/) build system (JDK 17 or later):
 ```
 $ git clone https://github.com/cascala/galileo.git
-$ sbt run
+$ cd galileo
+$ sbt test     # run the test suite
+$ sbt run      # start the REPL
+$ sbt assembly # build a standalone jar: java -jar target/scala-2.13/Galileo-assembly-0.2.0.jar
 ```
 
 ## Usage as a library
 You can use Galileo as a mathematical library in any JVM language (Java, Kotlin, Scala...).
-For details, see:
+Version 0.1.3 is on Maven Central; 0.2.0 (with plotting) can be installed locally with `sbt publishLocal`. For details, see:
 [https://search.maven.org/search?q=g:com.github.cascala](https://search.maven.org/search?q=g:com.github.cascala)
 
 For Maven, one can use:

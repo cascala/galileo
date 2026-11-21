@@ -10,6 +10,7 @@ import galileo.exprhandler.ExprHandler
 import galileo.linalg._
 import galileo.logic._
 import galileo.manipulate._
+import galileo.plot.{Plot,ParametricPlot}
 import galileo.proof.Proof
 import galileo.rand.Rand
 import galileo.solve.Solve
@@ -19,9 +20,16 @@ import galileo.trigonometry._
 class Parser extends builtinParser with exprParser { 
 	// lexer can be used to reserve keywords
   def program = rep1sep(statement, ";") <~ opt(";")
-  def statement:Parser[Expr] =  builtin | prove | assignment | expression // | selector // | expression // | selector
+  def statement:Parser[Expr] =  builtin | prove | plot | assignment | expression // | selector // | expression // | selector
   def builtin:Parser[Expr] = comment | whos | who | clear | ls | cd | pwd | load | exit
   def prove:Parser[Expr] = "prove" ~ "(" ~> expression ~ ( "=" | ">" | "<" | "!=" ) ~ expression <~ ")" ^^ { case l~o~r => Proof( l, o, r ) }
+  // plot( f1, f2, ..., x, from, to ) and parametric( fx, fy, t, from, to )
+  def plot:Parser[Expr] =
+    "plot" ~ "(" ~> rep1sep( expression, "," ) <~ ")" ^^ { args => Plot.fromArgs( args ) } |
+    "parametric" ~ "(" ~> rep1sep( expression, "," ) <~ ")" ^^ {
+      case List( fx, fy, v:Variable, from, to ) => ParametricPlot( fx, fy, v, from, to )
+      case _ => ErrorExpr( "usage: parametric(fx, fy, t, from, to)" )
+    }
   // Assignment and array assignment (AssignmentN)
   def assignment:Parser[Expr] = 
     ( "[" ~> ident <~ "," ) ~ (ident <~ "," ) ~ ( ident <~ "]" ) ~ ( "=" ~> expression ) ^^ { case a~b~c~e => Assignment3( a, b, c, e ) } |

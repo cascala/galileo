@@ -72,6 +72,21 @@ galileo>deriv(x^2,x)
 2.0*x 
 ```
 
+## Plotting
+`plot` samples one or more expressions over a range of a variable. In the REPL it draws a text chart; in a Jupyter notebook (iGalileo) it renders as an SVG image.
+```
+galileo>plot(sin(x), x, 0, 2*pi)
+galileo>plot(sin(x), cos(x), x^2/10, x, -pi, pi)
+galileo>f = x^3 - 2*x
+galileo>plot(f, deriv(f, x), x)
+```
+The range is optional and defaults to -10 .. 10. User-defined variables and constants (pi, e) are substituted, and poles (such as `1/x` or `tan(x)`) are clipped rather than stretching the chart.
+
+`parametric` plots a curve given by two expressions of one parameter:
+```
+galileo>parametric(cos(3*t), sin(2*t), t, 0, 2*pi)
+```
+
 ## Matrices and tensors
 ### Matrix manipulation
 
