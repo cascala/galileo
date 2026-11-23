@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use Galileo in your teaching, research or writing, please cite it as below."
+title: "Galileo: a computer algebra system in Scala"
+abstract: "The original Scala version of the Galileo computer algebra system: symbolic algebra, calculus, matrices, tensors and differential geometry, usable as a REPL and as a JVM library."
+type: software
+authors:
+  - family-names: Esch
+    given-names: Joris
+    alias: cascala
+version: "0.2.1"
+license: Apache-2.0
+url: "https://cascala.github.io/igalileo/"
+repository-code: "https://github.com/cascala/galileo"
+keywords:
+  - computer algebra
+  - symbolic mathematics
+  - mathematics education
+  - Jupyter
+  - WebAssembly

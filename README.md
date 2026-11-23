@@ -4,6 +4,8 @@
 
 > **Galileo now lives on in Rust:** [cascala/galileo-rs](https://github.com/cascala/galileo-rs). The `cascala/galileo` and `cascala/igalileo` Docker images from 0.3.0 on use the Rust engine; tags 0.2.1 and earlier are this Scala version.
 
+**▶ [Try Galileo in your browser](https://cascala.github.io/igalileo/)**: nothing to install. Open the [playground](https://cascala.github.io/igalileo/playground/), start the [first lesson](https://cascala.github.io/igalileo/playground/#lesson/foundations/01-numbers), or use [notebooks in JupyterLite](https://cascala.github.io/igalileo/lab/lab/index.html).
+
 Galileo is a computer algebra system (CAS) written in Scala. It works with numbers like Matlab or Octave, and with symbols like Maple or Mathematica: variables can stay unknown, and expressions are simplified, differentiated and solved symbolically.
 
 What sets it apart:
@@ -90,3 +92,11 @@ Build the image locally with `docker build -t cascala/galileo .`. To publish bot
 * [Language reference](docs/language.md): numbers, variables, simplification, calculus, plotting, matrices, tensors and differential geometry
 * [Library reference](docs/library.md)
 * Example scripts are in [examples/](examples/)
+
+## Citing Galileo
+
+Galileo is created by Joris Esch ([cascala](https://github.com/cascala)). If you use it in teaching, research or writing, please cite it: GitHub's **Cite this repository** button (in the sidebar) gives APA and BibTeX, from [CITATION.cff](CITATION.cff).
+
+## License
+
+Apache 2.0.
