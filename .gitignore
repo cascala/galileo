@@ -18,3 +18,7 @@ scalastyle-config.xml
 # Scala-IDE specific
 .scala_dependencies
 .worksheet
+
+# secrets
+.dockerhub-token
+.env
