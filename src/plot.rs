@@ -184,8 +184,14 @@ pub struct Raster {
 }
 
 impl Raster {
-    /// a data: URI with the pixels as a PNG (stored, uncompressed deflate blocks)
+    /// a data: URI with the pixels as a PNG
     pub fn png_uri(&self) -> String {
+        format!("data:image/png;base64,{}", base64(&png_bytes(self.w, self.h, &self.rgb)))
+    }
+}
+
+/// RGB pixels (top row first) as a PNG file
+pub fn png_bytes(w: usize, h: usize, rgb: &[u8]) -> Vec<u8> {
         fn crc32(data: &[u8]) -> u32 {
             let mut c = 0xffff_ffffu32;
             for &b in data {
@@ -204,15 +210,15 @@ impl Raster {
             out.extend_from_slice(&crc32(&body).to_be_bytes());
         }
         // filter each row by its difference from the row above (smooth pictures give small values)
-        let stride = self.w * 3;
-        let mut raw = Vec::with_capacity(self.h * (stride + 1));
-        for (j, row) in self.rgb.chunks(stride).enumerate() {
+        let stride = w * 3;
+        let mut raw = Vec::with_capacity(h * (stride + 1));
+        for (j, row) in rgb.chunks(stride).enumerate() {
             if j == 0 {
                 raw.push(0);
                 raw.extend_from_slice(row);
             } else {
                 raw.push(2);
-                let up = &self.rgb[(j - 1) * stride..j * stride];
+                let up = &rgb[(j - 1) * stride..j * stride];
                 raw.extend(row.iter().zip(up).map(|(a, b)| a.wrapping_sub(*b)));
             }
         }
@@ -226,14 +232,13 @@ impl Raster {
         z.extend_from_slice(&((bb << 16) | a).to_be_bytes());
         let mut png = vec![0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a];
         let mut ihdr = vec![];
-        ihdr.extend_from_slice(&(self.w as u32).to_be_bytes());
-        ihdr.extend_from_slice(&(self.h as u32).to_be_bytes());
+        ihdr.extend_from_slice(&(w as u32).to_be_bytes());
+        ihdr.extend_from_slice(&(h as u32).to_be_bytes());
         ihdr.extend_from_slice(&[8, 2, 0, 0, 0]);
         chunk(&mut png, b"IHDR", &ihdr);
         chunk(&mut png, b"IDAT", &z);
         chunk(&mut png, b"IEND", &[]);
-        format!("data:image/png;base64,{}", base64(&png))
-    }
+        png
 }
 
 /// deflate with fixed Huffman codes and greedy LZ77 matching
@@ -329,7 +334,7 @@ fn deflate_fixed(data: &[u8]) -> Vec<u8> {
     b.out
 }
 
-fn base64(data: &[u8]) -> String {
+pub(crate) fn base64(data: &[u8]) -> String {
     const T: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
     let mut out = String::with_capacity(data.len() * 4 / 3 + 4);
     for c in data.chunks(3) {

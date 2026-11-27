@@ -114,7 +114,7 @@ const SYMS: [&str; 31] = [
 ];
 
 /// Commands whose argument is taken as raw text
-const RAW: [&str; 4] = ["load", "cd", "help", "metric.generate"];
+const RAW: [&str; 5] = ["load", "cd", "help", "metric.generate", "rm"];
 
 fn lex(src: &str) -> Result<Vec<Token>, String> {
     let c: Vec<char> = src.chars().collect();
@@ -332,7 +332,9 @@ impl P {
                     self.i += 1;
                     return Ok(Stmt::Command(name, None));
                 }
-                "help" | "cd" | "load" => {
+                "help" | "cd" | "load" | "rm"
+                    if name != "rm" || ends || matches!(next, Some(Tok::Raw(_))) =>
+                {
                     self.i += 1;
                     let arg = match self.peek() {
                         Some(Tok::Raw(r)) => {

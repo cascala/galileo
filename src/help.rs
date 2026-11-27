@@ -67,8 +67,50 @@ pub const ENTRIES: &[Entry] = &[
         "load",
         "Basics",
         "load(file), load(RSA)",
-        "Runs the Galileo statements in a file and shows their results, as if they were typed in (a statement ending in ; stays quiet). Quote a name with spaces, load(\"my file.gg\"); .gg may be left off. A file can load others, found next to it. An error stops the file and says where: file.gg:12: ... In Docker, mount the folder first: docker run -it --rm -v \"$PWD:/work\" cascala/galileo. load(RSA) instead defines the RSA Factoring Challenge numbers: RSA100, RSA110, ... RSA617 by decimal digits and RSA576, RSA640, RSA704, RSA768, RSA896, RSA1024, RSA1536, RSA2048 by bits, with the two primes of each factored one as RSA100p and RSA100q and so on. Factors are included up to RSA250, plus RSA270 and RSA896 (RSA-896, factored in September 2026, is the largest so far); RSA260 was factored in September 2026 too, but its factors are not included yet.",
+        "Runs the Galileo statements in a file and shows their results, as if they were typed in (a statement ending in ; stays quiet). Quote a name with spaces, load(\"my file.gg\"); .gg may be left off. A file can load others, found next to it. An error stops the file and says where: file.gg:12: ... In the browser, load reads the files of the playground's file panel or of JupyterLite's file browser. In Docker, mount the folder first: docker run -it --rm -v \"$PWD:/work\" cascala/galileo. load(RSA) instead defines the RSA Factoring Challenge numbers: RSA100, RSA110, ... RSA617 by decimal digits and RSA576, RSA640, RSA704, RSA768, RSA896, RSA1024, RSA1536, RSA2048 by bits, with the two primes of each factored one as RSA100p and RSA100q and so on. Factors are included up to RSA250, plus RSA270 and RSA896 (RSA-896, factored in September 2026, is the largest so far); RSA260 was factored in September 2026 too, but its factors are not included yet.",
         "load(RSA)"
+    ),
+    e!(
+        "read",
+        "Files",
+        "read(\"file\")",
+        "Reads a file from the current folder. A .csv or .tsv table whose first row has names gives a record of columns: d = read(\"data.csv\"), then d.time and d.temp are its columns (vectors of numbers, or lists of strings for text). Names are made fit to type: \"temp (C)\" becomes temp_C. Without a header row the table is a matrix. The separator (comma, semicolon or tab) is found from the first line; quoted cells may hold commas; an empty cell is NaN. Any other file comes back as one string. In the browser, add files with the + button of the playground's file panel, or the upload button of JupyterLite's file browser.",
+        "save([1 2; 3 4], \"m.csv\"); read(\"m.csv\")"
+    ),
+    e!(
+        "save",
+        "Files",
+        "save(x, \"file\"), save(\"file.gg\")",
+        "Writes x to a file, in the format its extension names, replacing a file of that name: .csv or .tsv for tables (a matrix row by row, a record as named columns, a list as one column), .png, .svg or .eps for a plot, 3D plot or graph (PNG at twice the size on screen; EPS keeps lines and text sharp at any size, with see-through colors mixed with white), .tex for LaTeX (as display math \\[ ... \\]), .gg for Galileo that load reads back (x = value), and .txt for text. save(\"file.gg\") writes all your variables and f(x) := ... functions. Returns the file name. In the browser the file shows up in the playground's file panel, or in JupyterLite's file browser, where it can be downloaded.",
+        "save(plot(sin(x), x, 0, 2*pi), \"sine.png\")"
+    ),
+    e!(
+        "ls",
+        "Files",
+        "ls, ls(\"folder\")",
+        "The names of the files in the current folder (or another one), as a list of strings; folder names end in /. pwd gives the current folder, cd folder (or cd(\"folder\")) changes it, and cd .. goes up.",
+        "ls"
+    ),
+    e!(
+        "pwd",
+        "Files",
+        "pwd",
+        "The current folder, as a string. Files named without a folder are read and written there.",
+        "pwd"
+    ),
+    e!(
+        "rm",
+        "Files",
+        "rm(file)",
+        "Removes a file (not a folder): rm(old.csv), or rm(\"my file.csv\") with quotes for a name with spaces.",
+        "save(1, \"tmp.txt\"); rm(tmp.txt)"
+    ),
+    e!(
+        "latex",
+        "Files",
+        "latex(x)",
+        "The LaTeX of a value, as a string: an expression, a matrix (as a pmatrix), a list or a record. save(x, \"file.tex\") writes it to a file.",
+        "latex(x^2/3 + sqrt(y))"
     ),
     e!(
         "sin",
@@ -1757,6 +1799,7 @@ pub const ALIASES: &[(&str, &str)] = &[
     ("rank", "rref"),
     ("null", "rref"),
     ("cols", "rows"),
+    ("cd", "ls"),
     ("break", "for"),
     ("continue", "for"),
     ("end", "for"),

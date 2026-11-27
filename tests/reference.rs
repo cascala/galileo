@@ -32,6 +32,8 @@ fn blessing() -> bool {
 }
 
 fn quiet_session() -> Session {
+    // files are kept in memory, so examples that save and remove files leave the repository alone
+    galileo_rs::vfs::use_memory();
     let mut s = Session::new();
     s.set("explain", Expr::Bool(false));
     s

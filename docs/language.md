@@ -1,4 +1,4 @@
-<!-- syntax stamp: 22355d3af008d2f7 -->
+<!-- syntax stamp: adc79c3d7cfe865c -->
 
 # The Galileo language
 
@@ -380,6 +380,45 @@ it were typed in (`.gg` may be left off, and a name with spaces is quoted:
 `load("my file.gg")`). From a shell, `galileo file.gg` runs a script and
 `galileo -i file.gg` runs it and keeps the prompt open. An error stops the script and
 names the file and line: `file.gg:12: ...`.
+
+## Files
+
+`read` and `save` move data in and out. `save(x, "file")` picks the format from the
+extension: `.csv` or `.tsv` for tables, `.png`, `.svg` or `.eps` for plots, `.tex` for
+LaTeX, `.gg` for Galileo that `load` reads back, and `.txt` for text. It replaces a file
+of the same name and returns the name. `read("file.csv")` gives a record of columns when
+the first row holds names, and a matrix when it does not.
+
+```galileo
+galileo> d = {t: [0 1 2], y: [1 4 9]};
+galileo> save(d, "squares.csv")
+"squares.csv"
+galileo> e = read("squares.csv");
+galileo> e.y
+[1, 4, 9]
+galileo> save([1 2; 3 4], "m.csv");
+galileo> read("m.csv")
+[1, 2;
+ 3, 4]
+galileo> latex(x^2/3)
+"\frac{x^{2}}{3}"
+```
+
+`ls` lists the current folder as a list of names (folders end in `/`), `pwd` names it,
+`cd folder` changes it and `rm(file)` removes a file. A name with spaces is quoted:
+`rm("old data.csv")`.
+
+```galileo
+galileo> rm(m.csv)
+galileo> ls
+{"squares.csv"}
+```
+
+The same commands work in the terminal, in Jupyter, in JupyterLite and in the playground,
+so a script that uses names relative to its folder runs unchanged in all of them. In the
+browser, files live in the browser: the playground's file panel has a `+` button to add
+files and buttons to download, rename and delete them, and JupyterLite's file browser does
+the same for its files.
 
 ## Changes from the Scala version
 
