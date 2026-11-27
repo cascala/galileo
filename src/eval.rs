@@ -94,7 +94,7 @@ pub struct Session {
     pub(crate) calls: usize,
     /// the files being loaded, innermost last (relative paths also resolve
     /// against the loading file's folder; guards against a file loading itself)
-    pub(crate) loading: Vec<std::path::PathBuf>,
+    pub(crate) loading: Vec<(String, String)>,
     /// functions defined with `function ... end`
     pub(crate) procs: BTreeMap<String, crate::lang::Proc>,
     /// results of statements inside blocks, and printed text, waiting to be shown
@@ -310,25 +310,20 @@ impl Session {
     /// the folder of the file doing the loading.
     pub fn load_file(&mut self, name: &str) -> Vec<(R<Output>, bool, Vec<Note>)> {
         let err = |e: String| vec![(Err(e), false, vec![])];
-        if cfg!(target_arch = "wasm32") {
-            return err(format!(
-                "load({}): the browser version has no files to load; load(RSA) loads the RSA challenge numbers",
-                name
-            ));
-        }
         let path = match self.find_script(name) {
             Some(p) => p,
             None => return err(format!("load {}: no such file", unquote(name))),
         };
-        if self.loading.len() >= 32 || self.loading.contains(&path) {
-            return err(format!("load {}: the file loads itself", path.display()));
+        let full = crate::vfs::full(&path);
+        if self.loading.len() >= 32 || self.loading.iter().any(|(_, f)| *f == full) {
+            return err(format!("load {}: the file loads itself", path));
         }
-        let src = match std::fs::read_to_string(&path) {
-            Ok(s) => s,
-            Err(e) => return err(format!("load {}: {}", path.display(), e)),
+        let src = match crate::vfs::read(&path) {
+            Ok(b) => String::from_utf8_lossy(&b).into_owned(),
+            Err(e) => return err(format!("load {}", e)),
         };
         let shown = unquote(name).to_string();
-        self.loading.push(path);
+        self.loading.push((path, full));
         let mut out = vec![];
         'chunks: for (line, chunk) in crate::parser::statement_chunks(&src) {
             let at = |e: String| {
@@ -375,26 +370,25 @@ impl Session {
 
     /// Where a script name points: the name as given, then with `.gg` added,
     /// each against the current folder and then the loading file's folder
-    fn find_script(&self, name: &str) -> Option<std::path::PathBuf> {
-        use std::path::{Path, PathBuf};
+    fn find_script(&self, name: &str) -> Option<String> {
         let name = unquote(name);
-        let mut names = vec![PathBuf::from(name)];
-        if Path::new(name).extension().is_none() {
-            names.push(PathBuf::from(format!("{}.gg", name)));
+        let mut names = vec![name.to_string()];
+        let base = name.rsplit('/').next().unwrap_or(name);
+        if !base.contains('.') {
+            names.push(format!("{}.gg", name));
         }
-        let mut bases: Vec<Option<PathBuf>> = vec![None];
-        if let Some(dir) = self.loading.last().and_then(|f| f.parent()) {
-            bases.push(Some(dir.to_path_buf()));
+        let mut bases = vec![String::new()];
+        if let Some((f, _)) = self.loading.last() {
+            let d = crate::vfs::dir_of(f);
+            if !d.is_empty() {
+                bases.push(d);
+            }
         }
         for b in &bases {
             for n in &names {
-                let p = match b {
-                    Some(d) if n.is_relative() => d.join(n),
-                    Some(_) => continue,
-                    None => n.clone(),
-                };
-                if p.is_file() {
-                    return Some(p.canonicalize().unwrap_or(p));
+                let p = crate::vfs::join(b, n);
+                if crate::vfs::is_file(&p) {
+                    return Some(p);
                 }
             }
         }
@@ -636,23 +630,16 @@ impl Session {
                 Ok(Output::Nothing)
             }
             "exit" | "quit" => Ok(Output::Exit),
-            "pwd" => Ok(Output::Text(
-                std::env::current_dir()
-                    .map_err(|e| e.to_string())?
-                    .display()
-                    .to_string(),
-            )),
-            "ls" => {
-                let mut names: Vec<String> = std::fs::read_dir(".")
-                    .map_err(|e| e.to_string())?
-                    .filter_map(|e| e.ok().map(|e| e.file_name().to_string_lossy().into_owned()))
-                    .collect();
-                names.sort();
-                Ok(Output::Text(names.join("\n")))
-            }
+            "pwd" => Ok(Output::Value(Expr::Str(crate::vfs::cwd()?))),
+            "ls" => Ok(Output::Value(crate::files::ls(arg.map(unquote).unwrap_or("."))?)),
             "cd" => {
-                let dir = arg.ok_or("cd needs a directory")?;
-                std::env::set_current_dir(dir).map_err(|e| format!("cd {}: {}", dir, e))?;
+                let dir = arg.ok_or("cd needs a folder")?;
+                crate::vfs::cd(unquote(dir))?;
+                Ok(Output::Nothing)
+            }
+            "rm" => {
+                let file = arg.ok_or("rm needs a file name")?;
+                crate::vfs::remove(unquote(file)).map_err(|e| format!("rm {}", e))?;
                 Ok(Output::Nothing)
             }
             "load" => {
@@ -1120,11 +1107,25 @@ impl Session {
             "subs" => {
                 arity(3)?;
                 let e = self.eval(&args[0])?;
+                let v = self.eval(&args[2])?;
                 let x = match &args[1] {
                     Node::Ident(n) => n.clone(),
-                    _ => return Err("subs(expr, x, value): x must be a variable name".into()),
+                    // subs(E, d(x, t), 3), subs(f, y(t), 1), subs(f, sin(x), s): replace a subexpression
+                    other => {
+                        let target = self.eval(other)?;
+                        if let Expr::Sym(n) = &target {
+                            n.clone()
+                        } else {
+                            if matches!(target, Expr::Num(_) | Expr::Matrix(_) | Expr::Obj(_) | Expr::Str(_) | Expr::Bool(_)) {
+                                return Err("subs(expr, x, value): x must be a variable name or an expression such as d(y, t)".into());
+                            }
+                            if let (Expr::Matrix(m), false) = (&v, matches!(e, Expr::Matrix(_))) {
+                                return Ok(Expr::Matrix(m.iter().map(|row| row.iter().map(|val| calc::simplify(&calc::subst_expr(&e, &target, val))).collect()).collect()));
+                            }
+                            return Ok(calc::subst_expr(&e, &target, &v));
+                        }
+                    }
                 };
-                let v = self.eval(&args[2])?;
                 // a list of values into a scalar expression: one result per value
                 if let (Expr::Matrix(m), false) = (&v, matches!(e, Expr::Matrix(_))) {
                     return Ok(Expr::Matrix(m.iter().map(|row| row.iter().map(|val| calc::simplify(&calc::subst(&e, &x, val))).collect()).collect()));

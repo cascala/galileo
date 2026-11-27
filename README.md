@@ -1,14 +1,15 @@
 # Galileo
 
-Galileo is a free computer algebra system, written in Rust. (The original Scala version is on the [`scala` branch](https://github.com/cascala/galileo/tree/scala) and in releases 0.2.1 and earlier.)
+Galileo is a free computer algebra system, written in Rust.
 
 **▶ [Try Galileo in your browser](https://cascala.github.io/igalileo/)**: nothing to install. Open the [playground](https://cascala.github.io/igalileo/playground/), start the [first lesson](https://cascala.github.io/igalileo/playground/#lesson/foundations/01-numbers), or use [notebooks in JupyterLite](https://cascala.github.io/igalileo/lab/lab/index.html).
 
 **Questions, ideas or something you made with Galileo?** Join the [Discussions](https://github.com/cascala/galileo/discussions).
 
-This is a redesign rather than a line-by-line port. The language is the same
-(`deriv(x^3, x)`, `[a b; c d]`, `[L, U, P] = lu(A)`, ...), but the engine
-underneath is new:
+![Galileo in the browser playground: a derivative, an integral, a quadratic solved exactly, a symbolic matrix inverse, a factored Mersenne number and a plot](docs/images/playground.png)
+
+Galileo reads much like MATLAB (`deriv(x^3, x)`, `[a b; c d]`, `[L, U, P] = lu(A)`, ...),
+but everything is symbolic and exact unless you ask for numbers. The engine is built on a few ideas:
 
 * **Exact numbers.** Integers and fractions are exact rationals: `1/3 + 2/6` is `2/3`,
   `sqrt(8)` is `2*sqrt(2)`, and they have no size limit: `2^521 - 1` keeps all 157 digits
@@ -143,6 +144,11 @@ galileo> kretschmann(S)
 
 ## Plots and ODEs
 
+<p>
+  <img src="docs/images/surface.png" width="49%" alt="A torus drawn with surface() in the playground, as an interactive 3D plot">
+  <img src="docs/images/jupyterlab.png" width="49%" alt="plot(sin(x), cos(x), x, 0, 2*pi) in a JupyterLab notebook">
+</p>
+
 `plot`, `parametric`, `plot3d`, `surface`, `parametric3d`, `contour`, `implicitplot`,
 `fieldplot`, `odeplot`, `odesolve` and `geodesic`. In the terminal a plot is drawn in text; in a notebook it is an interactive
 Plotly chart with an SVG fallback. `odesolve` uses fixed-step RK4.
@@ -249,15 +255,6 @@ GALILEO_BLESS=1 cargo test --test reference
 | `src/kernel.rs` | `galileo --kernel` protocol |
 | `src/wasm.rs` | WebAssembly entry points for the browser |
 
-## Parity with the Scala version
-
-`tests/parity/scala_tests.txt` holds every input/expected pair from the Scala test
-suite. Output is formatted differently (`2*x` instead of `2.0*x`), so a case passes when
-the Rust answer is mathematically equal to the Scala one, checked at random points. For
-`simplify` and `factor` the Rust answer must also be no larger. Known, deliberate
-differences are listed in `tests/parity.rs` (for example, `acos(cos(y))` stays as it is,
-because it only equals `y` for `0 <= y <= pi`).
-
 ## Status
 
 - [x] Core algebra, calculus, simplification, matrices, parser, REPL
@@ -271,4 +268,4 @@ Galileo is created by Joris Esch ([cascala](https://github.com/cascala)). If you
 
 ## License
 
-Apache 2.0, like the original.
+Apache 2.0.

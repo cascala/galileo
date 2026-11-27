@@ -98,6 +98,9 @@ type Trajectory = (String, Vec<(f64, Vec<f64>)>);
 
 impl Session {
     pub(crate) fn command_call(&mut self, f: &str, args: &[Node]) -> R<Expr> {
+        if let Some(r) = self.files_call(f, args) {
+            return r;
+        }
         if let Some(r) = self.graph_call(f, args) {
             return r;
         }

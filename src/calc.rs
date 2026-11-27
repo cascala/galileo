@@ -181,6 +181,14 @@ pub fn subst(e: &Expr, name: &str, val: &Expr) -> Expr {
     }
 }
 
+/// Replace every occurrence of the subexpression `target` (such as d(y, t)) by val
+pub fn subst_expr(e: &Expr, target: &Expr, val: &Expr) -> Expr {
+    if e == target {
+        return val.clone();
+    }
+    e.map_children(&mut |c| subst_expr(c, target, val))
+}
+
 /// Numeric evaluation: exact numbers and constants become floats
 pub fn evalf(e: &Expr) -> Expr {
     match e {

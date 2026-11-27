@@ -79,3 +79,11 @@ fn lagrangian_motion() {
     assert_eq!(one("s = motion((2*d(a, t)^2 + d(b, t)^2 + 2*d(a, t)*d(b, t)*cos(a - b))/2 + 2*cos(a) + cos(b), [a b], t, [2 2], [0 0], 10); size(s.q)"), "[2, 2001]");
     let _ = PI;
 }
+
+#[test]
+fn subs_replaces_derivatives() {
+    assert_eq!(one("E = energy(m*d(x, t)^2/2 - k*x^2/2, x, t); subs(E, d(x, t), 3)"), "(k*x^2+9*m)/2");
+    assert_eq!(one("subs(d(y, t, 2) + d(y, t) + y, d(y, t, 2), 0)"), "y+d(y, t)");
+    assert_eq!(one("subs(y(t)^2 + 1, y(t), 2)"), "5");
+    assert!(one("subs(x^2, 3, 1)").starts_with("ERROR subs"));
+}

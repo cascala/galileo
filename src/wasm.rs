@@ -8,6 +8,14 @@
 //!    read it at `galileo_reply_ptr()` / `galileo_reply_len()`.
 //!
 //! `galileo_reset()` starts a fresh session; `galileo_seed(n)` seeds `rand`.
+//!
+//! Files live in memory (see `vfs.rs`). The host puts the user's files in with
+//! `galileo_fs_put(path, data)` (each a buffer from `galileo_alloc`), lists files
+//! it cannot hand over with `galileo_fs_stub(path, why)`, makes folders with
+//! `galileo_fs_mkdir`, takes files away with `galileo_fs_unput`, and sets the
+//! starting folder with `galileo_fs_cd`. After a run, `galileo_fs_changes()`
+//! replies with what the engine wrote or removed, as JSON:
+//! `[{"op": "write", "path": "/out.csv", "data": "<base64>"}, {"op": "remove", "path": "/old.csv"}]`.
 
 use crate::eval::{Session, seed_random};
 use crate::kernel;
@@ -89,4 +97,90 @@ pub extern "C" fn galileo_seed(seed: u64) {
 #[unsafe(no_mangle)]
 pub extern "C" fn galileo_version() -> usize {
     reply(env!("CARGO_PKG_VERSION").to_string())
+}
+
+/// # Safety
+/// Both buffers must come from `galileo_alloc`; they are freed here.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn galileo_fs_put(p: *mut u8, plen: usize, d: *mut u8, dlen: usize) {
+    let path = unsafe { take(p, plen) };
+    let data = unsafe { Vec::from_raw_parts(d, dlen, dlen) };
+    crate::vfs::put(&path, data);
+}
+
+/// # Safety
+/// Both buffers must come from `galileo_alloc`; they are freed here.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn galileo_fs_stub(p: *mut u8, plen: usize, w: *mut u8, wlen: usize) {
+    let path = unsafe { take(p, plen) };
+    let why = unsafe { take(w, wlen) };
+    crate::vfs::put_stub(&path, &why);
+}
+
+/// # Safety
+/// As for `galileo_execute`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn galileo_fs_mkdir(p: *mut u8, plen: usize) {
+    let path = unsafe { take(p, plen) };
+    crate::vfs::mkdir(&path);
+}
+
+/// # Safety
+/// As for `galileo_execute`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn galileo_fs_unput(p: *mut u8, plen: usize) {
+    let path = unsafe { take(p, plen) };
+    crate::vfs::unput(&path);
+}
+
+/// # Safety
+/// As for `galileo_execute`. Replies "" or the error.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn galileo_fs_cd(p: *mut u8, plen: usize) -> usize {
+    let path = unsafe { take(p, plen) };
+    reply(crate::vfs::cd(&path).err().unwrap_or_default())
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn galileo_fs_clear() {
+    crate::vfs::clear();
+}
+
+/// What the engine wrote or removed since the last call, as JSON
+#[unsafe(no_mangle)]
+pub extern "C" fn galileo_fs_changes() -> usize {
+    reply(changes_json())
+}
+
+pub(crate) fn changes_json() -> String {
+    use crate::plot::jstr;
+    use crate::vfs::Change;
+    let items: Vec<String> = crate::vfs::take_changes()
+        .into_iter()
+        .map(|(c, data)| match c {
+            Change::Write(p) => format!(
+                r#"{{"op":"write","path":{},"data":"{}"}}"#,
+                jstr(&p),
+                crate::plot::base64(&data.unwrap_or_default())
+            ),
+            Change::Remove(p) => format!(r#"{{"op":"remove","path":{}}}"#, jstr(&p)),
+        })
+        .collect();
+    format!("[{}]", items.join(","))
+}
+
+/// A picture (SVG text in the buffer) as a file: `kind` 0 for PNG (twice the
+/// size), 1 for EPS. Replies with the file's bytes in base64, or "" when the
+/// SVG cannot be read.
+///
+/// # Safety
+/// As for `galileo_execute`.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn galileo_export(ptr: *mut u8, len: usize, kind: u32) -> usize {
+    let svg = unsafe { take(ptr, len) };
+    let bytes = match kind {
+        0 => crate::export::png(&svg, None, 2.0).ok(),
+        _ => crate::export::eps(&svg, None).ok().map(String::into_bytes),
+    };
+    reply(bytes.map(|b| crate::plot::base64(&b)).unwrap_or_default())
 }
