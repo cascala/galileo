@@ -41,9 +41,9 @@ fn sphere_and_torus() {
 
 #[test]
 fn undefined_functions() {
-    assert_eq!(run("deriv(a(t)^2, t)"), "2*a(t)*a'(t)");
+    assert_eq!(run("deriv(a(t)^2, t)"), "2*a(t)*d(a, t)");
     let out = run("F = metric([t x], [-1 0; 0 a(t)^2]);\nricciscalar(F)");
-    assert!(out.contains("a''(t)"), "{}", out);
+    assert!(out.contains("d(a, t, 2)"), "{}", out);
     assert!(run("foo(1)").starts_with("ERROR"));
 }
 

@@ -294,11 +294,22 @@ struct Table {
     fd_err: f64,
 }
 
-/// A column name, with primes for a derivative: u'' parses as two transposes
+/// A column name, or a derivative d(u, t) / d(u, t, 2) of one
 fn var_spec(n: &Node) -> R<(String, usize)> {
     match n {
         Node::Ident(s) => Ok((s.clone(), 0)),
-        Node::Transpose(a) => var_spec(a).map(|(s, k)| (s, k + 1)),
+        Node::Call(f, a) if f == "d" && (2..=3).contains(&a.len()) => {
+            let Node::Ident(s) = &a[0] else {
+                return Err("write a derivative column as d(u, t) or d(u, t, 2)".into());
+            };
+            let k = match a.get(2) {
+                None => 1,
+                Some(Node::Num(k)) => k.parse::<usize>().ok().filter(|k| (1..=4).contains(k)).ok_or("d(u, t, k): k is 1 to 4")?,
+                _ => return Err("d(u, t, k): k is a number".into()),
+            };
+            Ok((s.clone(), k))
+        }
+        Node::Transpose(_) => Err("write a derivative column as d(u, t) or d(u, t, 2); ' is the transpose".into()),
         _ => Err("the variables must be names such as [a T], one per column of the data".into()),
     }
 }
@@ -317,7 +328,7 @@ fn var_specs(n: &Node) -> R<(Vec<String>, usize, usize)> {
         let (s, k) = var_spec(it)?;
         if k > 0 {
             if order > 0 {
-                return Err("only one variable can be a derivative such as u''".into());
+                return Err("only one variable can be a derivative such as d(u, t, 2)".into());
             }
             if i == 0 {
                 return Err(
@@ -455,23 +466,22 @@ impl Session {
         } else {
             if names.len() < 2 {
                 return Err(format!(
-                    "{}: a derivative needs the independent variable as the first column, e.g. [t x'']",
+                    "{}: a derivative needs the independent variable as the first column, e.g. [t d(x, t, 2)]",
                     f
                 ));
             }
             if order > 2 {
                 return Err(format!(
-                    "{}: derivatives up to second order (u'') are supported",
+                    "{}: derivatives up to second order (d(u, t, 2)) are supported",
                     f
                 ));
             }
             rows.sort_by(|a, b| a[0].total_cmp(&b[0]));
             if rows.len() < 5 || rows.windows(2).any(|w| w[1][0] <= w[0][0]) {
                 return Err(format!(
-                    "{}: to estimate {}{} the first column must have at least 5 different values",
+                    "{}: to estimate {} the first column must have at least 5 different values",
                     f,
-                    names[last],
-                    "'".repeat(order)
+                    dname(&names[last], &names[0], order)
                 ));
             }
             let t: Vec<f64> = rows.iter().map(|r| r[0]).collect();
@@ -521,7 +531,7 @@ impl Session {
         };
         Ok(Table {
             inputs,
-            target: format!("{}{}", names[last], "'".repeat(order)),
+            target: dname(&names[last], &names[0], order),
             x,
             y,
             sigma: sig,
@@ -986,9 +996,23 @@ fn power_candidates(t: &Table, out: &mut Vec<Cand>, notes: &mut Vec<String>) {
     }
 }
 
+/// u, d(u, t) or d(u, t, 2)
+fn dname(u: &str, t: &str, order: usize) -> String {
+    match order {
+        0 => u.to_string(),
+        1 => format!("d({}, {})", u, t),
+        k => format!("d({}, {}, {})", u, t, k),
+    }
+}
+
+/// u, d(u, t, 2) shown as u, u'' in formulas
 fn md_name(t: &str) -> String {
-    let base = t.trim_end_matches('\'');
-    format!("{}{}", lname(base), "'".repeat(t.len() - base.len()))
+    if let Some(inner) = t.strip_prefix("d(").and_then(|r| r.strip_suffix(')')) {
+        let parts: Vec<&str> = inner.split(',').map(|p| p.trim()).collect();
+        let k = parts.get(2).and_then(|k| k.parse::<usize>().ok()).unwrap_or(1);
+        return format!("{}{}", lname(parts[0]), "'".repeat(k));
+    }
+    lname(t)
 }
 
 impl Session {
@@ -2262,7 +2286,7 @@ mod tests {
     #[test]
     fn sparse_ode() {
         let out = run(
-            "tab = odedata([v, 1 - u + 0.01*u^2], [u v], phi, [1.5 0], 0, 12, 400);\ndiscover(tab, [phi u'' v], [1 u u^2 u^3])",
+            "tab = odedata([v, 1 - u + 0.01*u^2], [u v], phi, [1.5 0], 0, 12, 400);\ndiscover(tab, [phi d(u, phi, 2) v], [1 u u^2 u^3])",
         );
         let best = out.lines().find(|l| l.starts_with('*')).unwrap();
         assert!(best.contains("u^2-u+1"), "{}", out);

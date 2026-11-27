@@ -331,7 +331,7 @@ fn laplace_term(term: &Expr, t: &str, s: &str, depth: usize) -> R<Expr> {
         }
     }
     Err(format!(
-        "laplace: no rule for {}; the table covers t^n, e^(at), sin, cos, sinh, cosh, heaviside(t - a), dirac(t - a), products with e^(at) and t^n, and y(t), y'(t), ...",
+        "laplace: no rule for {}; the table covers t^n, e^(at), sin, cos, sinh, cosh, heaviside(t - a), dirac(t - a), products with e^(at) and t^n, and y(t), d(y, t), d(y, t, 2), ...",
         crate::print::show(&g)
     ))
 }

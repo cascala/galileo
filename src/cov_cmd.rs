@@ -53,15 +53,21 @@ fn unknowns(n: &Node, f: &str) -> R<Vec<String>> {
     }
 }
 
-/// Write q__0, q__1, q__2 back as q, q', q''
-fn primes(e: &Expr, qs: &[String]) -> Expr {
+/// Write q__0, q__1, q__2 back as q, d(q, x), d(q, x, 2)
+fn primes(e: &Expr, qs: &[String], x: &str) -> Expr {
     let mut e = e.clone();
     for q in qs {
-        for k in 0..3 {
-            e = subst(&e, &ph(q, k), &Expr::sym(&format!("{}{}", q, "'".repeat(k))));
+        e = subst(&e, &ph(q, 0), &Expr::sym(q));
+        for k in 1..3 {
+            e = subst(&e, &ph(q, k), &dq(q, x, k));
         }
     }
     e
+}
+
+/// d(q, x, k) as an expression
+fn dq(q: &str, x: &str, k: usize) -> Expr {
+    Expr::Apply(format!("{}{}", q, "'".repeat(k)), vec![Expr::sym(x)])
 }
 
 /// Solve a small dense linear system in place (partial pivoting); false if singular
@@ -199,7 +205,7 @@ impl Session {
         if qs.contains(&x) {
             return Err(format!("{}: {} can't be both an unknown and the variable", f, x));
         }
-        let mut node = ln.clone();
+        let mut node = self.inline_unknowns(ln, &qs)?;
         let mut order = 0;
         for q in &qs {
             let mut o = 0;
@@ -207,7 +213,7 @@ impl Session {
             order = order.max(o);
         }
         if order > 1 {
-            return Err(format!("{}: L may use the unknowns and their first derivatives ({}'), not higher ones", f, qs[0]));
+            return Err(format!("{}: L may use the unknowns and their first derivatives (d({}, {})), not higher ones", f, qs[0], x));
         }
         let mut hid: Vec<String> = qs.iter().flat_map(|q| [ph(q, 0), ph(q, 1)]).collect();
         hid.push(x.clone());
@@ -240,7 +246,7 @@ impl Session {
                     terms.push(neg(mul(vec![lag.d(&p, &ph(qj, 0)), Expr::sym(&ph(qj, 1))])));
                 }
                 let rhs = simplify(&div(add(terms), mm));
-                eqs.push(Expr::Apply("==".into(), vec![Expr::sym(&format!("{}''", q)), primes(&rhs, &lag.qs)]));
+                eqs.push(Expr::Apply("==".into(), vec![dq(q, &lag.x, 2), primes(&rhs, &lag.qs, &lag.x)]));
             }
         }
         if eqs.len() == lag.qs.len() {
@@ -255,18 +261,18 @@ impl Session {
             if rhs.is_zero() {
                 notes.push(format!(
                     "L does not contain {q} itself, so dL/d{q}' = {} stays constant along every extremal (a conserved momentum).",
-                    show(&primes(&p, &lag.qs))
+                    show(&primes(&p, &lag.qs, &lag.x))
                 ));
             }
             if eqs.len() < lag.qs.len() || !diag {
-                eqs.push(Expr::Apply("==".into(), vec![primes(&lhs, &lag.qs), primes(&rhs, &lag.qs)]));
+                eqs.push(Expr::Apply("==".into(), vec![primes(&lhs, &lag.qs, &lag.x), primes(&rhs, &lag.qs, &lag.x)]));
             }
         }
         if !lag.l.contains_sym(&lag.x) {
             notes.push(format!(
                 "L does not contain {} itself, so energy(L, ...) = {} stays constant along every extremal (Beltrami's identity, conservation of energy).",
                 lag.x,
-                show(&primes(&lag.energy(), &lag.qs))
+                show(&primes(&lag.energy(), &lag.qs, &lag.x))
             ));
         }
         self.note(format!(
@@ -290,7 +296,7 @@ impl Session {
             return Err("usage: energy(L, y, x) or energy(L, [q1 q2], t): the sum of q' dL/dq' minus L".into());
         };
         let lag = self.lagrangian(ln, qn, xn, "energy")?;
-        let e = primes(&lag.energy(), &lag.qs);
+        let e = primes(&lag.energy(), &lag.qs, &lag.x);
         self.note(format!(
             "E = {} - L, the sum of q' dL/dq' over the unknowns minus L. When L does not contain {} itself, E is constant along every solution of the Euler–Lagrange equations: in mechanics it is the total energy, in geometry Beltrami's first integral.",
             lag.qs.iter().map(|q| format!("{q}' dL/d{q}'")).collect::<Vec<_>>().join(" + "),
@@ -335,7 +341,7 @@ impl Session {
                 Expr::float(s)
             }
         };
-        self.note(format!("The integral of L = {} from {} = {} to {} along the given path.", show(&primes(&lag.l, &lag.qs)), lag.x, show(&a), show(&b)));
+        self.note(format!("The integral of L = {} from {} = {} to {} along the given path.", show(&primes(&lag.l, &lag.qs, &lag.x)), lag.x, show(&a), show(&b)));
         Ok(val)
     }
 
@@ -546,7 +552,7 @@ impl Session {
         }
         self.note(format!(
             "A numerical extremal of the integral of L = {} from ({}, {}) to ({}, {}): the path is cut into {} straight pieces and the integral of L along them (3-point Gauss rule per piece) is made stationary by Newton's method ({} steps). x and y hold the path, J the value of the integral along it. Compare with the exact solution of eulerlagrange where there is one.",
-            show(&primes(&lag.l, &lag.qs)),
+            show(&primes(&lag.l, &lag.qs, &lag.x)),
             fmt(a),
             fmt(ya),
             fmt(b),
@@ -674,7 +680,7 @@ impl Session {
         let timeless = !lag.l.contains_sym(&lag.x);
         self.note(format!(
             "Equations of motion of L = {} solved by Runge–Kutta (4th order) with {} steps (dt = {}). t holds the times, q the coordinate{} and v the velocit{}{}.{}",
-            show(&primes(&lag.l, &lag.qs)),
+            show(&primes(&lag.l, &lag.qs, &lag.x)),
             steps,
             format!("{:.3e}", dt),
             if k > 1 { "s, one row each in the order given" } else { "" },

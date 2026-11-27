@@ -108,8 +108,8 @@ struct Token {
     space_before: bool,
 }
 
-const SYMS: [&str; 31] = [
-    "&&", "||", "==", "~=", "!=", "<=", ">=", ":=", ".*", "./", ".^", "<", ">", "+", "-", "*", "/",
+const SYMS: [&str; 32] = [
+    ".'", "&&", "||", "==", "~=", "!=", "<=", ">=", ":=", ".*", "./", ".^", "<", ">", "+", "-", "*", "/",
     "^", "\\", "'", "(", ")", "[", "]", "{", "}", ",", ";", ":", "=", "!",
 ];
 
@@ -191,15 +191,24 @@ fn lex(src: &str) -> Result<Vec<Token>, String> {
             {
                 i += 1;
             }
-            // y'(x), y''(x): derivatives of a function, written with primes
+            // y'(x) was once a derivative; ' is now always the transpose
             let mut j = i;
             while j < c.len() && c[j] == '\'' {
                 j += 1;
             }
-            if j > i && c.get(j) == Some(&'(') {
-                i = j;
-            }
             let name: String = c[start..i].iter().collect();
+            if j > i && c.get(j) == Some(&'(') {
+                let k = j - i;
+                let arg: String = c[j + 1..].iter().take_while(|&&x| x != ')').collect();
+                return Err(format!(
+                    "{}{}(...): ' is the transpose; write the derivative as d({}, {}{})",
+                    name,
+                    "'".repeat(k),
+                    name,
+                    arg.trim(),
+                    if k > 1 { format!(", {}", k) } else { String::new() }
+                ));
+            }
             if RAW.contains(&name.as_str()) {
                 out.push(Token {
                     tok: Tok::Ident(name.clone()),
@@ -715,6 +724,9 @@ impl P {
             if self.is("'") && !self.space_before() {
                 self.i += 1;
                 e = Node::Transpose(Box::new(e));
+            } else if self.is(".'") && !self.space_before() {
+                self.i += 1;
+                e = Node::Call("transpose".into(), vec![e]);
             } else if self.is("[") && !self.space_before() {
                 self.i += 1;
                 let save = self.in_matrix;

@@ -164,6 +164,14 @@ fn fmt(e: &Expr) -> (String, u8) {
         Apply(f, v) if f == "==" && v.len() == 2 => {
             (format!("{} == {}", fmt(&v[0]).0, fmt(&v[1]).0), 0)
         }
+        Apply(f, v) if f.ends_with('\'') && v.len() == 1 => {
+            // y'(t) is written d(y, t), y''(t) d(y, t, 2)
+            let base = f.trim_end_matches('\'');
+            let k = f.len() - base.len();
+            let order = if k > 1 { format!(", {}", k) } else { String::new() };
+            (format!("d({}, {}{})", base, fmt(&v[0]).0, order), P_ATOM)
+        }
+        Apply(f, v) if partial(f, v).is_some() => (partial(f, v).unwrap(), P_ATOM),
         Apply(f, v) => (
             format!(
                 "{}({})",
@@ -335,4 +343,24 @@ mod tests {
         assert_eq!(show(&sqrt(x())), "sqrt(x)");
         assert_eq!(show(&add(vec![x(), Expr::int(-9)])), "x-9");
     }
+}
+
+/// f,12(x, y) (a partial derivative by position) written d(d(f(x, y), x), y),
+/// when the arguments are distinct names
+fn partial(f: &str, v: &[Expr]) -> Option<String> {
+    let (base, idx) = f.rsplit_once(',')?;
+    if base.is_empty() || idx.is_empty() || !idx.chars().all(|c| c.is_ascii_digit()) {
+        return None;
+    }
+    let names: Vec<&str> = v.iter().map(|a| if let Sym(s) = a { Some(s.as_str()) } else { None }).collect::<Option<_>>()?;
+    if (1..names.len()).any(|j| names[..j].contains(&names[j])) {
+        return None;
+    }
+    let mut out = format!("{}({})", base, names.join(", "));
+    for c in idx.chars() {
+        let j = c.to_digit(10)? as usize;
+        let x = names.get(j.checked_sub(1)?)?;
+        out = format!("d({}, {})", out, x);
+    }
+    Some(out)
 }

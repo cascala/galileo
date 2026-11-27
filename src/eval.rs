@@ -833,10 +833,20 @@ impl Session {
                     Expr::Matrix(out)
                 }
             }
-            Node::Transpose(a) => match self.eval(a)? {
-                Expr::Matrix(m) => Expr::Matrix(linalg::transpose(&m)),
-                v => v,
-            },
+            Node::Transpose(a) => {
+                if let Node::Ident(n) = &**a {
+                    if !self.vars.contains_key(n) && !self.hidden.contains(n) && !matches!(n.as_str(), "pi" | "e" | "i" | "inf") {
+                        return Err(format!(
+                            "{}' is the transpose of {}, which has no value; for a derivative write d({}, t) (or d({}, x), ...)",
+                            n, n, n, n
+                        ));
+                    }
+                }
+                match self.eval(a)? {
+                    Expr::Matrix(m) => Expr::Matrix(linalg::transpose(&linalg::map(&m, conj_expr))),
+                    v => conj_expr(&v),
+                }
+            }
             Node::Index(a, idx) => {
                 let target = self.eval(a)?;
                 if matches!(target, Expr::Matrix(_) | Expr::Str(_))
@@ -957,9 +967,6 @@ impl Session {
                 }
             }
         }
-        if f.ends_with('\'') {
-            return self.call_primed(f, args);
-        }
         if f == "if" {
             if args.len() != 3 {
                 return Err("usage: if(condition, value if true, value if false)".into());
@@ -1050,6 +1057,7 @@ impl Session {
                     g(x.clone())
                 })
             }
+            "d" => self.d_call(args),
             "deriv" | "diff" => {
                 arity(2)?;
                 let x = match &args[1] {
@@ -1406,31 +1414,49 @@ impl Session {
         Ok(Tail::Value(self.eval(node)?))
     }
 
-    /// f'(x), y''(t): derivatives of a user function, or of an undefined one
-    fn call_primed(&mut self, f: &str, args: &[Node]) -> R<Expr> {
-        let base = f.trim_end_matches('\'');
-        let order = f.len() - base.len();
-        match self.funcs.get(base).cloned() {
-            Some((params, body)) => {
-                if params.len() != 1 || args.len() != 1 {
-                    return Err(format!("{}: primes work for functions of one variable", f));
+    /// d(y, t), d(y, t, 2): the derivative of a function y at t (an unknown
+    /// one stays symbolic), or d(expr, x[, k]) the k-th derivative of expr
+    fn d_call(&mut self, args: &[Node]) -> R<Expr> {
+        let usage = "usage: d(y, t) or d(y, t, k): the (k-th) derivative of the function y at t (y may be unknown); d(expr, x[, k]) differentiates expr with respect to x";
+        if args.len() != 2 && args.len() != 3 {
+            return Err(usage.into());
+        }
+        let k = match args.get(2) {
+            None => 1,
+            Some(n) => match self.eval(n)?.num().and_then(|v| v.as_int()) {
+                Some(k) if (1..=50).contains(&k) => k as usize,
+                _ => return Err("d(y, t, k): k is a whole number from 1 to 50".into()),
+            },
+        };
+        if let Node::Ident(y) = &args[0] {
+            let bound = self.vars.contains_key(y) || self.hidden.contains(y);
+            if let Some((params, body)) = self.funcs.get(y).cloned() {
+                if params.len() != 1 {
+                    return Err(format!("d({}, ...): {} takes {} arguments; write d({}(...), x) for a partial derivative", y, y, params.len(), y));
                 }
                 let p = &params[0];
-                let mut d = self.eval_hidden(&body, std::slice::from_ref(p))?;
-                for _ in 0..order {
-                    d = calc::deriv(&d, p);
+                let mut e = self.eval_hidden(&body, std::slice::from_ref(p))?;
+                for _ in 0..k {
+                    e = calc::deriv(&e, p);
                 }
-                let v = self.eval(&args[0])?;
-                Ok(calc::subst(&d, p, &v))
+                let v = self.eval(&args[1])?;
+                return Ok(calc::subst(&e, p, &v));
             }
-            None => {
-                let mut vals = vec![];
-                for a in args {
-                    vals.push(self.eval(a)?);
-                }
-                Ok(Expr::Apply(f.to_string(), vals))
+            let same = matches!(&args[1], Node::Ident(t) if t == y);
+            if !bound && !same && !matches!(y.as_str(), "pi" | "e" | "i" | "inf") {
+                let at = self.eval(&args[1])?;
+                return Ok(Expr::Apply(format!("{}{}", y, "'".repeat(k)), vec![at]));
             }
         }
+        let x = match &args[1] {
+            Node::Ident(n) => n.clone(),
+            _ => return Err("d(expr, x): x must be a variable name".into()),
+        };
+        let mut e = self.eval_hidden(&args[0], std::slice::from_ref(&x))?;
+        for _ in 0..k {
+            e = calc::deriv(&e, &x);
+        }
+        Ok(e)
     }
 
     /// Value of a variable; stored expressions pick up values assigned later
@@ -2279,5 +2305,14 @@ fn complex_evalf(e: &Expr) -> Expr {
             _ => e.clone(),
         },
         _ => e.clone(),
+    }
+}
+
+/// Complex conjugate, treating symbols as real: i becomes -i
+pub(crate) fn conj_expr(e: &Expr) -> Expr {
+    match e {
+        Expr::Num(_) | Expr::Sym(_) | Expr::Str(_) | Expr::Bool(_) | Expr::Obj(_) => e.clone(),
+        Expr::Const(crate::expr::Const::I) => crate::build::neg(e.clone()),
+        _ => e.map_children(&mut |c| conj_expr(c)),
     }
 }

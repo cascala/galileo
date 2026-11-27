@@ -124,7 +124,7 @@ pub const ENTRIES: &[Entry] = &[
         "functions",
         "Functions",
         "a(t), A(r), f(x, y)",
-        "A call to an unknown one-letter name (optionally with digits or a subscript, like a_1) is an undefined function. deriv uses the chain rule: deriv(a(t)^2, t) is 2*a(t)*a'(t). Partial derivatives of functions of several variables are written f_,1 (first argument) and so on.",
+        "A call to an unknown one-letter name (optionally with digits or a subscript, like a_1) is an undefined function. deriv uses the chain rule: deriv(a(t)^2, t) is 2*a(t)*d(a, t), where d(a, t) is the derivative of a at t. Partial derivatives of functions of several variables are written d(f(x, y), x).",
         "deriv(a(t)^2, t)"
     ),
     e!(
@@ -224,6 +224,13 @@ pub const ENTRIES: &[Entry] = &[
         "and(a, b), or(a, b), xor(a, b), not(a); also a && b, a || b, !a",
         "Logic on true, false and numbers (nonzero is true).",
         "and(true, false)"
+    ),
+    e!(
+        "d",
+        "Calculus",
+        "d(y, t), d(y, t, k), d(expr, x), d(expr, x, k)",
+        "The derivative. d(y, t) is the derivative of the function y at t, and d(y, t, 2) the second derivative: y may be unknown (it then stays symbolic, so T = d(y, t)^2/2 can be stored and used later in dsolve or eulerlagrange), a function you defined (d(f, 2) is f'(2)), or a variable holding an expression. d(expr, x, k) differentiates any expression k times with respect to x, like deriv. The prime ' is never a derivative: A' is the transpose.",
+        "d(y, t, 2) + y"
     ),
     e!(
         "deriv",
@@ -334,7 +341,7 @@ pub const ENTRIES: &[Entry] = &[
         "expm",
         "Matrices",
         "expm(A) or expm(A, t)",
-        "Matrix exponential e^A = I + A + A^2/2! + ..., or e^(A t) with a symbol t: exact from the Jordan form (complex eigenvalues a +- bi give e^(a t) cos(b t) and e^(a t) sin(b t)), numeric for decimal entries. x(t) = expm(A, t)*x0 solves x' = A x with x(0) = x0.",
+        "Matrix exponential e^A = I + A + A^2/2! + ..., or e^(A t) with a symbol t: exact from the Jordan form (complex eigenvalues a +- bi give e^(a t) cos(b t) and e^(a t) sin(b t)), numeric for decimal entries. x(t) = expm(A, t)*x0 solves d(x, t) = A x with x(0) = x0.",
         "expm([0 -1; 1 0], t)"
     ),
     e!(
@@ -361,8 +368,8 @@ pub const ENTRIES: &[Entry] = &[
     e!(
         "transpose",
         "Matrices",
-        "transpose(A) or A'",
-        "Transpose of a matrix.",
+        "A', A.' or transpose(A)",
+        "Transpose of a matrix. A' is the conjugate transpose (complex entries are conjugated, as in MATLAB); A.' and transpose(A) only swap rows and columns. For a derivative use d(y, t).",
         "[1 2; 3 4]'"
     ),
     e!(
@@ -460,7 +467,7 @@ pub const ENTRIES: &[Entry] = &[
         "odeplot",
         "Calculus",
         "odeplot(rhs, unknowns, t, start, t0, t1, [X Y] (, steps))",
-        "Solves dy/dt = rhs numerically and plots the solution. The arguments: (1) rhs, a row with the right-hand side of each equation, dy1/dt, dy2/dt, ...; (2) unknowns, the names y1, y2, ... in the same order; (3) t, the name of the independent variable; (4) start, the values of y1, y2, ... at t0; (5, 6) t0 and t1, where the solution starts and stops; (7) [X Y], what to draw: two expressions in t and the unknowns for the horizontal and vertical axes ([t y1] plots y1 against t, [y1 y2] is a phase portrait, [r*cos(phi) r*sin(phi)] turns polar coordinates into a picture), or three for a 3D curve; (8) optionally the number of Runge-Kutta steps (default 20000). The equations must be first order: write y'' = f as two equations, y' = w and w' = f, with unknowns [y w].",
+        "Solves dy/dt = rhs numerically and plots the solution. The arguments: (1) rhs, a row with the right-hand side of each equation, dy1/dt, dy2/dt, ...; (2) unknowns, the names y1, y2, ... in the same order; (3) t, the name of the independent variable; (4) start, the values of y1, y2, ... at t0; (5, 6) t0 and t1, where the solution starts and stops; (7) [X Y], what to draw: two expressions in t and the unknowns for the horizontal and vertical axes ([t y1] plots y1 against t, [y1 y2] is a phase portrait, [r*cos(phi) r*sin(phi)] turns polar coordinates into a picture), or three for a 3D curve; (8) optionally the number of Runge-Kutta steps (default 20000). The equations must be first order: write d(y, t, 2) = f as two equations, d(y, t) = w and d(w, t) = f, with unknowns [y w].",
         "odeplot([v, -x], [x v], t, [1 0], 0, 2*pi, [t x])"
     ),
     e!(
@@ -544,7 +551,7 @@ pub const ENTRIES: &[Entry] = &[
         "define",
         "Basics",
         "f(x) := expr, f(x, y) := expr (or f(x) = expr)",
-        "Defines your own function. Call it like a built-in one: f(3), f(t + 1). f'(x) and f''(x) are its derivatives. Functions can call themselves together with if(...). ans in the body is replaced by the last result when the function is defined, so deriv(f(x), x) followed by d(x) := ans makes d the derivative.",
+        "Defines your own function. Call it like a built-in one: f(3), f(t + 1). d(f, x) and d(f, x, 2) are its derivatives at x. Functions can call themselves together with if(...). ans in the body is replaced by the last result when the function is defined, so deriv(f(x), x) followed by g(x) := ans makes g the derivative.",
         "f(x) := x^2 + 1; f(3)"
     ),
     e!(
@@ -1012,9 +1019,9 @@ pub const ENTRIES: &[Entry] = &[
     e!(
         "dsolve",
         "Calculus",
-        "dsolve(ode, y, x) or dsolve(ode, y, x, x0, [y(x0), y'(x0), ...])",
-        "Exact solution of a differential equation written with y, y', y'', ...: linear with constant coefficients of any order (forcing by polynomials, exponentials, sines and cosines), first-order linear y' + p(x) y = q(x), separable y' = f(x) g(y) (logistic, y' = x/y, ...), and Cauchy–Euler x^2 y'' + b x y' + c y = 0. A list of first-order equations with a list of unknowns solves a linear system: dsolve([x' == y, y' == -x], [x, y], t, 0, [1, 0]). Without start values the answer has constants C1, C2, ....",
-        "dsolve(y' == y*(1 - y/10), y, x, 0, 1)"
+        "dsolve(ode, y, x) or dsolve(ode, y, x, x0, [y(x0), d(y, x0), ...])",
+        "Exact solution of a differential equation written with y, d(y, x), d(y, x, 2), ...: linear with constant coefficients of any order (forcing by polynomials, exponentials, sines and cosines), first-order linear y' + p(x) y = q(x), separable y' = f(x) g(y) (logistic, y' = x/y, ...), and Cauchy–Euler x^2 y'' + b x y' + c y = 0. A list of first-order equations with a list of unknowns solves a linear system: dsolve([d(x, t) == y, d(y, t) == -x], [x, y], t, 0, [1, 0]). Without start values the answer has constants C1, C2, ....",
+        "dsolve(d(y, x) == y*(1 - y/10), y, x, 0, 1)"
     ),
     e!(
         "mean",
@@ -1103,15 +1110,15 @@ pub const ENTRIES: &[Entry] = &[
     e!(
         "seriessolve",
         "Differential equations",
-        "seriessolve(ode, y, x, n) or seriessolve(ode, y, x, n, [y(0), y'(0), ...])",
+        "seriessolve(ode, y, x, n) or seriessolve(ode, y, x, n, [y(0), d(y, 0), ...])",
         "Power series solution y = a0 + a1 x + ... + an x^n about the ordinary point x = 0 of a linear equation (polynomial coefficients, or any with a Taylor series). Without start values a0 = y(0) and a1 = y'(0) stay free.",
-        "seriessolve(y'' == x*y, y, x, 8)"
+        "seriessolve(d(y, x, 2) == x*y, y, x, 8)"
     ),
     e!(
         "laplace",
         "Differential equations",
         "laplace(f, t, s) or laplace(f)",
-        "Laplace transform F(s) = ∫₀^∞ f(t) e^(-s t) dt from the table and its rules: powers, exponentials, sines and cosines, sinh, cosh, shifts by e^(a t), products with t^n, heaviside(t - a) and dirac(t - a), and derivatives y(t), y'(t), y''(t) with y(0), y'(0). With 7 or 8 arguments, laplace(g, x, a, b, y, c, d) solves Laplace's equation instead (see poisson).",
+        "Laplace transform F(s) = ∫₀^∞ f(t) e^(-s t) dt from the table and its rules: powers, exponentials, sines and cosines, sinh, cosh, shifts by e^(a t), products with t^n, heaviside(t - a) and dirac(t - a), and derivatives y(t), d(y, t), d(y, t, 2) with y(0) and d(y, 0). With 7 or 8 arguments, laplace(g, x, a, b, y, c, d) solves Laplace's equation instead (see poisson).",
         "laplace(exp(-t)*cos(2*t), t, s)"
     ),
     e!(
@@ -1244,7 +1251,7 @@ pub const ENTRIES: &[Entry] = &[
         "discover",
         "Discovery",
         "discover(data, [x y]) or discover(data, [x y], [term1 term2 ...]) (, sigma)",
-        "Searches for the simplest formula that explains the last variable from the others (symbolic regression). (1) data: a matrix with one row per observation and one column per variable; (2) the names of the columns, in order; the quantity to explain comes last, or is the one written with primes: [t x''] explains the second derivative of x, estimated from neighbouring rows (the first column is then the independent variable). (3) optionally a row of candidate terms; discover then looks for the fewest terms whose weighted sum fits (the SINDy idea). Without terms it tries power laws with simple exponents (y = C*x^(3/2)) and short sums of powers of the inputs. (4) optionally one uncertainty per row: the fit then weighs each row by 1/sigma^2 and reports chi2/dof. The result lists candidates from simple to complex with their misfit (relative error, or chi2/dof with uncertainties) and marks the best one: the simplest formula that predicts each row from the others (leave-one-out) at most twice as badly as any, with at least two rows per fitted constant (with uncertainties: the simplest whose chi2/dof is close to the lowest). Constants close to simple numbers such as 1, 3/2 or 4*pi^2 are recognised. d[k] picks candidate k, best(d) the best one.",
+        "Searches for the simplest formula that explains the last variable from the others (symbolic regression). (1) data: a matrix with one row per observation and one column per variable; (2) the names of the columns, in order; the quantity to explain comes last, or is the one written as a derivative: [t d(x, t, 2)] explains the second derivative of x, estimated from neighbouring rows (the first column is then the independent variable). (3) optionally a row of candidate terms; discover then looks for the fewest terms whose weighted sum fits (the SINDy idea). Without terms it tries power laws with simple exponents (y = C*x^(3/2)) and short sums of powers of the inputs. (4) optionally one uncertainty per row: the fit then weighs each row by 1/sigma^2 and reports chi2/dof. The result lists candidates from simple to complex with their misfit (relative error, or chi2/dof with uncertainties) and marks the best one: the simplest formula that predicts each row from the others (leave-one-out) at most twice as badly as any, with at least two rows per fitted constant (with uncertainties: the simplest whose chi2/dof is close to the lowest). Constants close to simple numbers such as 1, 3/2 or 4*pi^2 are recognised. d[k] picks candidate k, best(d) the best one.",
         "discover([1 1; 2 2.83; 3 5.2; 4 8], [a T])"
     ),
     e!(
@@ -1671,36 +1678,36 @@ pub const ENTRIES: &[Entry] = &[
         "eulerlagrange",
         "Calculus of variations",
         "eulerlagrange(L, y, x) or eulerlagrange(L, [q1 q2], t)",
-        "The Euler–Lagrange equation d/dx(dL/dy') = dL/dy of a Lagrangian L in x, y and y': a path that makes the integral of L smallest (or stationary) between fixed end points satisfies it. Written as y'' == ... when it can be solved for y''. Several unknowns give one equation each (Lagrangian mechanics). The note names conserved quantities: dL/dq' when L does not contain q, and energy(L, ...) when L does not contain x.",
-        "eulerlagrange(sqrt(1 + y'^2), y, x)"
+        "The Euler–Lagrange equation d/dx(dL/dy') = dL/dy of a Lagrangian L in x, y and y': a path that makes the integral of L smallest (or stationary) between fixed end points satisfies it. Written as d(y, x, 2) == ... when it can be solved for the second derivative. Several unknowns give one equation each (Lagrangian mechanics). The note names conserved quantities: dL/dq' when L does not contain q, and energy(L, ...) when L does not contain x.",
+        "eulerlagrange(sqrt(1 + d(y, x)^2), y, x)"
     ),
     e!(
         "energy",
         "Calculus of variations",
         "energy(L, y, x) or energy(L, [q1 q2], t)",
         "The sum of q' dL/dq' over the unknowns minus L. When L does not contain x (or t), it is constant along every solution of the Euler–Lagrange equations: the total energy in mechanics, Beltrami's first integral in geometry.",
-        "energy(m*x'^2/2 - k*x^2/2, x, t)"
+        "energy(m*d(x, t)^2/2 - k*x^2/2, x, t)"
     ),
     e!(
         "action",
         "Calculus of variations",
         "action(L, y, x, f, a, b)",
         "The value of the functional: the integral of L(x, y, y') from x = a to b along the path y = f(x), exactly when possible, otherwise numerically. For several unknowns give a row of unknowns and a row of paths.",
-        "action(sqrt(1 + y'^2), y, x, x^2, 0, 1)"
+        "action(sqrt(1 + d(y, x)^2), y, x, x^2, 0, 1)"
     ),
     e!(
         "extremal",
         "Calculus of variations",
         "extremal(L, y, x, a, b, ya, yb) or with a last argument n (pieces, default 100)",
         "Finds numerically the path y(x) from (a, ya) to (b, yb) that makes the integral of L(x, y, y') smallest: the path is cut into n straight pieces (crowded near the ends) and Newton's method lowers the integral. Returns a record {x, y, J} with J the value of the integral.",
-        "s = extremal(sqrt((1 + y'^2)/y), y, x, 0, pi, 0, 2); s.J"
+        "s = extremal(sqrt((1 + d(y, x)^2)/y), y, x, 0, pi, 0, 2); s.J"
     ),
     e!(
         "motion",
         "Calculus of variations",
         "motion(L, q, t, q0, v0, T) or motion(L, [q1 q2], t, [..], [..], T) with a last argument steps (2000)",
         "Solves the equations of motion of a Lagrangian L(q, q', t) numerically (Runge–Kutta) from positions q0 and velocities v0 up to time T. Returns a record {t, q, v}: one row per coordinate. The note reports how well the energy was kept.",
-        "s = motion(x'^2/2 - x^2/2, x, t, 1, 0, 2*pi); s.q"
+        "s = motion(d(x, t)^2/2 - x^2/2, x, t, 1, 0, 2*pi); s.q"
     ),
 ];
 

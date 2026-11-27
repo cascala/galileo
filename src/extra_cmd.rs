@@ -994,25 +994,24 @@ pub(crate) fn ode_node(n: &Node, y: &str, x: &str, order: &mut usize) -> R<Node>
     };
     Ok(match n {
         Node::Ident(s) if s == y => ph(0, order),
-        Node::Transpose(_) => {
-            let mut k = 0;
-            let mut cur = n;
-            while let Node::Transpose(inner) = cur {
-                k += 1;
-                cur = inner;
-            }
-            match cur {
-                Node::Ident(s) if s == y => ph(k, order),
-                Node::Call(s, args) if s == y && args.len() == 1 => ph(k, order),
-                _ => Node::Transpose(Box::new(ode_node(&n_inner(n), y, x, order)?)),
-            }
+        Node::Call(s, args)
+            if s == y && args.len() == 1 && matches!(&args[0], Node::Ident(v) if v == x) =>
+        {
+            ph(0, order)
         }
         Node::Call(s, args)
-            if s.trim_end_matches('\'') == y
-                && args.len() == 1
-                && matches!(&args[0], Node::Ident(v) if v == x) =>
+            if s == "d"
+                && (2..=3).contains(&args.len())
+                && (matches!(&args[0], Node::Ident(v) if v == y)
+                    || matches!(&args[0], Node::Call(v, a) if v == y && a.len() == 1 && matches!(&a[0], Node::Ident(w) if w == x)))
+                && matches!(&args[1], Node::Ident(v) if v == x) =>
         {
-            ph(s.len() - y.len(), order)
+            let k = match args.get(2) {
+                Some(Node::Num(s)) => s.parse::<usize>().map_err(|_| "d(y, x, k): bad derivative order")?,
+                None => 1,
+                _ => return Err("d(y, x, k): write the derivative order as a number".into()),
+            };
+            ph(k, order)
         }
         Node::Call(s, args) if s == "diff" || s == "deriv" => {
             // diff(y, x) or diff(y(x), x, 2)
@@ -1061,10 +1060,45 @@ pub(crate) fn ode_node(n: &Node, y: &str, x: &str, order: &mut usize) -> R<Node>
     })
 }
 
-fn n_inner(n: &Node) -> Node {
-    match n {
-        Node::Transpose(a) => (**a).clone(),
-        other => other.clone(),
+/// Does e mention the unknown y: y itself, y(t) or a derivative d(y, t)?
+fn mentions(e: &Expr, y: &str) -> bool {
+    match e {
+        Expr::Sym(s) => s == y,
+        Expr::Apply(f, v) => f.trim_end_matches('\'') == y || v.iter().any(|a| mentions(a, y)),
+        Expr::Add(v) | Expr::Mul(v) => v.iter().any(|a| mentions(a, y)),
+        Expr::Pow(a, b) => mentions(a, y) || mentions(b, y),
+        Expr::Func(_, a) => mentions(a, y),
+        Expr::Matrix(r) => r.iter().flatten().any(|a| mentions(a, y)),
+        _ => false,
+    }
+}
+
+impl Session {
+    /// Replace stored variables that mention one of the unknowns by their
+    /// formula, so T = d(y, t)^2/2 can be used in dsolve and eulerlagrange
+    pub(crate) fn inline_unknowns(&self, n: &Node, ys: &[String]) -> R<Node> {
+        let rec = |a: &Node| self.inline_unknowns(a, ys);
+        Ok(match n {
+            Node::Ident(s) if !ys.contains(s) => match self.vars.get(s) {
+                Some(v) if v.is_scalar() && ys.iter().any(|y| mentions(v, y)) => {
+                    let src = format!("({})", show(v));
+                    match crate::parser::parse(&src)?.pop() {
+                        Some(crate::parser::Stmt::Expr(e)) => e,
+                        _ => n.clone(),
+                    }
+                }
+                _ => n.clone(),
+            },
+            Node::Neg(a) => Node::Neg(Box::new(rec(a)?)),
+            Node::Transpose(a) => Node::Transpose(Box::new(rec(a)?)),
+            Node::Bin(op, a, b) => Node::Bin(*op, Box::new(rec(a)?), Box::new(rec(b)?)),
+            Node::Call(f, args) => Node::Call(f.clone(), args.iter().map(rec).collect::<R<_>>()?),
+            Node::Matrix(rows) => Node::Matrix(
+                rows.iter().map(|r| r.iter().map(rec).collect::<R<Vec<_>>>()).collect::<R<_>>()?,
+            ),
+            Node::List(v) => Node::List(v.iter().map(rec).collect::<R<_>>()?),
+            other => other.clone(),
+        })
     }
 }
 
@@ -1923,7 +1957,7 @@ impl Session {
     }
 
     fn dsolve(&mut self, args: &[Node]) -> R<Expr> {
-        let usage = "usage: dsolve(ode, y, x) or dsolve(ode, y, x, x0, [y(x0), y'(x0), ...]); write the equation with y, y', y'' (e.g. y'' + y == 0)";
+        let usage = "usage: dsolve(ode, y, x) or dsolve(ode, y, x, x0, [y(x0), d(y, x0), ...]); write the equation with y, d(y, x), d(y, x, 2) (e.g. d(y, x, 2) + y == 0)";
         if matches!(args.first(), Some(Node::Matrix(_))) {
             return self.dsolve_system(args);
         }
@@ -1933,7 +1967,8 @@ impl Session {
         let y = name(&args[1], "dsolve: y")?;
         let x = name(&args[2], "dsolve: x")?;
         let mut order = 0;
-        let node = ode_node(&args[0], &y, &x, &mut order)?;
+        let node = self.inline_unknowns(&args[0], std::slice::from_ref(&y))?;
+        let node = ode_node(&node, &y, &x, &mut order)?;
         if order == 0 {
             return Err(format!("dsolve: the equation has no derivative of {}", y));
         }
@@ -2039,7 +2074,7 @@ impl Session {
                 "dsolve: a order-{} equation needs {} start values: y(x0){}",
                 order,
                 order,
-                if order > 1 { ", y'(x0), ..." } else { "" }
+                if order > 1 { ", d(y, x0), ..." } else { "" }
             ));
         }
         let mut eqs = vec![];
@@ -2059,7 +2094,7 @@ impl Session {
 
     /// power series solution about x = 0 of a linear equation
     fn seriessolve(&mut self, args: &[Node]) -> R<Expr> {
-        let usage = "usage: seriessolve(ode, y, x, n) or seriessolve(ode, y, x, n, [y(0), y'(0), ...]): the power series of y up to x^n";
+        let usage = "usage: seriessolve(ode, y, x, n) or seriessolve(ode, y, x, n, [y(0), d(y, 0), ...]): the power series of y up to x^n";
         if args.len() != 4 && args.len() != 5 {
             return Err(usage.into());
         }
@@ -2070,7 +2105,8 @@ impl Session {
             _ => return Err("seriessolve: n must be a whole number from 1 to 40".into()),
         };
         let mut order = 0;
-        let node = ode_node(&args[0], &y, &x, &mut order)?;
+        let node = self.inline_unknowns(&args[0], std::slice::from_ref(&y))?;
+        let node = ode_node(&node, &y, &x, &mut order)?;
         if order == 0 {
             return Err(format!("seriessolve: the equation has no derivative of {}", y));
         }
@@ -2219,7 +2255,7 @@ impl Session {
 
     /// dsolve([x' == a x + b y, y' == c x + d y], [x, y], t[, t0, [x0, y0]])
     fn dsolve_system(&mut self, args: &[Node]) -> R<Expr> {
-        let usage = "usage: dsolve([x' == ..., y' == ...], [x, y], t) or dsolve([...], [x, y], t, t0, [x(t0), y(t0)])";
+        let usage = "usage: dsolve([d(x, t) == ..., d(y, t) == ...], [x, y], t) or dsolve([...], [x, y], t, t0, [x(t0), y(t0)])";
         if args.len() != 3 && args.len() != 5 {
             return Err(usage.into());
         }
@@ -2241,12 +2277,12 @@ impl Session {
         let mut a: Vec<Vec<Expr>> = vec![];
         let mut b = vec![];
         for q in &eqs {
-            let mut node = q.clone();
+            let mut node = self.inline_unknowns(q, &vars)?;
             for v in &vars {
                 let mut order = 0;
                 node = ode_node(&node, v, &t, &mut order)?;
                 if order > 1 {
-                    return Err("dsolve: a system must be first order (x', y'); write y'' = ... as y' = v, v' = ...".into());
+                    return Err("dsolve: a system must be first order (d(x, t), d(y, t)); write d(y, t, 2) = ... as d(y, t) = v, d(v, t) = ...".into());
                 }
             }
             let e = equation_lhs(&self.eval_hidden(&node, &hid)?);
@@ -2737,7 +2773,7 @@ mod tests {
     }
     #[test]
     fn odes() {
-        assert_eq!(run("dsolve(y'' + y == 0, y, x, 0, [1, 0])"), "cos(x)");
-        assert_eq!(run("dsolve(y' == 2*y, y, x, 0, [3])"), "3*exp(2*x)");
+        assert_eq!(run("dsolve(d(y, x, 2) + y == 0, y, x, 0, [1, 0])"), "cos(x)");
+        assert_eq!(run("dsolve(d(y, x) == 2*y, y, x, 0, [3])"), "3*exp(2*x)");
     }
 }

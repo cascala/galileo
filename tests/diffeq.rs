@@ -50,22 +50,22 @@ fn laplace_pairs() {
 
 #[test]
 fn dsolve_more() {
-    assert_eq!(one("dsolve(y' == y*(1 - y/10), y, x, 0, 1)"), "10*exp(x)/(exp(x)+9)");
-    assert_eq!(one("dsolve(y' == x/y, y, x, 0, 2)"), "sqrt(x^2+4)");
-    assert_eq!(one("dsolve(y' == y^2, y, x, 0, 1)"), "1/(1-x)");
-    assert_eq!(one("dsolve(x^2*y'' + x*y' - 4*y == 0, y, x)"), "C1*x^2+C2/x^2");
-    assert_eq!(one("dsolve([x' == -x + y, y' == -x - y], [x, y], t, 0, [1, 0])"), "[exp(-t)*cos(t), -exp(-t)*sin(t)]");
-    assert_eq!(one("dsolve(y'' == 1/x, y, x)"), "C1+C2*x+x*log(x)-x");
-    assert_eq!(one("dsolve(v' == -u/M, v, M, M0, 0)"), "u*log(M0)-u*log(M)");
+    assert_eq!(one("dsolve(d(y, x) == y*(1 - y/10), y, x, 0, 1)"), "10*exp(x)/(exp(x)+9)");
+    assert_eq!(one("dsolve(d(y, x) == x/y, y, x, 0, 2)"), "sqrt(x^2+4)");
+    assert_eq!(one("dsolve(d(y, x) == y^2, y, x, 0, 1)"), "1/(1-x)");
+    assert_eq!(one("dsolve(x^2*d(y, x, 2) + x*d(y, x) - 4*y == 0, y, x)"), "C1*x^2+C2/x^2");
+    assert_eq!(one("dsolve([d(x, t) == -x + y, d(y, t) == -x - y], [x, y], t, 0, [1, 0])"), "[exp(-t)*cos(t), -exp(-t)*sin(t)]");
+    assert_eq!(one("dsolve(d(y, x, 2) == 1/x, y, x)"), "C1+C2*x+x*log(x)-x");
+    assert_eq!(one("dsolve(d(v, M) == -u/M, v, M, M0, 0)"), "u*log(M0)-u*log(M)");
     assert_eq!(
-        one("dsolve([x' == u, y' == v, u' == -2*x + y, v' == x - 2*y], [x, y, u, v], t, 0, [1, 0, 0, 0])"),
+        one("dsolve([d(x, t) == u, d(y, t) == v, d(u, t) == -2*x + y, d(v, t) == x - 2*y], [x, y, u, v], t, 0, [1, 0, 0, 0])"),
         "[(cos(t)+cos(sqrt(3)*t))/2, cos(t)/2-cos(sqrt(3)*t)/2, -(sqrt(3)*sin(sqrt(3)*t)+sin(t))/2, sqrt(3)*sin(sqrt(3)*t)/2-sin(t)/2]"
     );
 }
 
 #[test]
 fn series_and_fourier() {
-    assert_eq!(one("seriessolve(y'' + y == 0, y, x, 6, [1, 0])"), "-x^6/720+x^4/24-x^2/2+1");
+    assert_eq!(one("seriessolve(d(y, x, 2) + y == 0, y, x, 6, [1, 0])"), "-x^6/720+x^4/24-x^2/2+1");
     assert_eq!(one("fourier(x, x, pi, 3)"), "2*sin(x)-sin(2*x)+2*sin(3*x)/3");
     assert_eq!(one("fourier(x^2, x, pi, 2)"), "pi^2/3-4*cos(x)+cos(2*x)");
 }
@@ -76,7 +76,7 @@ fn trig_products_and_window() {
     assert_eq!(one("int(sin(3*x)*sin(5*x), x, -pi, pi)"), "0");
     assert!(!one("window(plot(x, x, 0, 1), 0, 1, -1, 2)").starts_with("ERROR"));
     assert!(one("window(plot(x, x, 0, 1), 1, 0, -1, 2)").starts_with("ERROR"));
-    assert_eq!(one("dsolve(P' == P*(1 - P) - 3/16, P, t, 0, 1)"), "(1-9*exp(t/2))/(4-12*exp(t/2))");
+    assert_eq!(one("dsolve(d(P, t) == P*(1 - P) - 3/16, P, t, 0, 1)"), "(1-9*exp(t/2))/(4-12*exp(t/2))");
 }
 
 #[test]

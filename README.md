@@ -23,7 +23,7 @@ underneath is new:
 * **Values, not statements.** The parser produces a syntax tree; functions are looked up by
   name at evaluation time, so `sinx` is just a variable and adding a function is one match arm.
   Unknown names are errors, except one-letter names like `a(t)` or `f2(x)`, which are
-  undefined functions: `deriv(a(t)^2, t)` is `2*a(t)*a'(t)`.
+  undefined functions: `deriv(a(t)^2, t)` is `2*a(t)*d(a, t)`.
 * **Rational-function simplification.** `simplify` puts expressions over a common
   denominator, cancels polynomial factors exactly, and rewrites `sin^2` as `1-cos^2` where
   that helps. Curvature results come out tidy (the Kerr Ricci tensor is zero in about 2 s).

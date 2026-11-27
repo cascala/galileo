@@ -1,4 +1,4 @@
-<!-- syntax stamp: 22355d3af008d2f7 -->
+<!-- syntax stamp: 469b1f3091a4e3fb -->
 
 # The Galileo language
 
@@ -108,15 +108,29 @@ galileo> f
 `who` lists the variables you defined, and `clear` removes them all.
 
 A one-letter name, or a letter followed by digits or `_` and more, used as a function
-(`y(t)`, `f2(x)`) is an undefined function, and primes write its derivatives.
-Any other unknown function name is an error.
+(`y(t)`, `f2(x)`) is an undefined function. Any other unknown function name is an error.
+
+## Derivatives
+
+`d(y, t)` is the derivative of the function `y` at `t`, and `d(y, t, 2)` the second
+derivative. When `y` has no value it is an unknown function and the derivative stays
+symbolic, so it can be stored and used later, for example in `dsolve` or `eulerlagrange`.
+`d(expr, x)` and `d(expr, x, k)` differentiate any expression, like `deriv`.
 
 ```galileo
+galileo> d(x^3, x, 2)
+6*x
 galileo> deriv(y(t)^2, t)
-2*y(t)*y'(t)
+2*y(t)*d(y, t)
+galileo> T = d(y, t)^2/2;
+galileo> eulerlagrange(T - y^2/2, y, t)
+d(y, t, 2) == -y
 galileo> sinx(1)
 Error: unknown function sinx
 ```
+
+The prime is never a derivative: `y'` is the transpose of `y` (see below), and `y'(t)`
+is an error that suggests `d(y, t)`.
 
 ## Operators
 
@@ -132,7 +146,7 @@ From loosest to tightest binding:
 | `*` `/` `\` `.*` `./` | product, quotient, left division (`A\b` solves `A*x = b`), elementwise product and quotient |
 | unary `-` `+` `!` | negation, not |
 | `^` `.^` | power and elementwise power, right associative |
-| `f(args)` `A[i]` `A'` | call, index from 0, transpose |
+| `f(args)` `A[i]` `A'` `A.'` | call, index from 0, conjugate transpose, transpose |
 
 So `-x^2` is `-(x^2)`, `2^3^2` is `2^9`, and `2^-1` is allowed.
 
@@ -199,6 +213,12 @@ galileo> A = [1 2; 3 4]
 galileo> A'
 [1, 3;
  2, 4]
+galileo> [1 2*i]'
+[   1;
+ -2*i]
+galileo> [1 2*i].'
+[  1;
+ 2*i]
 galileo> det(A)
 -2
 galileo> A \ [5; 6]
@@ -383,5 +403,7 @@ names the file and line: `file.gg:12: ...`.
 
 ## Changes from the Scala version
 
+* `'` is always the (conjugate) transpose and `.'` the plain transpose, as in Matlab and
+  Julia; derivatives are written `d(y, t)`, never `y'`.
 * Inside a matrix, `[a -b]` has two entries (as in Matlab); `[a - b]` and `[a-b]` have one.
 * `exit` is not available in a notebook.
