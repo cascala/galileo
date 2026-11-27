@@ -166,6 +166,21 @@ a header line `execute <length>`, `complete <cursor> <length>` or `inspect <curs
 then the code; each reply is one line of JSON with MIME bundles (text, LaTeX, Markdown, SVG,
 Plotly). [iGalileo](https://github.com/cascala/igalileo) wraps it in a small Python ipykernel.
 
+## Galileo in a web page
+
+To put live Galileo examples in your own web page (lesson notes, worksheets, a blog),
+add one line to the page and write each example as a `<pre class="galileo">` block:
+
+```html
+<script src="https://cascala.github.io/igalileo/embed/galileo.js" defer></script>
+
+<pre class="galileo" data-autorun>deriv(sin(x)^2, x)</pre>
+```
+
+Readers can edit and run every block, in their own browser. See
+[Galileo in your own page](https://cascala.github.io/igalileo/embed/) for the options,
+a template, and a download for use without internet.
+
 ## WebAssembly
 
 The same engine runs in a browser. It has no dependencies and builds straight to WebAssembly
@@ -180,7 +195,14 @@ cargo build --release --target wasm32-unknown-unknown --lib
 `src/wasm.rs` exports a small C ABI (`galileo_alloc`, `galileo_execute`, `galileo_complete`,
 `galileo_inspect`, `galileo_reset`, `galileo_seed`) whose replies are the same JSON as the
 `--kernel` protocol. iGalileo's JupyterLite site and the Galileo playground use it.
-`ls`, `cd` and `load` have no file system in the browser and report an error there.
+
+In the browser, files live in memory (`src/vfs.rs`): the page puts the user's files in with
+`galileo_fs_put` (and `galileo_fs_mkdir`, `galileo_fs_cd`, `galileo_fs_unput`), and after
+each run collects what Galileo wrote or removed with `galileo_fs_changes`. So `load`, `read`,
+`save`, `ls`, `cd`, `pwd` and `rm` work there too, and a script with relative file names
+runs the same in the terminal, in Jupyter, in JupyterLite and in the playground. The
+playground keeps its files in the browser (IndexedDB); JupyterLite uses its own file
+browser. `galileo_export` turns a plot into PNG or EPS.
 
 ## Programming
 
