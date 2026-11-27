@@ -44,6 +44,8 @@ fn euler_lagrange_equations() {
     }
     assert!(one("eulerlagrange(y''^2, y, x)").starts_with("ERROR eulerlagrange: L may use"));
     close("action(sqrt(1 + y'^2), y, x, x^2, 0, 1)", 1.4789428575445975, 1e-9);
+    // a singular integrand at the start (sliding from rest): tanh-sinh quadrature
+    close("action(sqrt((1 + y'^2)/(2*9.81*y)), y, x, 2*sqrt(x/pi), 0, pi)", 1.012865257486215, 1e-6);
 }
 
 #[test]

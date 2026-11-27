@@ -92,6 +92,47 @@ fn gauss(a: &mut [Vec<f64>], b: &mut [f64]) -> bool {
     true
 }
 
+/// The integral of f over [a, b] by tanh-sinh (double exponential) quadrature,
+/// which copes with integrable singularities at the end points
+fn tanh_sinh(f: &dyn Fn(f64) -> f64, a: f64, b: f64) -> f64 {
+    use std::f64::consts::FRAC_PI_2;
+    let (c, d) = ((a + b) / 2.0, (b - a) / 2.0);
+    let sum = |h: f64, odd_only: bool| -> f64 {
+        let mut s = 0.0;
+        let n = (4.5 / h).ceil() as i64;
+        for k in -n..=n {
+            if odd_only && k % 2 == 0 {
+                continue;
+            }
+            let t = k as f64 * h;
+            let u = FRAC_PI_2 * t.sinh();
+            // distance to the nearer end, computed without cancellation
+            let delta = d * 2.0 / (1.0 + (2.0 * u.abs()).exp());
+            if delta <= 0.0 {
+                continue;
+            }
+            let x = if t < 0.0 { a + delta } else if t > 0.0 { b - delta } else { c };
+            let w = d * FRAC_PI_2 * t.cosh() / u.cosh().powi(2);
+            let v = f(x);
+            if v.is_finite() {
+                s += w * v;
+            }
+        }
+        s
+    };
+    let mut h = 0.5;
+    let mut total = sum(h, false) * h;
+    for _ in 0..8 {
+        h /= 2.0;
+        let next = total / 2.0 + sum(h, true) * h;
+        if (next - total).abs() <= 1e-12 * next.abs().max(1e-300) {
+            return next;
+        }
+        total = next;
+    }
+    total
+}
+
 /// A Lagrangian read with its unknowns written as q__0 (value) and q__1 (derivative)
 struct Lag {
     qs: Vec<String>,
@@ -287,21 +328,7 @@ impl Session {
                     evalf(&b).num().map(|n| n.to_f64()).ok_or("action: b must be a number")?,
                 );
                 let c = compile(&e, &[&lag.x]);
-                // Gauss–Legendre, 5 points on 400 panels
-                let (gx, gw) = (
-                    [0.0, -0.538469310105683, 0.538469310105683, -0.906179845938664, 0.906179845938664],
-                    [0.568888888888889, 0.478628670499366, 0.478628670499366, 0.236926885056189, 0.236926885056189],
-                );
-                let n = 400;
-                let h = (hi - lo) / n as f64;
-                let mut s = 0.0;
-                for k in 0..n {
-                    let m = lo + (k as f64 + 0.5) * h;
-                    for j in 0..5 {
-                        s += gw[j] * run(&c, &[m + gx[j] * h / 2.0]);
-                    }
-                }
-                let s = s * h / 2.0;
+                let s = tanh_sinh(&|x| run(&c, &[x]), lo, hi);
                 if !s.is_finite() {
                     return Err(format!("action: the integral of {} is not a finite number", show(&e)));
                 }
