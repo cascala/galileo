@@ -987,7 +987,7 @@ fn poly_geo_sum(f: &Expr, k: &str, a0: i128) -> R<Option<Expr>> {
 // ---------- dsolve ----------
 
 /// replace y, y', y'', y(x), y'(x) ... by placeholder names y__0, y__1, ...
-fn ode_node(n: &Node, y: &str, x: &str, order: &mut usize) -> R<Node> {
+pub(crate) fn ode_node(n: &Node, y: &str, x: &str, order: &mut usize) -> R<Node> {
     let ph = |k: usize, order: &mut usize| {
         *order = (*order).max(k);
         Node::Ident(format!("{}__{}", y, k))

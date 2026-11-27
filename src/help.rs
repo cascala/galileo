@@ -1667,6 +1667,41 @@ pub const ENTRIES: &[Entry] = &[
         "Shows a result of heat, wave, laplace or poisson: an animation in time (the default for heat and wave), snapshots side by side, a color map (the default for laplace and poisson, with level curves) or a surface.",
         "pdeplot(heat(x*(1 - x), x, 0, 1, 0.2), \"map\")"
     ),
+    e!(
+        "eulerlagrange",
+        "Calculus of variations",
+        "eulerlagrange(L, y, x) or eulerlagrange(L, [q1 q2], t)",
+        "The Euler–Lagrange equation d/dx(dL/dy') = dL/dy of a Lagrangian L in x, y and y': a path that makes the integral of L smallest (or stationary) between fixed end points satisfies it. Written as y'' == ... when it can be solved for y''. Several unknowns give one equation each (Lagrangian mechanics). The note names conserved quantities: dL/dq' when L does not contain q, and energy(L, ...) when L does not contain x.",
+        "eulerlagrange(sqrt(1 + y'^2), y, x)"
+    ),
+    e!(
+        "energy",
+        "Calculus of variations",
+        "energy(L, y, x) or energy(L, [q1 q2], t)",
+        "The sum of q' dL/dq' over the unknowns minus L. When L does not contain x (or t), it is constant along every solution of the Euler–Lagrange equations: the total energy in mechanics, Beltrami's first integral in geometry.",
+        "energy(m*x'^2/2 - k*x^2/2, x, t)"
+    ),
+    e!(
+        "action",
+        "Calculus of variations",
+        "action(L, y, x, f, a, b)",
+        "The value of the functional: the integral of L(x, y, y') from x = a to b along the path y = f(x), exactly when possible, otherwise numerically. For several unknowns give a row of unknowns and a row of paths.",
+        "action(sqrt(1 + y'^2), y, x, x^2, 0, 1)"
+    ),
+    e!(
+        "extremal",
+        "Calculus of variations",
+        "extremal(L, y, x, a, b, ya, yb) or with a last argument n (pieces, default 100)",
+        "Finds numerically the path y(x) from (a, ya) to (b, yb) that makes the integral of L(x, y, y') smallest: the path is cut into n straight pieces (crowded near the ends) and Newton's method lowers the integral. Returns a record {x, y, J} with J the value of the integral.",
+        "s = extremal(sqrt((1 + y'^2)/y), y, x, 0, pi, 0, 2); s.J"
+    ),
+    e!(
+        "motion",
+        "Calculus of variations",
+        "motion(L, q, t, q0, v0, T) or motion(L, [q1 q2], t, [..], [..], T) with a last argument steps (2000)",
+        "Solves the equations of motion of a Lagrangian L(q, q', t) numerically (Runge–Kutta) from positions q0 and velocities v0 up to time T. Returns a record {t, q, v}: one row per coordinate. The note reports how well the energy was kept.",
+        "s = motion(x'^2/2 - x^2/2, x, t, 1, 0, 2*pi); s.q"
+    ),
 ];
 
 /// other names for a command: (alias, the entry it is described under)

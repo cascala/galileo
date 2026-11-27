@@ -101,6 +101,9 @@ impl Session {
         if let Some(r) = self.graph_call(f, args) {
             return r;
         }
+        if let Some(r) = self.cov_call(f, args) {
+            return r;
+        }
         if let Some(r) = self.pde_call(f, args) {
             return r;
         }

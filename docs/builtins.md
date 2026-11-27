@@ -4,7 +4,7 @@
 
 Every built-in command, by topic. Inside Galileo, `help` lists them and `help(name)` shows the same text as here. How statements, operators, functions, matrices, strings, lists and blocks are written is described in the [language reference](language.md).
 
-[Basics](#basics) · [Functions](#functions) · [Algebra](#algebra) · [Calculus](#calculus) · [Matrices](#matrices) · [Plotting](#plotting) · [Language](#language) · [Complex numbers](#complex-numbers) · [Number theory](#number-theory) · [Factoring lab](#factoring-lab) · [Groups](#groups) · [Rings and fields](#rings-and-fields) · [Statistics](#statistics) · [Complex analysis](#complex-analysis) · [Differential equations](#differential-equations) · [Differential geometry](#differential-geometry) · [Discovery](#discovery) · [Multivariable calculus](#multivariable-calculus) · [Special functions](#special-functions) · [Units](#units) · [Signals](#signals) · [Graphs](#graphs) · [Random processes](#random-processes) · [Partial differential equations](#partial-differential-equations)
+[Basics](#basics) · [Functions](#functions) · [Algebra](#algebra) · [Calculus](#calculus) · [Matrices](#matrices) · [Plotting](#plotting) · [Language](#language) · [Complex numbers](#complex-numbers) · [Number theory](#number-theory) · [Factoring lab](#factoring-lab) · [Groups](#groups) · [Rings and fields](#rings-and-fields) · [Statistics](#statistics) · [Complex analysis](#complex-analysis) · [Differential equations](#differential-equations) · [Differential geometry](#differential-geometry) · [Discovery](#discovery) · [Multivariable calculus](#multivariable-calculus) · [Special functions](#special-functions) · [Units](#units) · [Signals](#signals) · [Graphs](#graphs) · [Random processes](#random-processes) · [Partial differential equations](#partial-differential-equations) · [Calculus of variations](#calculus-of-variations)
 
 ## Basics
 
@@ -2133,3 +2133,45 @@ Example: `s = laplace(0, x, 0, 1, y, 0, 1, {top: sin(pi*x)}); pdeplot(s)`
 Shows a result of heat, wave, laplace or poisson: an animation in time (the default for heat and wave), snapshots side by side, a color map (the default for laplace and poisson, with level curves) or a surface.
 
 Example: `pdeplot(heat(x*(1 - x), x, 0, 1, 0.2), "map")`
+
+## Calculus of variations
+
+### eulerlagrange
+
+`eulerlagrange(L, y, x) or eulerlagrange(L, [q1 q2], t)`
+
+The Euler–Lagrange equation d/dx(dL/dy') = dL/dy of a Lagrangian L in x, y and y': a path that makes the integral of L smallest (or stationary) between fixed end points satisfies it. Written as y'' == ... when it can be solved for y''. Several unknowns give one equation each (Lagrangian mechanics). The note names conserved quantities: dL/dq' when L does not contain q, and energy(L, ...) when L does not contain x.
+
+Example: `eulerlagrange(sqrt(1 + y'^2), y, x)`
+
+### energy
+
+`energy(L, y, x) or energy(L, [q1 q2], t)`
+
+The sum of q' dL/dq' over the unknowns minus L. When L does not contain x (or t), it is constant along every solution of the Euler–Lagrange equations: the total energy in mechanics, Beltrami's first integral in geometry.
+
+Example: `energy(m*x'^2/2 - k*x^2/2, x, t)`
+
+### action
+
+`action(L, y, x, f, a, b)`
+
+The value of the functional: the integral of L(x, y, y') from x = a to b along the path y = f(x), exactly when possible, otherwise numerically. For several unknowns give a row of unknowns and a row of paths.
+
+Example: `action(sqrt(1 + y'^2), y, x, x^2, 0, 1)`
+
+### extremal
+
+`extremal(L, y, x, a, b, ya, yb) or with a last argument n (pieces, default 100)`
+
+Finds numerically the path y(x) from (a, ya) to (b, yb) that makes the integral of L(x, y, y') smallest: the path is cut into n straight pieces (crowded near the ends) and Newton's method lowers the integral. Returns a record {x, y, J} with J the value of the integral.
+
+Example: `s = extremal(sqrt((1 + y'^2)/y), y, x, 0, pi, 0, 2); s.J`
+
+### motion
+
+`motion(L, q, t, q0, v0, T) or motion(L, [q1 q2], t, [..], [..], T) with a last argument steps (2000)`
+
+Solves the equations of motion of a Lagrangian L(q, q', t) numerically (Runge–Kutta) from positions q0 and velocities v0 up to time T. Returns a record {t, q, v}: one row per coordinate. The note reports how well the energy was kept.
+
+Example: `s = motion(x'^2/2 - x^2/2, x, t, 1, 0, 2*pi); s.q`

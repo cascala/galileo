@@ -70,6 +70,7 @@ pub mod ode2;
 pub mod stats;
 pub mod stoch_cmd;
 pub mod pde_cmd;
+pub mod cov_cmd;
 pub mod stats_cmd;
 pub mod cnum;
 pub mod laurent;
