@@ -6,15 +6,13 @@
 //!   (the SINDy idea). Candidates are ranked by fit against simplicity.
 //! * `check(law, data, vars)` tests a formula (or several) against
 //!   observations, fitting any free constants.
-//! * `prove(lhs, rhs)` shows step by step that two expressions are equal and
-//!   lists the assumptions (nonzero denominators, ...) it needed.
 //! * `scatter(data, vars)` draws observations as points, `odedata` turns an ODE
 //!   solution into a data table.
 
 use crate::build::*;
 use crate::calc;
 use crate::eval::{R, Session};
-use crate::expr::{Expr, Func, Obj};
+use crate::expr::{Expr, Obj};
 use crate::latex::{latex, name as lname};
 use crate::numeric::{self, compile, run};
 use crate::parser::Node;
@@ -22,7 +20,7 @@ use crate::plot::{Figure, Series};
 use crate::print::show;
 use std::rc::Rc;
 
-/// Result of discover, check or prove: text for terminals, Markdown for notebooks
+/// Result of discover or check: text for terminals, Markdown for notebooks
 #[derive(Clone, Debug, PartialEq)]
 pub struct Report {
     pub kind: &'static str,
@@ -261,18 +259,6 @@ fn pct(v: f64) -> String {
         format!("{:.0e}%", p)
     } else {
         "0%".into()
-    }
-}
-
-/// Deterministic pseudo-random numbers in [0, 1)
-struct Lcg(u64);
-impl Lcg {
-    fn next(&mut self) -> f64 {
-        self.0 = self
-            .0
-            .wrapping_mul(6364136223846793005)
-            .wrapping_add(1442695040888963407);
-        (self.0 >> 11) as f64 / (1u64 << 53) as f64
     }
 }
 
@@ -1020,7 +1006,6 @@ impl Session {
         let r = match f {
             "discover" => self.discover(args),
             "check" => self.check(args),
-            "prove" => self.prove(args),
             "scatter" => self.scatter(args),
             "odedata" => self.odedata(args),
             "column" => self.column(args),
@@ -1668,342 +1653,6 @@ fn fit_law(t: &Table, law: &Expr) -> R<Fit> {
     })
 }
 
-// ---------- prove ----------
-
-/// Assumptions an expression needs to make sense: denominators nonzero,
-/// even roots of nonnegative numbers, logarithms of positive numbers
-fn conditions(e: &Expr, out: &mut Vec<String>) {
-    fn push(out: &mut Vec<String>, s: String) {
-        if !out.contains(&s) {
-            out.push(s);
-        }
-    }
-    match e {
-        Expr::Pow(b, x) => {
-            conditions(b, out);
-            conditions(x, out);
-            if !b.is_number() && !matches!(**b, Expr::Const(_)) {
-                if let Some(n) = x.num() {
-                    if n.is_negative() {
-                        for f in factors(b) {
-                            push(out, format!("{} ≠ 0", show(&f)));
-                        }
-                    }
-                    if !n.is_integer() && n.denom().is_some_and(|d| d % 2 == 0) {
-                        push(out, format!("{} ≥ 0", show(b)));
-                    }
-                }
-            }
-        }
-        Expr::Func(Func::Log, a) => {
-            conditions(a, out);
-            if !a.is_number() {
-                push(out, format!("{} > 0", show(a)));
-            }
-        }
-        _ => {
-            if let Expr::Add(v) | Expr::Mul(v) | Expr::Apply(_, v) = e {
-                for c in v {
-                    conditions(c, out);
-                }
-            } else if let Expr::Func(_, a) = e {
-                conditions(a, out);
-            } else if let Expr::Matrix(m) = e {
-                for c in m.iter().flatten() {
-                    conditions(c, out);
-                }
-            }
-        }
-    }
-}
-
-fn factors(e: &Expr) -> Vec<Expr> {
-    match e {
-        Expr::Mul(v) => v
-            .iter()
-            .filter(|f| !f.is_number() && !matches!(f, Expr::Const(_)))
-            .map(|f| f.base_exp().0)
-            .collect(),
-        Expr::Pow(b, _) => factors(b),
-        other => vec![other.clone()],
-    }
-}
-
-fn is_zero(e: &Expr) -> bool {
-    e.is_zero() || crate::ratfun::is_zero(e)
-}
-
-impl Session {
-    fn prove(&mut self, args: &[Node]) -> R<Expr> {
-        let usage = "usage: prove(lhs, rhs) shows that lhs = rhs; prove(lhs, rhs, [a value_a; b value_b]) first substitutes the given values";
-        let (l, r, g) = match args {
-            [l] => (l, None, None),
-            [l, r] => (l, Some(r), None),
-            [l, r, g] => (l, Some(r), Some(g)),
-            _ => return Err(usage.into()),
-        };
-        let mut lhs = self.eval(l)?;
-        let mut rhs = match r {
-            Some(r) => self.eval(r)?,
-            None => Expr::zero(),
-        };
-        if lhs.is_matrix()
-            || rhs.is_matrix()
-            || matches!(lhs, Expr::Obj(_))
-            || matches!(rhs, Expr::Obj(_))
-        {
-            return Err("prove compares two expressions (not matrices or plots)".into());
-        }
-        let mut steps: Vec<(String, String, String)> = vec![]; // (description, text, latex)
-        let mut conds = vec![];
-        self.node_conditions(l, &mut conds);
-        if let Some(r) = r {
-            self.node_conditions(r, &mut conds);
-        }
-        conditions(&lhs, &mut conds);
-        conditions(&rhs, &mut conds);
-        let src_l = crate::parser::source(l);
-        let src_r = r.map(crate::parser::source).unwrap_or_else(|| "0".into());
-        let claim = (src_l.clone(), src_r.clone(), latex(&lhs), latex(&rhs));
-        if src_l != show(&lhs) || src_r != show(&rhs) {
-            steps.push((
-                "evaluate both sides".into(),
-                format!("{} = {}", show(&lhs), show(&rhs)),
-                format!("{} = {}", latex(&lhs), latex(&rhs)),
-            ));
-        }
-        let mut given_txt = vec![];
-        let mut given_tex = vec![];
-        if let Some(g) = g {
-            let pairs: Vec<(String, Node)> = match g {
-                Node::Matrix(rows) => {
-                    rows.iter()
-                        .map(|row| match row.as_slice() {
-                            [Node::Ident(nm), v] => Ok((nm.clone(), v.clone())),
-                            _ => Err("prove: give the substitutions as [name value; name value]"
-                                .to_string()),
-                        })
-                        .collect::<R<_>>()?
-                }
-                _ => return Err("prove: give the substitutions as [name value; name value]".into()),
-            };
-            for (nm, v) in pairs {
-                let val = self.eval(&v)?;
-                conditions(&val, &mut conds);
-                lhs = calc::subst(&lhs, &nm, &val);
-                rhs = calc::subst(&rhs, &nm, &val);
-                given_txt.push(format!("{} = {}", nm, show(&val)));
-                given_tex.push(format!("{} = {}", lname(&nm), latex(&val)));
-            }
-            conditions(&lhs, &mut conds);
-            conditions(&rhs, &mut conds);
-            steps.push((
-                format!("substitute {}", given_txt.join(", ")),
-                format!("{} = {}", show(&lhs), show(&rhs)),
-                format!("{} = {}", latex(&lhs), latex(&rhs)),
-            ));
-        }
-        let d = sub(lhs.clone(), rhs.clone());
-        let mut proved = is_zero(&d) && d.is_zero();
-        if !proved {
-            steps.push((
-                "move everything to one side".into(),
-                format!("lhs - rhs = {}", show(&d)),
-                format!("\\text{{lhs}} - \\text{{rhs}} = {}", latex(&d)),
-            ));
-            let tg = calc::together(&d);
-            let (num, den) = calc::num_den(&tg);
-            if !den.is_one() && !den.is_number() {
-                steps.push((
-                    "common denominator".into(),
-                    format!("({}) / ({})", show(&num), show(&den)),
-                    format!("\\frac{{{}}}{{{}}}", latex(&num), latex(&den)),
-                ));
-                for f in factors(&den) {
-                    if !f.is_number() {
-                        let s = format!("{} ≠ 0", show(&f));
-                        if !conds.contains(&s) {
-                            conds.push(s);
-                        }
-                    }
-                }
-            }
-            let ex = calc::expand(&num);
-            if show(&ex) != show(&num) {
-                steps.push(("expand the numerator".into(), show(&ex), latex(&ex)));
-            }
-            if ex.is_zero() {
-                proved = true;
-            } else {
-                let s = calc::simplify(&ex);
-                let s2 = if s.is_zero() { s } else { calc::simplify(&d) };
-                steps.push(("simplify".into(), show(&s2), latex(&s2)));
-                proved = s2.is_zero() || is_zero(&s2);
-            }
-        }
-        // verdict
-        let (verdict, vtex) = if proved {
-            let c = if conds.is_empty() {
-                String::new()
-            } else {
-                format!(", assuming {}", conds.join(", "))
-            };
-            (
-                format!("Proved: the difference is 0{}.", c),
-                format!("**Proved**: the difference is 0{}.", tex_conds(&conds)),
-            )
-        } else {
-            match counterexample(&lhs, &rhs) {
-                Some((pt, a, b)) => (
-                    format!("False: at {} the left side is {} and the right side is {}.", pt, fmt(a), fmt(b)),
-                    format!("**False**: at {} the left side is {} and the right side is {}.", pt, fmt(a), fmt(b)),
-                ),
-                None => (
-                    "Not proved: both sides agree at 50 random points, but Galileo could not reduce the difference to 0, so this is evidence, not a proof.".into(),
-                    "**Not proved**: both sides agree at 50 random points, but Galileo could not reduce the difference to 0, so this is evidence, not a proof.".into(),
-                ),
-            }
-        };
-        let mut tx = vec![format!("Claim: {} = {}", claim.0, claim.1)];
-        let mut md = vec![format!("**Claim**: `{} = {}`\n", claim.0, claim.1)];
-        for (i, (desc, t, l)) in steps.iter().enumerate() {
-            tx.push(format!("  {}. {}: {}", i + 1, desc, t));
-            md.push(format!("{}. {}: ${}$", i + 1, desc, l));
-        }
-        tx.push(verdict);
-        md.push(format!("\n{}", vtex));
-        Ok(report(Report {
-            kind: "Proof",
-            text: tx.join("\n"),
-            markdown: md.join("\n"),
-            formulas: vec![],
-            best: 0,
-            vars: vec![],
-            order: 0,
-            target: 0,
-            value: Some(Expr::Bool(proved)),
-        }))
-    }
-}
-
-impl Session {
-    /// Conditions read from the formula as typed, before evaluation cancels anything (x^2/x)
-    fn node_conditions(&mut self, n: &Node, out: &mut Vec<String>) {
-        use crate::parser::Op;
-        let add = |s: &mut Session, e: &Node, rel: &str, out: &mut Vec<String>| {
-            if let Ok(v) = s.eval(e) {
-                if !v.is_number() && !matches!(v, Expr::Const(_)) && !v.is_matrix() {
-                    let items = if rel == "≠ 0" { factors(&v) } else { vec![v] };
-                    for f in items {
-                        let c = format!("{} {}", show(&f), rel);
-                        if !out.contains(&c) {
-                            out.push(c);
-                        }
-                    }
-                }
-            }
-        };
-        match n {
-            Node::Bin(op, a, b) => {
-                self.node_conditions(a, out);
-                self.node_conditions(b, out);
-                match op {
-                    Op::Div => add(self, b, "≠ 0", out),
-                    Op::Pow => {
-                        if let Ok(x) = self.eval(b) {
-                            if let Some(k) = x.num() {
-                                if k.is_negative() {
-                                    add(self, a, "≠ 0", out);
-                                }
-                                if !k.is_integer() && k.denom().is_some_and(|d| d % 2 == 0) {
-                                    add(self, a, "≥ 0", out);
-                                }
-                            }
-                        }
-                    }
-                    _ => {}
-                }
-            }
-            Node::Neg(a) | Node::Transpose(a) => self.node_conditions(a, out),
-            Node::Call(f, args) => {
-                for a in args {
-                    self.node_conditions(a, out);
-                }
-                match (f.as_str(), args.as_slice()) {
-                    ("sqrt", [a]) => add(self, a, "≥ 0", out),
-                    ("log", [a]) => add(self, a, "> 0", out),
-                    _ => {}
-                }
-            }
-            _ => {}
-        }
-    }
-}
-
-fn tex_conds(c: &[String]) -> String {
-    if c.is_empty() {
-        return String::new();
-    }
-    format!(
-        ", assuming {}",
-        c.iter()
-            .map(|s| format!("`{}`", s))
-            .collect::<Vec<_>>()
-            .join(", ")
-    )
-}
-
-/// A point where the two sides differ, if random sampling finds one
-fn counterexample(l: &Expr, r: &Expr) -> Option<(String, f64, f64)> {
-    let mut syms = l.symbols();
-    for s in r.symbols() {
-        if !syms.contains(&s) {
-            syms.push(s);
-        }
-    }
-    let nm: Vec<&str> = syms.iter().map(|s| s.as_str()).collect();
-    let (cl, cr) = (compile(l, &nm), compile(r, &nm));
-    let mut rng = Lcg(0x5eed);
-    let mut agree = 0;
-    for k in 0..400 {
-        let pt: Vec<f64> = syms
-            .iter()
-            .map(|_| {
-                if k % 2 == 0 {
-                    0.1 + 3.0 * rng.next()
-                } else {
-                    6.0 * rng.next() - 3.0
-                }
-            })
-            .collect();
-        let (a, b) = (run(&cl, &pt), run(&cr, &pt));
-        if !a.is_finite() || !b.is_finite() {
-            continue;
-        }
-        if (a - b).abs() > 1e-7 * (1.0 + a.abs() + b.abs()) {
-            let p: Vec<String> = syms
-                .iter()
-                .zip(&pt)
-                .map(|(s, v)| format!("{} = {}", s, fmt(*v)))
-                .collect();
-            return Some((
-                if p.is_empty() {
-                    "every point".into()
-                } else {
-                    p.join(", ")
-                },
-                a,
-                b,
-            ));
-        }
-        agree += 1;
-        if agree >= 50 {
-            break;
-        }
-    }
-    None
-}
-
 // ---------- scatter, odedata, column ----------
 
 impl Session {
@@ -2290,18 +1939,6 @@ mod tests {
         );
         let best = out.lines().find(|l| l.starts_with('*')).unwrap();
         assert!(best.contains("u^2-u+1"), "{}", out);
-    }
-
-    #[test]
-    fn prove_with_conditions() {
-        let out = run("prove(x^2/x, x)");
-        assert!(out.contains("Proved") && out.contains("x ≠ 0"), "{}", out);
-        let out = run("prove((a+b)^2, a^2 + b^2)");
-        assert!(out.contains("False"), "{}", out);
-        let out = run(
-            "prove(2*pi*epsilon*A, 6*pi*G*M/(c^2*p), [epsilon 3*G*M/c^2; A G*M/h^2; h sqrt(G*M*p)])",
-        );
-        assert!(out.contains("Proved"), "{}", out);
     }
 
     #[test]

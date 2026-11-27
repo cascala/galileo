@@ -1304,13 +1304,6 @@ pub const ENTRIES: &[Entry] = &[
         "check(a^(3/2), [1 1; 4 8; 9 27], [a T])"
     ),
     e!(
-        "prove",
-        "Discovery",
-        "prove(lhs, rhs) or prove(lhs, rhs, [a value; b value])",
-        "Shows step by step that lhs = rhs: it brings the difference over a common denominator, expands and simplifies it to 0, and lists what it had to assume (denominators nonzero, square roots of nonnegative numbers, logarithms of positive numbers). With a third argument it first substitutes the given values. If the difference is not 0 it looks for a counterexample at random points; if it finds none it says so, which is evidence but not a proof.",
-        "prove(x^2/x, x)"
-    ),
-    e!(
         "best",
         "Discovery",
         "best(d)",
