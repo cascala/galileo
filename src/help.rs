@@ -36,6 +36,13 @@ pub const ENTRIES: &[Entry] = &[
         "explain = \"off\""
     ),
     e!(
+        "exactdigits",
+        "Basics",
+        "exactdigits = 38, exactdigits = 0",
+        "Typed decimals hold their exact value: 0.1 is exactly one tenth, and + - * / and whole powers of decimals are exact, so 0.1 + 0.2 - 0.3 is 0.0 and 0.1*x + 0.2*x == 0.3*x is true. A decimal stays exact while its numerator and denominator have at most exactdigits digits; beyond that it becomes a 64-bit float (about 16 digits). The default and the largest value is 38; exactdigits = 0 makes every decimal a float. Functions like sqrt, sin and exp, and powers like 0.5^0.5, always give floats.",
+        "exactdigits = 10"
+    ),
+    e!(
         "who",
         "Basics",
         "who",

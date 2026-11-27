@@ -234,6 +234,7 @@ pub fn pow(b: Expr, e: Expr) -> Expr {
     // an integral float exponent means the same as the exact integer: x^2.0 = x^2
     let e = match e {
         Num(Number::Float(f)) if f.fract() == 0.0 && f.abs() < 9.0e15 => Expr::int(f as i128),
+        Num(Number::Xd(n, 1)) => Expr::int(n),
         other => other,
     };
     if crate::assume::any() {

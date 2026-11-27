@@ -61,6 +61,7 @@ fn apply_name(f: &str) -> String {
 pub fn number(n: Number) -> String {
     match n {
         Number::Dec(..) => n.to_string(),
+        Number::Xd(..) => number(Number::Float(n.to_f64())),
         Number::Big(ref r) if r.is_integer() => r.numer().to_string(),
         Number::Big(ref r) => {
             let a = r.numer();
@@ -295,7 +296,7 @@ fn fmt_mul(e: &Expr) -> (String, u8) {
         ),
         Number::Big(ref r) if r.is_integer() => (r.numer().to_string(), None),
         Number::Big(ref r) => (r.numer().to_string(), Some(r.denom().to_string())),
-        Number::Float(_) | Number::Dec(..) => (number(coeff), None),
+        Number::Float(_) | Number::Dec(..) | Number::Xd(..) => (number(coeff), None),
     };
     let join = |fs: &[Expr], lead: Option<String>| -> String {
         let mut parts: Vec<String> = lead.into_iter().collect();

@@ -1,9 +1,16 @@
 //! Numbers: exact rationals, with floating point as the inexact fallback.
 //!
-//! Integer literals stay exact (`1/3 + 2/6` is `2/3`). Decimal literals are
-//! floats, and floats are contagious: anything combined with a float is a
-//! float. Exact numbers have no size limit: small ones use i128, larger
-//! ones switch to big integers automatically and never become floats.
+//! Integer literals stay exact (`1/3 + 2/6` is `2/3`). Exact numbers have no
+//! size limit: small ones use i128, larger ones switch to big integers
+//! automatically and never become floats.
+//!
+//! Decimal literals are exact decimals (Xd): `0.1` is exactly 1/10, so
+//! `0.1 + 0.2 - 0.3` is 0. They are still decimals, not exact numbers: they
+//! print as decimals and sqrt, sin, exp, ... give decimal values. `+ - * /`
+//! and whole powers stay exact while the numerator and denominator have at
+//! most `exactdigits` digits (38 by default, at most 38); beyond that the
+//! value becomes a 64-bit float. Floats are contagious: anything combined
+//! with a float is a float.
 
 use num_bigint::BigInt;
 use num_rational::BigRational;
@@ -16,6 +23,91 @@ use std::rc::Rc;
 /// Results with more bits than this stay symbolic (2^(10^9) is not expanded).
 pub const MAX_BITS: u64 = 1 << 22;
 
+thread_local! {
+    static EXACT_DIGITS: std::cell::Cell<u32> = const { std::cell::Cell::new(DEFAULT_EXACT_DIGITS) };
+}
+
+/// The default of `exactdigits`, and its largest value (what fits in i128)
+pub const DEFAULT_EXACT_DIGITS: u32 = 38;
+
+/// How many digits the numerator and denominator of an exact decimal may
+/// have before it becomes a float (0: decimals are floats)
+pub fn exact_digits() -> u32 {
+    EXACT_DIGITS.with(|c| c.get())
+}
+
+/// Sets `exactdigits` (0 to 38)
+pub fn set_exact_digits(d: u32) {
+    EXACT_DIGITS.with(|c| c.set(d.min(DEFAULT_EXACT_DIGITS)));
+}
+
+/// 10^k as i128 (k <= 38)
+fn ten_i128(k: u32) -> i128 {
+    10i128.pow(k)
+}
+
+/// n/d (d > 0, in lowest terms) as an exact decimal, or a float when it has
+/// more digits than `exactdigits` allows
+fn xd(n: i128, d: i128) -> Number {
+    let k = exact_digits();
+    if k == 0 {
+        return Float(n as f64 / d as f64);
+    }
+    if k < 38 {
+        let lim = ten_i128(k);
+        if n.unsigned_abs() >= lim as u128 || d >= lim {
+            return Float(rat_f64(n, d));
+        }
+    }
+    Xd(n, d)
+}
+
+/// an exact rational as an exact decimal (or a float when too large)
+fn xd_big(r: BigRational) -> Number {
+    match (r.numer().to_i128(), r.denom().to_i128()) {
+        (Some(n), Some(d)) => xd(n, d),
+        _ => Float(big_f64(&r)),
+    }
+}
+
+/// n/d rounded once to the nearest f64
+fn rat_f64(n: i128, d: i128) -> f64 {
+    const M: u128 = 1 << 53;
+    if n.unsigned_abs() <= M && d as u128 <= M {
+        n as f64 / d as f64
+    } else {
+        big_f64(&BigRational::new_raw(BigInt::from(n), BigInt::from(d)))
+    }
+}
+
+fn big_f64(r: &BigRational) -> f64 {
+    r.to_f64().unwrap_or_else(|| {
+        // too large for f64
+        let s = if r.is_negative() { -1.0 } else { 1.0 };
+        if r.numer().bits() > r.denom().bits() {
+            s * f64::INFINITY
+        } else {
+            0.0
+        }
+    })
+}
+
+/// a + b, a * b with i128 n/d pairs in lowest terms (None on overflow)
+fn rat_add(a: i128, b: i128, c: i128, d: i128) -> Option<(i128, i128)> {
+    let g = gcd(b, d);
+    let l = (b / g).checked_mul(d)?;
+    let n = a.checked_mul(l / b)?.checked_add(c.checked_mul(l / d)?)?;
+    let g2 = gcd(n, l).max(1);
+    Some((n / g2, l / g2))
+}
+fn rat_mul(a: i128, b: i128, c: i128, d: i128) -> Option<(i128, i128)> {
+    let g1 = gcd(a, d).max(1);
+    let g2 = gcd(c, b).max(1);
+    let n = (a / g1).checked_mul(c / g2)?;
+    let m = (b / g2).checked_mul(d / g1)?;
+    Some((n, m))
+}
+
 #[derive(Clone, Debug)]
 pub enum Number {
     /// numerator, denominator; denominator > 0 and gcd == 1
@@ -27,6 +119,11 @@ pub enum Number {
     /// literal: the value rounded to that many significant digits. Inexact,
     /// like a float; arithmetic keeps the smaller number of digits.
     Dec(Rc<BigRational>, u32),
+    /// an exact decimal: a decimal literal, or + - * / of them, holding the
+    /// exact value numerator/denominator (denominator > 0, lowest terms).
+    /// Inexact as far as symbolic work goes (it prints as a decimal and
+    /// functions give decimal values), but its arithmetic is exact.
+    Xd(i128, i128),
 }
 
 use Number::*;
@@ -172,6 +269,40 @@ fn long_decimal(t: &str) -> Option<(BigRational, u32)> {
     Some((r, sig as u32))
 }
 
+/// the exact value of a decimal literal like 0.1, 2.5e-3 or 1e20
+pub fn decimal_value(t: &str) -> Option<BigRational> {
+    let (mant, exp) = match t.find(['e', 'E']) {
+        Some(p) => (&t[..p], t[p + 1..].trim_start_matches('+').parse::<i64>().ok()?),
+        None => (t, 0),
+    };
+    let (neg, mant) = match mant.strip_prefix('-') {
+        Some(m) => (true, m),
+        None => (false, mant),
+    };
+    let (ip, fp) = match mant.find('.') {
+        Some(p) => (&mant[..p], &mant[p + 1..]),
+        None => (mant, ""),
+    };
+    if ip.is_empty() && fp.is_empty() {
+        return None;
+    }
+    if !(ip.chars().all(|c| c.is_ascii_digit()) && fp.chars().all(|c| c.is_ascii_digit())) {
+        return None;
+    }
+    let all = format!("{}{}", ip, fp);
+    let n: BigInt = if all.is_empty() { BigInt::zero() } else { all.parse().ok()? };
+    let n = if neg { -n } else { n };
+    let shift = exp - fp.len() as i64;
+    if shift.unsigned_abs() > 400 {
+        return None;
+    }
+    Some(if shift >= 0 {
+        BigRational::from_integer(n * ten_pow(shift as u32))
+    } else {
+        BigRational::new(n, ten_pow((-shift) as u32))
+    })
+}
+
 /// a normalized big rational as a Number, small when it fits
 fn norm(r: BigRational) -> Number {
     match (r.numer().to_i128(), r.denom().to_i128()) {
@@ -224,7 +355,15 @@ impl Number {
         if let Some((r, d)) = long_decimal(t) {
             return Some(Dec(Rc::new(r), d));
         }
-        t.parse::<f64>().ok().map(Float)
+        let f = t.parse::<f64>().ok()?;
+        if exact_digits() > 0 && f.is_finite() {
+            if let Some(r) = decimal_value(t) {
+                if let Xd(n, d) = xd_big(r) {
+                    return Some(Xd(n, d));
+                }
+            }
+        }
+        Some(Float(f))
     }
 
     /// the digits of a many-digit decimal (None for other numbers)
@@ -236,7 +375,32 @@ impl Number {
     pub fn rational(&self) -> Option<BigRational> {
         match self {
             Dec(r, _) => Some((**r).clone()),
+            Xd(n, d) => Some(BigRational::new_raw(BigInt::from(*n), BigInt::from(*d))),
             _ => self.big(),
+        }
+    }
+
+    /// whether this is an exact decimal
+    pub fn is_xd(&self) -> bool {
+        matches!(self, Xd(..))
+    }
+
+    /// the value as a float when this is a decimal of machine size (a
+    /// float or an exact decimal): numeric functions evaluate these directly
+    pub fn decimal(&self) -> Option<f64> {
+        match self {
+            Float(f) => Some(*f),
+            Xd(n, d) => Some(rat_f64(*n, *d)),
+            _ => None,
+        }
+    }
+
+    /// an exact decimal with the same value as this exact number (others unchanged)
+    pub fn to_xd(&self) -> Number {
+        match self {
+            Rat(n, d) => xd(*n, *d),
+            Big(r) => xd_big((**r).clone()),
+            _ => self.clone(),
         }
     }
 
@@ -245,10 +409,34 @@ impl Number {
     fn dec_op(&self, o: &Number, f: impl Fn(BigRational, BigRational) -> Option<BigRational>) -> Option<Option<Number>> {
         let d = match (self, o) {
             (Dec(_, a), Dec(_, b)) => (*a).min(*b),
-            (Dec(_, a), x) | (x, Dec(_, a)) if x.is_exact() => *a,
+            (Dec(_, a), x) | (x, Dec(_, a)) if x.is_exact() || x.is_xd() => *a,
             _ => return None,
         };
         Some(f(self.rational()?, o.rational()?).map(|r| dec(r, d)))
+    }
+
+    /// arithmetic where an exact decimal takes part and the other side is an
+    /// exact number or exact decimal: the exact result, as an exact decimal
+    /// (or a float when it has too many digits)
+    fn xd_op(
+        &self,
+        o: &Number,
+        small: fn(i128, i128, i128, i128) -> Option<(i128, i128)>,
+        big: fn(BigRational, BigRational) -> BigRational,
+    ) -> Option<Number> {
+        if !(self.is_xd() || o.is_xd()) || matches!(self, Float(_) | Dec(..)) || matches!(o, Float(_) | Dec(..)) {
+            return None;
+        }
+        let pair = |n: &Number| match n {
+            Rat(a, b) | Xd(a, b) => Some((*a, *b)),
+            _ => None,
+        };
+        if let (Some((a, b)), Some((c, d))) = (pair(self), pair(o)) {
+            if let Some((n, m)) = small(a, b, c, d) {
+                return Some(xd(n, m));
+            }
+        }
+        Some(xd_big(big(self.rational()?, o.rational()?)))
     }
 
     /// the exact value as a big rational (None for floats)
@@ -256,7 +444,7 @@ impl Number {
         match self {
             Rat(n, d) => Some(BigRational::new_raw(BigInt::from(*n), BigInt::from(*d))),
             Big(r) => Some((**r).clone()),
-            Float(_) | Dec(..) => None,
+            Float(_) | Dec(..) | Xd(..) => None,
         }
     }
     /// the exact integer value, of any size
@@ -282,10 +470,11 @@ impl Number {
             }),
             Float(f) => *f,
             Dec(r, _) => Big(r.clone()).to_f64(),
+            Xd(n, d) => rat_f64(*n, *d),
         }
     }
     pub fn is_exact(&self) -> bool {
-        !matches!(self, Float(_) | Dec(..))
+        !matches!(self, Float(_) | Dec(..) | Xd(..))
     }
     pub fn is_zero(&self) -> bool {
         match self {
@@ -293,6 +482,7 @@ impl Number {
             Big(_) => false,
             Float(f) => *f == 0.0,
             Dec(r, _) => r.is_zero(),
+            Xd(n, _) => *n == 0,
         }
     }
     pub fn is_one(&self) -> bool {
@@ -301,6 +491,7 @@ impl Number {
             Big(_) => false,
             Float(f) => *f == 1.0,
             Dec(r, _) => r.is_one(),
+            Xd(n, d) => *n == 1 && *d == 1,
         }
     }
     pub fn is_minus_one(&self) -> bool {
@@ -309,18 +500,19 @@ impl Number {
             Big(_) => false,
             Float(f) => *f == -1.0,
             Dec(r, _) => (-(**r).clone()).is_one(),
+            Xd(n, d) => *n == -1 && *d == 1,
         }
     }
     pub fn is_negative(&self) -> bool {
         match self {
-            Rat(n, _) => *n < 0,
+            Rat(n, _) | Xd(n, _) => *n < 0,
             Big(r) | Dec(r, _) => r.is_negative(),
             Float(f) => *f < 0.0,
         }
     }
     pub fn is_integer(&self) -> bool {
         match self {
-            Rat(_, d) => *d == 1,
+            Rat(_, d) | Xd(_, d) => *d == 1,
             Big(r) | Dec(r, _) => r.is_integer(),
             Float(f) => f.fract() == 0.0 && f.is_finite(),
         }
@@ -348,6 +540,10 @@ impl Number {
             Big(r) => norm(-(**r).clone()),
             Float(f) => Float(-f),
             Dec(r, d) => Dec(Rc::new(-(**r).clone()), *d),
+            Xd(n, d) => match n.checked_neg() {
+                Some(m) => Xd(m, *d),
+                None => Float(-rat_f64(*n, *d)),
+            },
         }
     }
     pub fn abs(&self) -> Number {
@@ -361,6 +557,9 @@ impl Number {
     pub fn add(&self, o: impl Borrow<Number>) -> Number {
         let o = o.borrow();
         if let Some(Some(r)) = self.dec_op(o, |x, y| Some(x + y)) {
+            return r;
+        }
+        if let Some(r) = self.xd_op(o, rat_add, |x, y| x + y) {
             return r;
         }
         if let (Rat(a, b), Rat(c, d)) = (self, o) {
@@ -388,6 +587,9 @@ impl Number {
         if let Some(Some(r)) = self.dec_op(o, |x, y| Some(x * y)) {
             return r;
         }
+        if let Some(r) = self.xd_op(o, rat_mul, |x, y| x * y) {
+            return r;
+        }
         if let (Rat(a, b), Rat(c, d)) = (self, o) {
             let (a, b, c, d) = (*a, *b, *c, *d);
             let g1 = gcd(a, d).max(1);
@@ -411,6 +613,15 @@ impl Number {
             Float(f) => Some(Float(1.0 / f)),
             Dec(r, _) if r.is_zero() => None,
             Dec(r, d) => Some(dec(r.recip(), *d)),
+            Xd(0, _) => None,
+            Xd(n, d) => Some(if *n < 0 {
+                match (d.checked_neg(), n.checked_neg()) {
+                    (Some(a), Some(b)) => xd(a, b),
+                    _ => Float(1.0 / rat_f64(*n, *d)),
+                }
+            } else {
+                xd(*d, *n)
+            }),
         }
     }
     pub fn div(&self, o: impl Borrow<Number>) -> Option<Number> {
@@ -430,6 +641,26 @@ impl Number {
             let p = num_traits::pow(r.abs(), k.unsigned_abs() as usize);
             let p = if r.is_negative() && k % 2 != 0 { -p } else { p };
             return Some(dec(if k < 0 { p.recip() } else { p }, *d));
+        }
+        // an exact decimal to an exact whole power stays exact
+        if let (Xd(..), true) = (self, e.is_exact() && e.is_integer()) {
+            let k = e.as_int()?;
+            if self.is_zero() && k < 0 {
+                return None;
+            }
+            let b = if k < 0 { self.recip()? } else { self.clone() };
+            let mut acc = Xd(1, 1);
+            for _ in 0..k.unsigned_abs().min(4096) {
+                acc = acc.mul(&b);
+                if let Float(_) = acc {
+                    break;
+                }
+            }
+            if let (Xd(..), true) = (&acc, k.unsigned_abs() <= 4096) {
+                return Some(acc);
+            }
+            let r = self.to_f64().powf(e.to_f64());
+            return if r.is_nan() { None } else { Some(Float(r)) };
         }
         if !self.is_exact() || !e.is_exact() {
             let r = self.to_f64().powf(e.to_f64());
@@ -508,6 +739,7 @@ impl PartialEq for Number {
             (Big(a), Big(b)) => a == b,
             (Float(a), Float(b)) => a == b,
             (Dec(a, p), Dec(b, q)) => a == b && p == q,
+            (Xd(a, b), Xd(c, d)) => a == c && b == d,
             _ => false, // 1 and 1.0 are different expressions
         }
     }
@@ -533,6 +765,46 @@ pub fn fmt_float(f: f64) -> String {
     }
 }
 
+/// An exact decimal as text: the shortest float text when that reads back as
+/// the same value (0.1, 1e-12, 2.5), all its digits when it is a terminating
+/// decimal with more digits than a float shows, and the nearest float's text
+/// otherwise (1/30 as 0.03333333333333333)
+fn fmt_xd(n: i128, d: i128) -> String {
+    let f = rat_f64(n, d);
+    let s = fmt_float(f);
+    let r = BigRational::new_raw(BigInt::from(n), BigInt::from(d));
+    if decimal_value(&s).is_some_and(|v| v == r) {
+        return s;
+    }
+    // terminating: d = 2^a 5^b
+    let mut m = d;
+    let (mut twos, mut fives) = (0u32, 0u32);
+    while m % 2 == 0 {
+        m /= 2;
+        twos += 1;
+    }
+    while m % 5 == 0 {
+        m /= 5;
+        fives += 1;
+    }
+    if m != 1 {
+        return s;
+    }
+    let k = twos.max(fives);
+    // n/d = n * (10^k/d) / 10^k
+    let scaled = BigInt::from(n) * (ten_pow(k) / BigInt::from(d));
+    let neg = scaled.is_negative();
+    let digits = scaled.abs().to_string();
+    let k = k as usize;
+    let (ip, fp) = if digits.len() > k {
+        (digits[..digits.len() - k].to_string(), digits[digits.len() - k..].to_string())
+    } else {
+        ("0".to_string(), format!("{}{}", "0".repeat(k - digits.len()), digits))
+    };
+    let fp = fp.trim_end_matches('0');
+    format!("{}{}.{}", if neg { "-" } else { "" }, ip, if fp.is_empty() { "0" } else { fp })
+}
+
 impl fmt::Display for Number {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -542,6 +814,7 @@ impl fmt::Display for Number {
             Big(r) => write!(f, "{}/{}", r.numer(), r.denom()),
             Float(x) => write!(f, "{}", fmt_float(*x)),
             Dec(r, d) => write!(f, "{}", fmt_dec(r, *d)),
+            Xd(n, d) => write!(f, "{}", fmt_xd(*n, *d)),
         }
     }
 }

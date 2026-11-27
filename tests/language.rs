@@ -264,3 +264,21 @@ fn small_coefficients_are_kept() {
     assert_eq!(last("expand((x+0.1)^2) == x^2+0.2*x+0.01"), "true");
     assert_eq!(last("simplify((x^2-0.01)/(x-0.1))"), "x+0.1");
 }
+
+#[test]
+fn exact_decimals() {
+    assert_eq!(last("0.1*x + 0.2*x == 0.3*x"), "true");
+    assert_eq!(last("0.1 + 0.2"), "0.3");
+    assert_eq!(last("0.1 + 0.2 - 0.3"), "0.0");
+    assert_eq!(last("(0.1/3)*3"), "0.1");
+    assert_eq!(last("1e20 + 1"), "100000000000000000001.0");
+    assert_eq!(last("sqrt(0.25)"), "0.5");
+    assert_eq!(last("exp(1.0)"), "2.718281828459045");
+    assert_eq!(last("x^2.0"), "x^2");
+    // small coefficients are still kept
+    assert_eq!(last("x^3 == x^3 + 1e-12*x^5"), "x^3 == 1e-12*x^5+x^3");
+    // past exactdigits, decimals are floats
+    assert_eq!(last("exactdigits = 0; 0.1 + 0.2"), "0.30000000000000004");
+    assert_eq!(last("exactdigits = 3; 0.001*0.1"), "0.0001");
+    assert!(shown("exactdigits = 39").iter().any(|l| l.contains("from 0 to 38")));
+}

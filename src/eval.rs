@@ -120,6 +120,8 @@ pub(crate) fn builtins() -> BTreeMap<String, Expr> {
     v.insert("true".into(), Expr::Bool(true));
     v.insert("false".into(), Expr::Bool(false));
     v.insert("explain".into(), explain_default());
+    crate::num::set_exact_digits(crate::num::DEFAULT_EXACT_DIGITS);
+    v.insert("exactdigits".into(), Expr::int(crate::num::DEFAULT_EXACT_DIGITS as i128));
     v
 }
 
@@ -509,6 +511,13 @@ impl Session {
                 let v = self.eval(n)?;
                 if name == "explain" {
                     check_explain(&v)?;
+                }
+                if name == "exactdigits" {
+                    let max = crate::num::DEFAULT_EXACT_DIGITS as i128;
+                    match v.num().and_then(|k| if k.is_exact() { k.as_int() } else { None }) {
+                        Some(k) if (0..=max).contains(&k) => crate::num::set_exact_digits(k as u32),
+                        _ => return Err(format!("exactdigits: a whole number from 0 to {}", max)),
+                    }
                 }
                 self.note_report(&v);
                 self.set(name, v.clone());
@@ -1013,7 +1022,7 @@ impl Session {
             arity(1)?;
             let a = self.eval(&args[0])?;
             return elementwise(&a, &|x| {
-                if let Expr::Num(Number::Float(v)) = x {
+                if let Some(v) = &x.num().and_then(|n| n.decimal()) {
                     return Expr::float(1.0 / func.apply(*v));
                 }
                 calc::simplify(&build::div(Expr::one(), build::func(func, x.clone())))
@@ -1030,7 +1039,7 @@ impl Session {
             return elementwise(&a, &|x| {
                 // decimals directly (fast for large arrays); outside the real domain
                 // (log(-1.0)) the symbolic rules give the complex value
-                if let Expr::Num(Number::Float(v)) = x {
+                if let Some(v) = &x.num().and_then(|n| n.decimal()) {
                     let y = func.apply(*v);
                     if y.is_finite() {
                         return Expr::float(y);
@@ -1064,7 +1073,7 @@ impl Session {
                 }
                 let g = if f == "exp" { build::exp } else { build::sqrt };
                 elementwise(&a, &|x| {
-                    if let Expr::Num(Number::Float(v)) = x {
+                    if let Some(v) = &x.num().and_then(|n| n.decimal()) {
                         if f == "exp" || *v >= 0.0 {
                             let y = if f == "exp" { v.exp() } else { v.sqrt() };
                             if y.is_finite() {
