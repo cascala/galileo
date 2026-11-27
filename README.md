@@ -166,6 +166,21 @@ a header line `execute <length>`, `complete <cursor> <length>` or `inspect <curs
 then the code; each reply is one line of JSON with MIME bundles (text, LaTeX, Markdown, SVG,
 Plotly). [iGalileo](https://github.com/cascala/igalileo) wraps it in a small Python ipykernel.
 
+## Galileo in a web page
+
+To put live Galileo examples in your own web page (lesson notes, worksheets, a blog),
+add one line to the page and write each example as a `<pre class="galileo">` block:
+
+```html
+<script src="https://cascala.github.io/igalileo/embed/galileo.js" defer></script>
+
+<pre class="galileo" data-autorun>deriv(sin(x)^2, x)</pre>
+```
+
+Readers can edit and run every block, in their own browser. See
+[Galileo in your own page](https://cascala.github.io/igalileo/embed/) for the options,
+a template, and a download for use without internet.
+
 ## WebAssembly
 
 The same engine runs in a browser. It has no dependencies and builds straight to WebAssembly
