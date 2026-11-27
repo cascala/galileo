@@ -277,13 +277,6 @@ GALILEO_BLESS=1 cargo test --test reference
 | `src/kernel.rs` | `galileo --kernel` protocol |
 | `src/wasm.rs` | WebAssembly entry points for the browser |
 
-## Status
-
-- [x] Core algebra, calculus, simplification, matrices, parser, REPL
-- [x] Tensors and differential geometry (metrics, Christoffel, Riemann, Ricci, Einstein, Weyl, geodesics, ODE solver)
-- [x] Plotting (SVG and Plotly) and LaTeX output
-- [x] Jupyter kernel (through iGalileo)
-
 ## Citing Galileo
 
 Galileo is created by Joris Esch ([cascala](https://github.com/cascala)). If you use it in teaching, research or writing, please cite it: GitHub's **Cite this repository** button (in the sidebar) gives APA and BibTeX, from [CITATION.cff](CITATION.cff).
