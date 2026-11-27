@@ -4,6 +4,8 @@ Galileo is a free computer algebra system, written in Rust. (The original Scala 
 
 **▶ [Try Galileo in your browser](https://cascala.github.io/igalileo/)**: nothing to install. Open the [playground](https://cascala.github.io/igalileo/playground/), start the [first lesson](https://cascala.github.io/igalileo/playground/#lesson/foundations/01-numbers), or use [notebooks in JupyterLite](https://cascala.github.io/igalileo/lab/lab/index.html).
 
+**Questions, ideas or something you made with Galileo?** Join the [Discussions](https://github.com/cascala/galileo/discussions).
+
 This is a redesign rather than a line-by-line port. The language is the same
 (`deriv(x^3, x)`, `[a b; c d]`, `[L, U, P] = lu(A)`, ...), but the engine
 underneath is new:
