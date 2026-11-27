@@ -18,11 +18,11 @@ Example: `help(deriv)`
 
 ### explain
 
-`explain = true, explain = "teach", explain = false`
+`explain = "brief", explain = "teach", explain = "off"`
 
-Results are always plain Galileo values; with explain = true (the default) commands also add a short explanation, shown apart from the result (as // comments in plain text). explain = "teach" gives longer explanations for learning: they walk through the method step by step with the numbers of this run, say why each step is needed and what to notice (gnfs, nfspoly and polyselect so far; other commands give their full help text). explain = false turns explanations off for the session. The environment variable GALILEO_EXPLAIN sets the start: 0 for off, teach for teaching. A trailing ; hides both.
+Results are always plain Galileo values; explain sets how much commands add to them, as one of three levels. explain = "brief" (the default) adds a short explanation, shown apart from the result (as // comments in plain text). explain = "teach" gives longer explanations for learning: they walk through the method step by step with the numbers of this run, say why each step is needed and what to notice (gnfs, nfspoly, polyselect and solve so far; other commands give their full help text). explain = "off" turns explanations off for the session. Any other value, true and false included, is an error. The environment variable GALILEO_EXPLAIN sets the starting level: off, brief or teach. A trailing ; hides both.
 
-Example: `explain = false`
+Example: `explain = "off"`
 
 ### who
 

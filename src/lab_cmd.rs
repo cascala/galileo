@@ -1049,7 +1049,7 @@ mod tests {
     #[test]
     fn methods_factor_completely() {
         let mut s = Session::new();
-        s.run_to_string("explain = false; N = semiprime(15) * semiprime(13); M = semiprime(12, 1) * semiprime(10, 2) * 7^2");
+        s.run_to_string("explain = \"off\"; N = semiprime(15) * semiprime(13); M = semiprime(12, 1) * semiprime(10, 2) * 7^2");
         let want = s.run_to_string("factor(N)");
         assert_eq!(want.matches(", 1").count(), 4, "{}", want);
         for cmd in ["gnfs(N)", "labrun(\"rho\", N)", "ecm(N)", "squfof(N)", "classfactor(N)"] {

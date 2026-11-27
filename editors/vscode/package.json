@@ -107,9 +107,9 @@
         },
         "galileo.explain": {
           "type": "string",
-          "enum": ["default", "off", "teach"],
-          "default": "default",
-          "markdownDescription": "Explanations after results: `default` (brief), `off`, or `teach` (step-by-step walk-throughs). Sets `GALILEO_EXPLAIN`."
+          "enum": ["brief", "off", "teach"],
+          "default": "brief",
+          "markdownDescription": "Explanations after results: `brief`, `off`, or `teach` (step-by-step walk-throughs). Sets `GALILEO_EXPLAIN`."
         }
       }
     }

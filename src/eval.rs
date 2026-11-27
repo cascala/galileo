@@ -123,17 +123,43 @@ pub(crate) fn builtins() -> BTreeMap<String, Expr> {
     v
 }
 
-/// `explain` starts on (brief) unless the environment variable GALILEO_EXPLAIN is
-/// 0, off, false or no; GALILEO_EXPLAIN=teach starts in teaching mode
-fn explain_default() -> Expr {
-    match std::env::var("GALILEO_EXPLAIN") {
-        Ok(v) => match v.trim().to_ascii_lowercase().as_str() {
-            "0" | "off" | "false" | "no" => Expr::Bool(false),
-            "teach" => Expr::Str("teach".into()),
-            _ => Expr::Bool(true),
-        },
-        Err(_) => Expr::Bool(true),
+/// The levels of the `explain` setting, from least to most
+pub const EXPLAIN_LEVELS: [&str; 3] = ["off", "brief", "teach"];
+
+/// Checks a value for `explain`: one of the strings "off", "brief" or "teach"
+pub fn check_explain(v: &Expr) -> Result<(), String> {
+    match v {
+        Expr::Str(s) if EXPLAIN_LEVELS.contains(&s.as_str()) => Ok(()),
+        Expr::Bool(b) => Err(format!(
+            "explain is a level: use explain = \"{}\" (the levels are \"off\", \"brief\" and \"teach\")",
+            if *b { "brief" } else { "off" }
+        )),
+        _ => Err(format!(
+            "explain is \"off\", \"brief\" or \"teach\", not {}",
+            crate::print::show(v)
+        )),
     }
+}
+
+/// `explain` starts at "brief", or at the level the environment variable
+/// GALILEO_EXPLAIN names ("off", "brief" or "teach")
+fn explain_default() -> Expr {
+    let level = match std::env::var("GALILEO_EXPLAIN") {
+        Ok(v) if !v.trim().is_empty() => {
+            let v = v.trim().to_ascii_lowercase();
+            if EXPLAIN_LEVELS.contains(&v.as_str()) {
+                v
+            } else {
+                eprintln!(
+                    "galileo: GALILEO_EXPLAIN is off, brief or teach, not {}; using brief",
+                    v
+                );
+                "brief".into()
+            }
+        }
+        _ => "brief".into(),
+    };
+    Expr::Str(level)
 }
 
 /// the first sentence of a text
@@ -183,21 +209,23 @@ impl Session {
         self.vars.insert(name.to_string(), v);
     }
 
-    /// Whether commands explain their results: the variable `explain`
-    /// (true unless set to false or 0, or started off by GALILEO_EXPLAIN=0)
-    pub fn explaining(&self) -> bool {
+    /// The level of the `explain` setting: "off", "brief" or "teach"
+    pub fn explain_level(&self) -> &str {
         match self.vars.get("explain") {
-            Some(Expr::Bool(b)) => *b,
-            Some(Expr::Num(n)) => !n.is_zero(),
-            Some(Expr::Str(s)) => !matches!(s.trim(), "off" | "no" | "false" | "0"),
-            _ => true,
+            Some(Expr::Str(s)) if EXPLAIN_LEVELS.contains(&s.as_str()) => s,
+            _ => "brief",
         }
+    }
+
+    /// Whether commands explain their results (explain is "brief" or "teach")
+    pub fn explaining(&self) -> bool {
+        self.explain_level() != "off"
     }
 
     /// Whether commands teach: explain = "teach" walks through the method with the
     /// numbers of this run (commands without a teaching note give their brief one)
     pub fn teaching(&self) -> bool {
-        matches!(self.vars.get("explain"), Some(Expr::Str(s)) if s.trim() == "teach")
+        self.explain_level() == "teach"
     }
 
     /// Adds an explanation (Markdown) to the statement being run. Results stay
@@ -479,6 +507,9 @@ impl Session {
             }
             Stmt::Assign(name, n) => {
                 let v = self.eval(n)?;
+                if name == "explain" {
+                    check_explain(&v)?;
+                }
                 self.note_report(&v);
                 self.set(name, v.clone());
                 Ok(Output::Value(v))
@@ -2170,7 +2201,14 @@ mod tests {
         assert!(split.contains("**It factors.**") && split.contains("1099509530626"));
         let poly = notes("explain = \"teach\"; nfspoly(2^128 + 1)");
         assert!(poly.contains("The degree is a balance") && poly.contains("0 mod 7"));
-        assert_eq!(notes("explain = false; gnfs(2^128 + 1)"), "");
+        assert_eq!(notes("explain = \"off\"; gnfs(2^128 + 1)"), "");
+        assert!(notes("explain = \"brief\"; gnfs(2^128 + 1)").len() > 0);
+        let mut s = Session::new();
+        let e = s.run_to_string("explain = true");
+        assert!(e.contains("explain = \"brief\""), "{}", e);
+        assert!(s.run_to_string("explain = false").contains("explain = \"off\""));
+        assert!(s.run_to_string("explain = \"loud\"").contains("\"off\", \"brief\" or \"teach\""));
+        assert_eq!(s.explain_level(), "brief");
         // commands without a teaching note give their whole help text
         assert!(notes("explain = \"teach\"; mod(7, 3)").contains("greatest common divisor"));
     }

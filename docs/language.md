@@ -9,7 +9,7 @@ with its usage and an example, in the [command reference](builtins.md); inside G
 
 The examples below are transcripts. A line starting with `galileo>` is what you type,
 a line starting with `...>` continues it, and the lines after it are what Galileo shows.
-They are shown with `explain = false`, so without the short explanations that some
+They are shown with `explain = "off"`, so without the short explanations that some
 commands add.
 
 ## Statements and results
@@ -389,9 +389,15 @@ galileo> if mod(n, 2) == 0, "even", else, "odd", end
 
 Results are always plain Galileo values, which can be pasted back in. Many commands also
 add a short explanation, shown apart from the result (as `//` comments at the prompt).
-`explain = false` turns explanations off, `explain = "teach"` makes them longer for
-learning, and `explain = true` brings back the short ones. The environment variable
-`GALILEO_EXPLAIN` sets the start: `0` for off, `teach` for teaching.
+`explain` sets how much they say, as one of three levels: `explain = "brief"` (the
+default) gives the short ones, `explain = "teach"` makes them longer for learning, and
+`explain = "off"` turns them off. Any other value is an error. The environment variable
+`GALILEO_EXPLAIN` sets the starting level, with the same names: `off`, `brief` or `teach`.
+
+```galileo
+galileo> explain = true
+Error: explain is a level: use explain = "brief" (the levels are "off", "brief" and "teach")
+```
 
 ## Scripts
 

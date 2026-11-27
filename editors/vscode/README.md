@@ -33,7 +33,7 @@ The extension runs the `galileo` program. Any of these works:
 | `galileo.command` | `galileo` | The program to run: a name on your `PATH` or a full path. |
 | `galileo.useDocker` | `auto` | `auto` uses Docker only when `galileo` is not found; also `always` or `never`. |
 | `galileo.dockerImage` | `cascala/galileo` | The image used with Docker. |
-| `galileo.explain` | `default` | Explanations after results: `default` (brief), `off`, or `teach` (step by step). |
+| `galileo.explain` | `brief` | Explanations after results: `brief`, `off`, or `teach` (step by step). |
 
 The prompt starts in your workspace folder, so `load(lessons/orbit.gg)` works with paths
 relative to it. Run File runs a script in its own folder, so the scripts it loads are

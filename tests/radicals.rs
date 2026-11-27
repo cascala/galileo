@@ -201,7 +201,7 @@ fn notes() {
     for part in ["Ferrari", "resolvent", "8*m^3-8*m-1", "two quadratics"] {
         assert!(teach.contains(part), "missing {}: {}", part, teach);
     }
-    let (_, off) = roots("explain = 0; solve(x^3 - 2*x + 2, x)");
+    let (_, off) = roots("explain = \"off\"; solve(x^3 - 2*x + 2, x)");
     assert!(off.is_empty());
 }
 

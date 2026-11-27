@@ -33,7 +33,7 @@ function settings() {
     command: c.get("command", "galileo") || "galileo",
     useDocker: c.get("useDocker", "auto"),
     image: c.get("dockerImage", "cascala/galileo") || "cascala/galileo",
-    explain: c.get("explain", "default"),
+    explain: c.get("explain", "brief"),
   };
 }
 
@@ -71,7 +71,7 @@ function runner(s = settings(), find = which) {
 }
 
 function explainEnv(s) {
-  return s.explain === "off" ? "0" : s.explain === "teach" ? "teach" : undefined;
+  return s.explain === "off" || s.explain === "teach" ? s.explain : undefined;
 }
 
 async function noGalileo() {
