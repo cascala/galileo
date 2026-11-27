@@ -616,20 +616,22 @@ impl Figure {
             ("zeroline", "true".into()),
             ("title", obj(&[("text", jstr(&self.y_label))])),
         ];
+        let mut xaxis = vec![
+            ("range", jnums(&[b.x0, b.x1])),
+            ("title", obj(&[("text", jstr(&self.x_label))])),
+            ("zeroline", "true".into()),
+        ];
         if self.equal_aspect {
             yaxis.push(("scaleanchor", jstr("x")));
             yaxis.push(("scaleratio", "1".into()));
+            // keep both ranges and shrink the plot area instead of widening the x range
+            xaxis.push(("constrain", jstr("domain")));
+            yaxis.push(("constrain", jstr("domain")));
         }
         let grid = obj(&[("gridcolor", jstr("#e5e7eb"))]);
         let layout = obj(&[
             ("title", obj(&[("text", jstr(&self.title))])),
-            (
-                "xaxis",
-                obj(&[
-                    ("title", obj(&[("text", jstr(&self.x_label))])),
-                    ("zeroline", "true".into()),
-                ]),
-            ),
+            ("xaxis", obj(&xaxis)),
             ("yaxis", obj(&yaxis)),
             ("showlegend", "true".into()),
             ("legend", {
