@@ -270,7 +270,12 @@ fn exact_decimals() {
     assert_eq!(last("0.1*x + 0.2*x == 0.3*x"), "true");
     assert_eq!(last("0.1 + 0.2"), "0.3");
     assert_eq!(last("0.1 + 0.2 - 0.3"), "0.0");
-    assert_eq!(last("(0.1/3)*3"), "0.1");
+    assert_eq!(last("0.1/3"), "1/30");
+    assert_eq!(last("1.5/7"), "3/14");
+    assert_eq!(last("sqrt(0.1/3)"), "sqrt(30)/30");
+    assert_eq!(last("(0.1/3)*3"), "1/10");
+    assert_eq!(last("solve(3*x == 0.1, x)"), "1/30");
+    assert_eq!(last("0.1/4"), "0.025");
     assert_eq!(last("1e20 + 1"), "100000000000000000001.0");
     assert_eq!(last("sqrt(0.25)"), "0.5");
     assert_eq!(last("exp(1.0)"), "2.718281828459045");

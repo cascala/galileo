@@ -234,7 +234,8 @@ pub fn pow(b: Expr, e: Expr) -> Expr {
     // an integral float exponent means the same as the exact integer: x^2.0 = x^2
     let e = match e {
         Num(Number::Float(f)) if f.fract() == 0.0 && f.abs() < 9.0e15 => Expr::int(f as i128),
-        Num(Number::Xd(n, 1)) => Expr::int(n),
+        // an exact decimal exponent is the exact number it is: x^0.5 = x^(1/2)
+        Num(n) if n.is_xd() => Num(n.to_exact()),
         other => other,
     };
     if crate::assume::any() {
@@ -268,6 +269,10 @@ pub fn pow(b: Expr, e: Expr) -> Expr {
             Num(bn) => {
                 if let Some(r) = bn.pow(&en) {
                     return Num(r);
+                }
+                // an exact decimal works as the exact number it is: sqrt(0.5) = sqrt(2)/2
+                if bn.is_xd() || en.is_xd() {
+                    return pow(Num(bn.to_exact()), Num(en.to_exact()));
                 }
                 // pull perfect powers out of roots: 8^(1/2) = 2*2^(1/2)
                 if let (&Number::Rat(n, d), &Number::Rat(p, q)) = (bn, &en) {

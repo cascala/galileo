@@ -120,8 +120,8 @@ pub(crate) fn builtins() -> BTreeMap<String, Expr> {
     v.insert("true".into(), Expr::Bool(true));
     v.insert("false".into(), Expr::Bool(false));
     v.insert("explain".into(), explain_default());
-    crate::num::set_exact_digits(crate::num::DEFAULT_EXACT_DIGITS);
-    v.insert("exactdigits".into(), Expr::int(crate::num::DEFAULT_EXACT_DIGITS as i128));
+    crate::num::set_exact_digits(crate::num::NO_LIMIT);
+    v.insert("exactdigits".into(), Expr::sym("inf"));
     v
 }
 
@@ -513,10 +513,13 @@ impl Session {
                     check_explain(&v)?;
                 }
                 if name == "exactdigits" {
-                    let max = crate::num::DEFAULT_EXACT_DIGITS as i128;
-                    match v.num().and_then(|k| if k.is_exact() { k.as_int() } else { None }) {
-                        Some(k) if (0..=max).contains(&k) => crate::num::set_exact_digits(k as u32),
-                        _ => return Err(format!("exactdigits: a whole number from 0 to {}", max)),
+                    let k = match &v {
+                        Expr::Sym(s) if s == "inf" => Some(crate::num::NO_LIMIT),
+                        _ => v.num().and_then(|k| k.as_int()).and_then(|k| u32::try_from(k).ok()).filter(|k| *k < 1_000_000),
+                    };
+                    match k {
+                        Some(k) => crate::num::set_exact_digits(k),
+                        None => return Err("exactdigits is a whole number of digits (0: decimals are floats) or inf (no limit)".into()),
                     }
                 }
                 self.note_report(&v);

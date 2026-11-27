@@ -67,10 +67,11 @@ A number with a decimal point, like `0.5` or `1e-3`, is a decimal, and anything
 combined with a decimal becomes one. A decimal you type holds its exact value, so `0.1` is
 exactly one tenth and `+ - * /` and whole powers of decimals are exact: `0.1 + 0.2` is `0.3`
 and `0.1*x + 0.2*x == 0.3*x` is true. Decimals still act as numbers to compute with:
-`sqrt(0.5)`, `sin(0.5)` and `0.5^0.5` give decimal values. A decimal stays exact while its
-numerator and denominator have at most `exactdigits` digits (38, the default and the
-largest); beyond that it becomes a 64-bit float with about 16 digits. `exactdigits = 0`
-makes every decimal a float. `eval(x, digits)` gives as many significant digits as you ask
+`sqrt(0.5)`, `sin(0.5)` and `0.5^0.5` give decimal values. A result that has no finite
+decimal form is an exact fraction, like `0.1/3`, which is `1/30`; `eval` gives its digits.
+A decimal stays exact while its numerator and denominator have at most `exactdigits`
+digits (38, the default and the largest); beyond that it becomes a 64-bit float with
+about 16 digits. `exactdigits = 0` makes every decimal a float. `eval(x, digits)` gives as many significant digits as you ask
 for, up to 100000, and the digits carry through `+ - * /`.
 
 ```galileo
@@ -80,6 +81,8 @@ galileo> 0.1 + 0.2 - 0.3
 0.0
 galileo> 1e20 + 1
 100000000000000000001.0
+galileo> 0.1/3
+1/30
 galileo> eval(pi, 30)
 3.14159265358979323846264338328
 ```

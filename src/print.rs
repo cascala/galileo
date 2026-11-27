@@ -291,7 +291,7 @@ fn fmt_mul(e: &Expr) -> (String, u8) {
                 ds.push(r.denom().to_string());
             }
         }
-        Number::Float(_) | Number::Dec(..) | Number::Xd(..) => {
+        Number::Float(_) | Number::Dec(..) | Number::Xd(..) | Number::XdBig(_) => {
             if !coeff.is_one() || numer.is_empty() {
                 ns.push(coeff.to_string())
             }
