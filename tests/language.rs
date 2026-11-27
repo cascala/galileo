@@ -252,3 +252,15 @@ fn blocks_over_lines_in_scripts() {
     assert_eq!(open_blocks("v(end) = 3"), 0);
     assert_eq!(open_blocks("s = \"for while\""), 0);
 }
+
+#[test]
+fn small_coefficients_are_kept() {
+    // a coefficient is never dropped for being small next to the others
+    assert_eq!(last("x^3 == x^3 + 1e-12*x^5"), "x^3 == 1e-12*x^5+x^3");
+    assert_eq!(last("1e20*x == 1e20*x + 1"), "false");
+    assert_eq!(last("simplify(x^3 - (x^3 + 1e-12*x^5))"), "-1e-12*x^5");
+    assert_eq!(last("simplify(1e20*x + 1 - 1e20*x)"), "1");
+    // float cancellation still gives exact zeros
+    assert_eq!(last("expand((x+0.1)^2) == x^2+0.2*x+0.01"), "true");
+    assert_eq!(last("simplify((x^2-0.01)/(x-0.1))"), "x+0.1");
+}

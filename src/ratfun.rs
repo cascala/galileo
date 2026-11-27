@@ -134,14 +134,24 @@ fn round(c: Number) -> Number {
     }
 }
 
-/// drop zeros (and float noise) and round
+/// a + b, where a float sum that cancels down to rounding noise of its
+/// operands (0.1 + 0.2 - 0.3) is zero. Only cancellation counts: a coefficient
+/// is never dropped for being small next to the other coefficients.
+fn cadd(a: &Number, b: &Number) -> Number {
+    let r = a.add(b);
+    if let Number::Float(f) = r {
+        let s = a.to_f64().abs().max(b.to_f64().abs());
+        if f.abs() <= 1e-12 * s {
+            return Number::zero();
+        }
+    }
+    r
+}
+
+/// drop zero coefficients and round floats
 fn clean(p: Poly) -> Poly {
-    let scale = p.values().map(|c| c.to_f64().abs()).fold(0.0, f64::max);
     p.into_iter()
-        .filter(|(_, c)| match c {
-            Number::Rat(..) | Number::Big(_) | Number::Dec(..) => !c.is_zero(),
-            Number::Float(f) => f.abs() > 1e-11 * scale && *f != 0.0,
-        })
+        .filter(|(_, c)| !c.is_zero())
         .map(|(m, c)| (m, round(c)))
         .collect()
 }
@@ -235,7 +245,7 @@ impl Ctx {
         let mut m = a.clone();
         for (mo, c) in b {
             let e = m.entry(mo.clone()).or_insert(Number::zero());
-            *e = e.add(c.mul(&s));
+            *e = cadd(e, &c.mul(&s));
         }
         self.reduce_poly(clean(m))
     }
@@ -246,7 +256,7 @@ impl Ctx {
         for (ma, ca) in a {
             for (mb, cb) in b {
                 let e = m.entry(mono_mul(ma, mb)).or_insert(Number::zero());
-                *e = e.add(ca.mul(cb));
+                *e = cadd(e, &ca.mul(cb));
             }
         }
         self.reduce_poly(clean(m))
@@ -302,7 +312,7 @@ impl Ctx {
         let mut out = Poly::new();
         let put = |out: &mut Poly, mo: Mono, c: Number| {
             let e = out.entry(mo).or_insert(Number::zero());
-            *e = e.add(c);
+            *e = cadd(e, &c);
         };
         for (mo, c) in p {
             let mut hit = None;
@@ -368,13 +378,13 @@ impl Ctx {
         }
         let (ld, cd) = leading(d);
         let (ld, cd) = (ld.clone(), cd);
-        let scale = p.values().map(|c| c.to_f64().abs()).fold(0.0, f64::max);
         let mut rem = p.clone();
         let mut q = Poly::new();
         while !rem.is_empty() {
             self.spend(d.len())?;
             let (lr, cr) = leading(&rem);
-            let Some(mo) = mono_div(lr, &ld) else {
+            let lr = lr.clone();
+            let Some(mo) = mono_div(&lr, &ld) else {
                 return Ok(None);
             };
             let Some(c) = cr.div(&cd) else {
@@ -385,12 +395,11 @@ impl Ctx {
             for (md, cdd) in d {
                 let x = mono_mul(&mo, md);
                 let e = rem.entry(x).or_insert(Number::zero());
-                *e = e.sub(c.mul(cdd));
+                *e = cadd(e, &c.mul(cdd).neg());
             }
-            rem.retain(|_, v| match v {
-                Number::Rat(..) | Number::Big(_) | Number::Dec(..) => !v.is_zero(),
-                Number::Float(f) => f.abs() > 1e-9 * scale,
-            });
+            // the leading term cancels by construction, whatever float rounding says
+            rem.remove(&lr);
+            rem.retain(|_, v| !v.is_zero());
         }
         Ok(Some(clean(q)))
     }
