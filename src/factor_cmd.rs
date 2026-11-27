@@ -64,14 +64,64 @@ pub(crate) fn factor_rows(parts: Vec<BigInt>) -> Expr {
     Expr::Matrix(rows)
 }
 
-/// The split n = f * (n / f) as factorization rows; [] when there is no split
-pub(crate) fn split_rows(n: &BigInt, f: Option<&BigInt>) -> Expr {
-    match f {
-        Some(f) if !f.is_zero() && !f.abs().is_one() && f.abs() != n.abs() => {
-            factor_rows(vec![f.abs(), (n / f).abs()])
+/// A factoring method found f | n: factor both parts on until every row is a
+/// prime, as factor(n) would give. Composite parts go first to the engine of
+/// factor (trial division, p - 1, rho, ECM), and what that leaves to `again`
+/// (the method itself, run once more on the part). A part that still does not
+/// split keeps a row of its own. Also returns a line for each composite part
+/// that was split further ("" when both parts were prime).
+pub(crate) fn complete_split(
+    n: &BigInt,
+    f: Option<&BigInt>,
+    again: &mut dyn FnMut(&BigInt) -> Option<BigInt>,
+) -> (Expr, String) {
+    let n = n.abs();
+    let f = match f {
+        Some(f) if !f.is_zero() && !f.abs().is_one() && f.abs() != n => f.abs(),
+        _ => return (Expr::Matrix(vec![]), String::new()),
+    };
+    let mut parts = vec![];
+    let mut notes = vec![];
+    for top in [f.clone(), &n / &f] {
+        if top.is_one() || crate::numtheory::is_prime(&top) {
+            parts.push(top);
+            continue;
         }
-        _ => Expr::Matrix(vec![]),
+        let mut mine = vec![];
+        let mut todo = vec![top.clone()];
+        while let Some(m) = todo.pop() {
+            if m.is_one() {
+                continue;
+            }
+            if crate::numtheory::is_prime(&m) {
+                mine.push(m);
+                continue;
+            }
+            let (ps, cs) = af::factor_partial(&m);
+            mine.extend(ps);
+            // what the engine of factor left whole: try the method once more
+            for c in cs {
+                let ok = |d: &BigInt| !d.is_one() && d != &c && (&c % d).is_zero();
+                match again(&c).map(|d| d.abs()).filter(ok) {
+                    Some(d) => {
+                        todo.push(&c / &d);
+                        todo.push(d);
+                    }
+                    None => mine.push(c),
+                }
+            }
+        }
+        mine.sort();
+        let text = mine.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(" * ");
+        let whole = mine.iter().filter(|p| !crate::numtheory::is_prime(p)).count();
+        notes.push(if whole > 0 {
+            format!("{} is composite; factored on, it gives {} (a part that did not split keeps its own row).", top, text)
+        } else {
+            format!("{} is composite; factored on, it gives {}.", top, text)
+        });
+        parts.extend(mine);
     }
+    (factor_rows(parts), notes.join("\n"))
 }
 
 fn bnum(n: BigInt) -> Expr {

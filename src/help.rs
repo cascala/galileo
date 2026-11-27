@@ -726,7 +726,7 @@ pub const ENTRIES: &[Entry] = &[
         "labrun",
         "Factoring lab",
         "labrun(method, N), labrun(method, N, seconds)",
-        "Runs one factoring method on N with a time limit (default 5 s) and reports the factor and the work it took. Work is counted in multiplications modulo N, the same on every computer. A method is a built-in name in quotes: \"trial\", \"fermat\", \"hart\", \"rho\", \"pm1\", \"squfof\", \"ecm\", \"qs\"; a lab program like \"iter(x^2 + 1, x - y, 2)\" or \"rel(rti, 64)\" (see help(algosearch)); or the name of your own function f(n) := ... that returns a factor (its work is counted in evaluation steps, so compare user functions by time). The result is a factorization like factor's: rows [p, e], here [p, 1; q, 1] for the split N = p q ([] when no factor is found).",
+        "Runs one factoring method on N with a time limit (default 5 s) and reports the factor and the work it took. Work is counted in multiplications modulo N, the same on every computer. A method is a built-in name in quotes: \"trial\", \"fermat\", \"hart\", \"rho\", \"pm1\", \"squfof\", \"ecm\", \"qs\"; a lab program like \"iter(x^2 + 1, x - y, 2)\" or \"rel(rti, 64)\" (see help(algosearch)); or the name of your own function f(n) := ... that returns a factor (its work is counted in evaluation steps, so compare user functions by time). The result is a factorization like factor's: rows [p, e] with every prime of N. After the method splits N, a composite part is factored on (as factor does, then by this method again) until all parts are prime; a part that does not split keeps a row of its own. [] when no factor is found.",
         "labrun(\"qs\", semiprime(40, 1))"
     ),
     e!(
@@ -761,7 +761,7 @@ pub const ENTRIES: &[Entry] = &[
         "gnfs",
         "Factoring lab",
         "gnfs(N), gnfs(N, seconds), gnfs(N, f, m), gnfs(N, f, m, seconds)",
-        "Factors N with the number field sieve and prints every step: the polynomial f with f(m) divisible by N (base m, or a special form when N divides b^k +- 1: that is the special number field sieve), the factor bases, the line sieve over pairs (a, b) where both a - b m and the norm b^d f(a/b) are smooth, the linear algebra mod 2 (with quadratic characters), the square root in the number field (Hensel lifting at a prime where f splits) and gcd(X - Y, N). Give your own f (a polynomial in x, made monic if needed) and m to try a polynomial. Default limit 60 s. This is a teaching version: below about 60 digits the quadratic sieve is faster. The result is a factorization like factor's: rows [p, e], here [p, 1; q, 1] for the split N = p q ([] when no factor is found).",
+        "Factors N with the number field sieve and prints every step: the polynomial f with f(m) divisible by N (base m, or a special form when N divides b^k +- 1: that is the special number field sieve), the factor bases, the line sieve over pairs (a, b) where both a - b m and the norm b^d f(a/b) are smooth, the linear algebra mod 2 (with quadratic characters), the square root in the number field (Hensel lifting at a prime where f splits) and gcd(X - Y, N). Give your own f (a polynomial in x, made monic if needed) and m to try a polynomial. Default limit 60 s. This is a teaching version: below about 60 digits the quadratic sieve is faster. The result is a factorization like factor's: rows [p, e] with every prime of N. After the method splits N, a composite part is factored on (as factor does, then by this method again) until all parts are prime; a part that does not split keeps a row of its own. [] when no factor is found.",
         "gnfs(2^128 + 1)"
     ),
     e!(
@@ -810,21 +810,21 @@ pub const ENTRIES: &[Entry] = &[
         "pm1",
         "Number theory",
         "pm1(n), pm1(n, B)",
-        "Pollard's p - 1 method with bound B (default 100000): computes 3^E mod n for E = lcm(1, ..., B). A prime p of n with every prime power of p - 1 at most B has 3^E = 1 mod p, because (Z/p)* has order p - 1, so gcd(3^E - 1, n) finds p. It says which case happened and shows p - 1. The result is a factorization like factor's: rows [p, e], here [p, 1; q, 1] for the split n = p q ([] when no factor is found).",
+        "Pollard's p - 1 method with bound B (default 100000): computes 3^E mod n for E = lcm(1, ..., B). A prime p of n with every prime power of p - 1 at most B has 3^E = 1 mod p, because (Z/p)* has order p - 1, so gcd(3^E - 1, n) finds p. It says which case happened and shows p - 1. The result is a factorization like factor's: rows [p, e] with every prime of n. After the method splits n, a composite part is factored on (as factor does, then by this method again) until all parts are prime; a part that does not split keeps a row of its own. [] when no factor is found.",
         "pm1(2^67 - 1)"
     ),
     e!(
         "ecm",
         "Number theory",
         "ecm(n), ecm(n, curves), ecm(n, curves, B1)",
-        "Lenstra's elliptic curve method: like p - 1, but in the group of points of a random elliptic curve mod p, whose order varies between p + 1 - 2 sqrt(p) and p + 1 + 2 sqrt(p) from curve to curve. Each curve is a new chance for a smooth group order. Defaults: 50 curves, B1 = 11000 (good for factors of about 20 digits; 50000 for 25, 250000 for 30). algfactor and factor also try a few curves after rho, more with a larger effort. The result is a factorization like factor's: rows [p, e], here [p, 1; q, 1] for the split n = p q ([] when no factor is found).",
+        "Lenstra's elliptic curve method: like p - 1, but in the group of points of a random elliptic curve mod p, whose order varies between p + 1 - 2 sqrt(p) and p + 1 + 2 sqrt(p) from curve to curve. Each curve is a new chance for a smooth group order. Defaults: 50 curves, B1 = 11000 (good for factors of about 20 digits; 50000 for 25, 250000 for 30). algfactor and factor also try a few curves after rho, more with a larger effort. The result is a factorization like factor's: rows [p, e] with every prime of n. After the method splits n, a composite part is factored on (as factor does, then by this method again) until all parts are prime; a part that does not split keeps a row of its own. [] when no factor is found.",
         "ecm(nextprime(7*10^15)*nextprime(10^45))"
     ),
     e!(
         "squfof",
         "Number theory",
         "squfof(n)",
-        "Shanks' square forms factorization (SQUFOF): walks the continued fraction of sqrt(k n) until a square appears among the denominators, then walks back from the square form to a factor. It takes about n^(1/4) steps, so it is for n up to about 30 digits. The result is a factorization like factor's: rows [p, e], here [p, 1; q, 1] for the split n = p q ([] when no factor is found).",
+        "Shanks' square forms factorization (SQUFOF): walks the continued fraction of sqrt(k n) until a square appears among the denominators, then walks back from the square form to a factor. It takes about n^(1/4) steps, so it is for n up to about 30 digits. The result is a factorization like factor's: rows [p, e] with every prime of n. After the method splits n, a composite part is factored on (as factor does, then by this method again) until all parts are prime; a part that does not split keeps a row of its own. [] when no factor is found.",
         "squfof(1000000000039 * 10000000000037)"
     ),
     e!(
@@ -845,7 +845,7 @@ pub const ENTRIES: &[Entry] = &[
         "classfactor",
         "Number theory",
         "classfactor(n), classfactor(n, B)",
-        "Factoring with the class group (after Schnorr and Lenstra): raises a form of discriminant -4kn to the product of the odd prime powers up to B (default 50000), then squares until the identity appears; the form just before has order 2, so it is ambiguous and splits n. Works when the odd part of the class number is B-smooth; for n up to about 25 digits. The result is a factorization like factor's: rows [p, e], here [p, 1; q, 1] for the split n = p q ([] when no factor is found).",
+        "Factoring with the class group (after Schnorr and Lenstra): raises a form of discriminant -4kn to the product of the odd prime powers up to B (default 50000), then squares until the identity appears; the form just before has order 2, so it is ambiguous and splits n. Works when the odd part of the class number is B-smooth; for n up to about 25 digits. The result is a factorization like factor's: rows [p, e] with every prime of n. After the method splits n, a composite part is factored on (as factor does, then by this method again) until all parts are prime; a part that does not split keeps a row of its own. [] when no factor is found.",
         "classfactor(nextprime(10^8)*nextprime(3*10^8))"
     ),
     e!(

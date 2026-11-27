@@ -102,7 +102,7 @@ impl Session {
                     _ => return Err("usage: pm1(n) or pm1(n, B): Pollard's p - 1 method with bound B (default 100000)".into()),
                 };
                 let (f, gg) = g::pm1(&n, b);
-                let value = crate::factor_cmd::split_rows(&n, f.as_ref());
+                let (value, more) = crate::factor_cmd::complete_split(&n, f.as_ref(), &mut |c| g::pm1(c, b).0);
                 let text = match f {
                     Some(p) => format!(
                         "found the factor {}: for this prime p, p - 1 has no prime factor above {} (p - 1 = {}), so 3^E = 1 mod p for E = lcm(1..{}), and gcd(3^E - 1, n) = p",
@@ -120,7 +120,7 @@ impl Session {
                         b
                     ),
                 };
-                self.note(text);
+                self.note(add_more(text, &more));
                 Ok(value)
             })(),
             "ecm" => (|| {
@@ -136,7 +136,7 @@ impl Session {
                     );
                 }
                 let found = g::ecm(&n, curves, b1);
-                let value = crate::factor_cmd::split_rows(&n, found.as_ref().map(|(p, _)| p));
+                let (value, more) = crate::factor_cmd::complete_split(&n, found.as_ref().map(|(p, _)| p), &mut |c| g::ecm(c, curves, b1).map(|(p, _)| p));
                 let text = match found {
                     Some((p, c)) => format!(
                         "found the factor {} on curve {} of {}: the group of that elliptic curve mod {} has an order made of primes up to {}, plus at most one prime up to {}",
@@ -152,7 +152,7 @@ impl Session {
                         curves, b1
                     ),
                 };
-                self.note(text);
+                self.note(add_more(text, &more));
                 Ok(value)
             })(),
             "squfof" => (|| {
@@ -164,14 +164,14 @@ impl Session {
                     return Err("squfof: n has more than 100 bits; SQUFOF takes about n^(1/4) steps, which is too many".into());
                 }
                 let found = g::squfof(&n);
-                let value = crate::factor_cmd::split_rows(&n, found.as_ref().map(|(p, _, _)| p));
-                self.note(match found {
+                let (value, more) = crate::factor_cmd::complete_split(&n, found.as_ref().map(|(p, _, _)| p), &mut |c| g::squfof(c).map(|(p, _, _)| p));
+                self.note(add_more(match found {
                     Some((p, k, steps)) => format!(
                         "found the factor {} after {} steps of the continued fraction of sqrt({}·n)",
                         p, steps, k
                     ),
                     None => "no factor found (the value is [])".into(),
-                });
+                }, &more));
                 Ok(value)
             })(),
             "classfactor" => (|| {
@@ -184,7 +184,7 @@ impl Session {
                     return Err("classfactor: n has more than 140 bits; the class group is too large for this method".into());
                 }
                 let found = g::class_factor(&n, b, 3);
-                let value = crate::factor_cmd::split_rows(&n, found.as_ref().map(|(p, _, _)| p));
+                let (value, more) = crate::factor_cmd::complete_split(&n, found.as_ref().map(|(p, _, _)| p), &mut |c| g::class_factor(c, b, 3).map(|(p, _, _)| p));
                 let text = match found {
                     Some((p, k, f)) => format!(
                         "found the factor {}: the form {} of discriminant -4·{}·n has order 2 (it is ambiguous), and ambiguous forms are factorizations",
@@ -197,7 +197,7 @@ impl Session {
                         b
                     ),
                 };
-                self.note(text);
+                self.note(add_more(text, &more));
                 Ok(value)
             })(),
             "polyselect" => (|| {
@@ -499,4 +499,13 @@ fn polyselect_report(n: &BigInt, d: usize, gens: usize, teach: bool) -> Expr {
         report("Polynomial selection", tx.join("\n"), md.join("\n")),
         value,
     )
+}
+
+/// a method's note, then the lines on parts that were factored further
+fn add_more(text: String, more: &str) -> String {
+    if more.is_empty() {
+        text
+    } else {
+        format!("{}\n\n{}", text, more.replace('\n', "\n\n"))
+    }
 }

@@ -246,6 +246,14 @@ impl Session {
         lab::start_budget(units, secs);
         let run = gnfs::nfs(&n, choice, None);
         let w = lab::end_budget();
+        // carry the split on to primes, like factor: the engine of factor
+        // first, then the number field sieve again on what it leaves
+        let (value, more) = crate::factor_cmd::complete_split(&n, run.factor.as_ref(), &mut |c| {
+            lab::start_budget(units, secs);
+            let f = gnfs::nfs(c, None, None).factor;
+            lab::end_budget();
+            f
+        });
         let head = match &run.factor {
             Some(f) => format!(
                 "The number field sieve split {} = {} * {} in {} work units ({}).",
@@ -271,9 +279,12 @@ impl Session {
                 format!("{}\n\n```\n{}\n```", head, run.log.join("\n")),
             )
         };
+        let (text, md) = if more.is_empty() {
+            (text, md)
+        } else {
+            (format!("{}\n{}", text, more), format!("{}\n\n{}", md, more.replace('\n', "\n\n")))
+        };
         let formulas: Vec<Expr> = run.factor.iter().map(|f| bnum(f.clone())).collect();
-        // the value: the split as factorization rows, like factor ([] when none)
-        let value = crate::factor_cmd::split_rows(&n, run.factor.as_ref());
         Ok(with_value(report("NFS", text, md, formulas, vec![]), value))
     }
 
@@ -376,14 +387,20 @@ impl Session {
         let label = m.label();
         match f {
             Some(f) => {
-                let text = format!(
+                let mut text = format!(
                     "{} found {} in {} work units ({})",
                     label,
                     f,
                     fmt_units(w),
                     fmt_secs(t)
                 );
-                let value = crate::factor_cmd::split_rows(&n, Some(&f));
+                // carry the split on to primes, like factor
+                let (value, more) = crate::factor_cmd::complete_split(&n, Some(&f), &mut |c| {
+                    self.run_one(&m, c, secs, 1).0
+                });
+                if !more.is_empty() {
+                    text = format!("{}\n{}", text, more);
+                }
                 Ok(with_value(
                     report("LabRun", text.clone(), text, vec![bnum(f)], vec![]),
                     value,
@@ -1026,5 +1043,22 @@ mod tests {
         );
         let out = s.run_to_string("leakhunt(10, 400)");
         assert!(out.contains("control"), "{}", out);
+    }
+
+    /// Factoring methods give every prime, like factor, not just one split
+    #[test]
+    fn methods_factor_completely() {
+        let mut s = Session::new();
+        s.run_to_string("explain = false; N = semiprime(15) * semiprime(13); M = semiprime(12, 1) * semiprime(10, 2) * 7^2");
+        let want = s.run_to_string("factor(N)");
+        assert_eq!(want.matches(", 1").count(), 4, "{}", want);
+        for cmd in ["gnfs(N)", "labrun(\"rho\", N)", "ecm(N)", "squfof(N)", "classfactor(N)"] {
+            assert_eq!(s.run_to_string(cmd), want, "{}", cmd);
+        }
+        let want = s.run_to_string("factor(M)");
+        for cmd in ["pm1(M, 10^6)", "ecm(M)", "gnfs(M)"] {
+            let got = s.run_to_string(cmd);
+            assert!(got == want || got == "[]", "{}: {} vs {}", cmd, got, want);
+        }
     }
 }
