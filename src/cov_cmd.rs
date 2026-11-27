@@ -414,6 +414,7 @@ impl Session {
         let mut iters = 0;
         let mut converged = false;
         let mut still = 0;
+        let mut last_resid = f64::INFINITY;
         while iters < 200 {
             iters += 1;
             let j_before = j;
@@ -454,6 +455,9 @@ impl Session {
                 }
             }
             let gnorm = g.iter().fold(0.0f64, |s, v| s.max(v.abs()));
+            // the discrete Euler–Lagrange residual away from the end pieces, per unit length
+            let resid = (2..m.saturating_sub(2)).map(|i| (g[i] / ((hs[i] + hs[i + 1]) / 2.0)).abs()).fold(0.0f64, f64::max);
+            last_resid = resid;
             if !gnorm.is_finite() {
                 return Err("extremal: L or its derivatives stopped being numbers along the way".into());
             }
@@ -532,6 +536,10 @@ impl Session {
                 converged = gnorm < 1e-6 * (1.0 + j.abs());
                 break;
             }
+        }
+        let scale = (j / (b - a)).abs().max(1e-12);
+        if converged && last_resid > 1e-6 * scale {
+            return Err("extremal: no smooth path between these end points makes the integral stationary (the search ran off: the best shape may have a corner or break apart, as a soap film between rings too far apart)".into());
         }
         if !converged {
             return Err("extremal: Newton's method did not settle; there may be no smooth extremal between these end points (or try fewer pieces)".into());
