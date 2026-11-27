@@ -59,6 +59,8 @@ fn numerical_extremals() {
     close("s = extremal(y*sqrt(1 + y'^2), y, x, -1, 1, cosh(1), cosh(1)); Y = s.y; Y(51)", 1.0, 1e-3);
     // least action: a thrown ball follows a parabola
     close("s = extremal(y'^2/2 - 9.81*y, y, t, 0, 2, 0, 0); Y = s.y; Y(51)", 9.81 / 2.0, 1e-3);
+    // plot straight from the record fields
+    assert!(!one("s = extremal(sqrt(1 + y'^2), y, x, 0, 1, 0, 2); plot(s.x, s.y)").starts_with("ERROR"));
     // rings too far apart: no catenoid
     assert!(one("extremal(y*sqrt(1 + y'^2), y, x, -1.5, 1.5, 2, 2)").starts_with("ERROR extremal: no smooth path"));
     assert!(one("extremal(a*y'^2, y, x, 0, 1, 0, 1)").starts_with("ERROR extremal: give a a value first"));

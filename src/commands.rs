@@ -255,8 +255,13 @@ impl Session {
 
     /// Two numeric lists of the same length (at least two values), for plot(xs, ys) and scatter(xs, ys)
     pub(crate) fn two_lists(&mut self, a: &Node, b: &Node, f: &str) -> R<Option<(Vec<f64>, Vec<f64>)>> {
-        if matches!(b, Node::Ident(_)) && !self.vars.contains_key(match b { Node::Ident(n) => n.as_str(), _ => "" }) {
-            return Ok(None);
+        if let Node::Ident(n) = b {
+            // a plain name with no value is the variable of plot(f, x); s.y is a record field
+            let known = self.vars.contains_key(n.as_str())
+                || n.split_once('.').is_some_and(|(r, _)| self.vars.contains_key(r));
+            if !known {
+                return Ok(None);
+            }
         }
         let (Ok(va), Ok(vb)) = (self.eval(a), self.eval(b)) else { return Ok(None) };
         // a single point [x0], [y0] may come out as two plain numbers
