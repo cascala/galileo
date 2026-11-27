@@ -1,0 +1,92 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Galileo",
+  "scopeName": "source.galileo",
+  "fileTypes": ["gg"],
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#string" },
+    { "include": "#command" },
+    { "include": "#function-block" },
+    { "include": "#keyword" },
+    { "include": "#definition" },
+    { "include": "#number" },
+    { "include": "#constant" },
+    { "include": "#call" },
+    { "include": "#operator" },
+    { "include": "#continuation" }
+  ],
+  "repository": {
+    "comment": {
+      "name": "comment.line.double-slash.galileo",
+      "begin": "//",
+      "end": "$",
+      "beginCaptures": { "0": { "name": "punctuation.definition.comment.galileo" } }
+    },
+    "string": {
+      "name": "string.quoted.double.galileo",
+      "begin": "\"",
+      "end": "\"|$",
+      "beginCaptures": { "0": { "name": "punctuation.definition.string.begin.galileo" } },
+      "endCaptures": { "0": { "name": "punctuation.definition.string.end.galileo" } }
+    },
+    "command": {
+      "patterns": [
+        {
+          "comment": "load(file), cd dir, help(name): the argument is a file or a name, not an expression",
+          "match": "\\b(load|cd|help)\\b\\s*(\\()([^)\\n]*)(\\))",
+          "captures": {
+            "1": { "name": "keyword.other.command.galileo" },
+            "2": { "name": "punctuation.parenthesis.open.galileo" },
+            "3": { "name": "string.unquoted.argument.galileo" },
+            "4": { "name": "punctuation.parenthesis.close.galileo" }
+          }
+        },
+        {
+          "match": "^\\s*\\b(who|whos|clear|exit|quit|ls|pwd|help|cd)\\b(?!\\s*[=(])",
+          "captures": { "1": { "name": "keyword.other.command.galileo" } }
+        }
+      ]
+    },
+    "function-block": {
+      "comment": "function name(a, b) and function out = name(a, b)",
+      "match": "\\b(function)\\b\\s+(?:([A-Za-z_][A-Za-z0-9_]*)\\s*=\\s*)?([A-Za-z_][A-Za-z0-9_]*)",
+      "captures": {
+        "1": { "name": "keyword.control.galileo" },
+        "2": { "name": "variable.other.galileo" },
+        "3": { "name": "entity.name.function.galileo" }
+      }
+    },
+    "keyword": {
+      "match": "\\b(for|in|while|if|elseif|else|end|break|continue|return)\\b(?!\\s*\\()",
+      "name": "keyword.control.galileo"
+    },
+    "definition": {
+      "comment": "f(x) := ... and f(x) = ...",
+      "match": "^\\s*([A-Za-z_][A-Za-z0-9_]*)(?=\\s*\\([^()]*\\)\\s*:?=(?!=))",
+      "captures": { "1": { "name": "entity.name.function.galileo" } }
+    },
+    "number": {
+      "match": "(?<![A-Za-z_0-9])(\\d+\\.?\\d*|\\.\\d+)([eE][+-]?\\d+)?",
+      "name": "constant.numeric.galileo"
+    },
+    "constant": {
+      "match": "\\b(pi|e|i|j|inf|true|false|explain)\\b(?!\\s*\\()",
+      "name": "constant.language.galileo"
+    },
+    "call": {
+      "match": "\\b([A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)*)(?=\\s*\\()",
+      "captures": { "1": { "name": "support.function.galileo" } }
+    },
+    "operator": {
+      "patterns": [
+        { "match": ":=|==|~=|!=|<=|>=|&&|\\|\\||\\.\\*|\\./|\\.\\^|[-+*/^<>=:'!]", "name": "keyword.operator.galileo" },
+        { "match": "\\\\(?=\\s*\\S)(?!\\s*//)", "name": "keyword.operator.solve.galileo" }
+      ]
+    },
+    "continuation": {
+      "match": "\\\\(?=\\s*(//.*)?$)",
+      "name": "punctuation.separator.continuation.line.galileo"
+    }
+  }
+}

@@ -1,25 +1,16 @@
-# Build stage: JDK 21 + sbt (sbt is fetched from its GitHub release)
-# The build stage runs on the build machine's own platform: the jars it makes run anywhere
-FROM --platform=$BUILDPLATFORM eclipse-temurin:21-jdk AS build
+# The Galileo REPL in a small image:
+#   docker run -it --rm cascala/galileo
+#   docker run --rm -v "$PWD:/work" cascala/galileo script.gg
+#   docker run -it --rm -v "$PWD:/work" cascala/galileo -i script.gg
 
-ARG SBT_VERSION=1.10.7
-RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates && \
-    curl -fsSL "https://github.com/sbt/sbt/releases/download/v${SBT_VERSION}/sbt-${SBT_VERSION}.tgz" | tar xz -C /opt && \
-    ln -s /opt/sbt/bin/sbt /usr/local/bin/sbt && \
-    rm -rf /var/lib/apt/lists/*
+FROM rust:1-slim AS build
+WORKDIR /src
+COPY . .
+RUN cargo build --release --locked --bin galileo
 
-WORKDIR /galileo
-
-# Resolve dependencies first so they are cached between source changes
-COPY build.sbt ./
-COPY project/build.properties project/assembly.sbt project/
-RUN sbt -batch update
-
-COPY src src
-# Build the 'fat' jar
-RUN sbt -batch assembly && cp target/scala-2.13/Galileo-assembly-*.jar /galileo.jar
-
-# Run stage: JRE only
-FROM eclipse-temurin:21-jre
-COPY --from=build /galileo.jar /opt/galileo/galileo.jar
-ENTRYPOINT [ "java", "-jar", "/opt/galileo/galileo.jar" ]
+FROM debian:trixie-slim
+COPY --from=build /src/target/release/galileo /usr/local/bin/galileo
+RUN useradd -m -u 1000 galileo && mkdir /work && chown galileo:galileo /work
+USER galileo
+WORKDIR /work
+ENTRYPOINT [ "galileo" ]

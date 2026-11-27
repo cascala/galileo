@@ -1,0 +1,126 @@
+{
+  "name": "galileo",
+  "displayName": "Galileo",
+  "description": "Galileo computer algebra: syntax colors for .gg scripts, run a file, and send lines to a Galileo prompt with Shift+Enter.",
+  "version": "0.1.0",
+  "publisher": "cascala",
+  "license": "Apache-2.0",
+  "icon": "icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cascala/galileo",
+    "directory": "editors/vscode"
+  },
+  "homepage": "https://cascala.github.io/igalileo/",
+  "engines": {
+    "vscode": "^1.82.0"
+  },
+  "categories": ["Programming Languages", "Education", "Other"],
+  "keywords": ["galileo", "computer algebra", "cas", "math", "symbolic"],
+  "main": "./extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "languages": [
+      {
+        "id": "galileo",
+        "aliases": ["Galileo", "galileo"],
+        "extensions": [".gg"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "galileo",
+        "scopeName": "source.galileo",
+        "path": "./syntaxes/galileo.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "galileo.runFile",
+        "title": "Run File",
+        "category": "Galileo",
+        "icon": "$(play)"
+      },
+      {
+        "command": "galileo.sendSelection",
+        "title": "Run Line or Selection",
+        "category": "Galileo"
+      },
+      {
+        "command": "galileo.loadFile",
+        "title": "Load File into the Prompt",
+        "category": "Galileo"
+      },
+      {
+        "command": "galileo.startPrompt",
+        "title": "Open Prompt",
+        "category": "Galileo"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "galileo.sendSelection",
+        "key": "shift+enter",
+        "when": "editorTextFocus && editorLangId == galileo && !suggestWidgetVisible"
+      }
+    ],
+    "menus": {
+      "editor/title/run": [
+        {
+          "command": "galileo.runFile",
+          "when": "resourceLangId == galileo",
+          "group": "navigation"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "galileo.sendSelection",
+          "when": "editorLangId == galileo",
+          "group": "galileo@1"
+        },
+        {
+          "command": "galileo.loadFile",
+          "when": "editorLangId == galileo",
+          "group": "galileo@2"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Galileo",
+      "properties": {
+        "galileo.command": {
+          "type": "string",
+          "default": "galileo",
+          "markdownDescription": "The `galileo` program to run. Leave it as `galileo` to use the one on your `PATH`, or give a full path."
+        },
+        "galileo.useDocker": {
+          "type": "string",
+          "enum": ["auto", "always", "never"],
+          "default": "auto",
+          "markdownDescription": "Run Galileo in Docker (`cascala/galileo`). `auto` uses Docker only when `galileo.command` is not found. The file's folder is mounted as `/work`."
+        },
+        "galileo.dockerImage": {
+          "type": "string",
+          "default": "cascala/galileo",
+          "description": "The Docker image to use when running in Docker."
+        },
+        "galileo.explain": {
+          "type": "string",
+          "enum": ["default", "off", "teach"],
+          "default": "default",
+          "markdownDescription": "Explanations after results: `default` (brief), `off`, or `teach` (step-by-step walk-throughs). Sets `GALILEO_EXPLAIN`."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "test": "node test/grammar.test.js && node test/extension.test.js",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^3.0.0",
+    "vscode-oniguruma": "^2.0.1",
+    "vscode-textmate": "^9.0.0"
+  }
+}

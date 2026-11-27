@@ -1,0 +1,4 @@
+# Deep expressions recurse deeply; the native binary runs the engine on a
+# 512 MB thread, and the WebAssembly build gets a 64 MB stack.
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "link-arg=-zstack-size=67108864"]
