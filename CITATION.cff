@@ -7,7 +7,7 @@ authors:
   - family-names: Esch
     given-names: Joris
     alias: cascala
-version: "0.6.0"
+version: "0.6.1"
 license: Apache-2.0
 url: "https://cascala.github.io/igalileo/"
 repository-code: "https://github.com/cascala/galileo"
