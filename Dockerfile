@@ -2,6 +2,7 @@
 #   docker run -it --rm cascala/galileo
 #   docker run --rm -v "$PWD:/work" cascala/galileo script.gg
 #   docker run -it --rm -v "$PWD:/work" cascala/galileo -i script.gg
+#   docker run -i --rm cascala/galileo mcp          (MCP server for AI assistants)
 
 FROM rust:1-slim-bookworm AS build
 WORKDIR /src

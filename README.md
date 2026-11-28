@@ -166,6 +166,58 @@ a header line `execute <length>`, `complete <cursor> <length>` or `inspect <curs
 then the code; each reply is one line of JSON with MIME bundles (text, LaTeX, Markdown, SVG,
 Plotly). [iGalileo](https://github.com/cascala/igalileo) wraps it in a small Python ipykernel.
 
+## AI assistants (MCP)
+
+`galileo mcp` is a [Model Context Protocol](https://modelcontextprotocol.io) server, so an AI
+assistant can hand its math to Galileo and get exact answers back. It offers four tools:
+
+* `execute` runs Galileo code in a session that keeps its variables and functions between
+  calls. Each result comes back as Galileo text (plus LaTeX where it helps), plots come back
+  as images (and as SVG and Plotly JSON on request), explanations as separate notes, and
+  errors with their message;
+* `inspect` gives the help for a command (with no name, the list of commands by topic);
+* `complete` lists the commands and variables that start with a prefix;
+* `reset` starts a new session.
+
+The language and command references are there as resources too.
+
+With Claude Code, using Docker:
+
+```
+claude mcp add galileo -- docker run -i --rm cascala/galileo mcp
+```
+
+or with a `galileo` binary on your path: `claude mcp add galileo -- galileo mcp`.
+
+With Claude Desktop, add this to `claude_desktop_config.json` (Settings > Developer > Edit
+Config) and restart it:
+
+```json
+{
+  "mcpServers": {
+    "galileo": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "cascala/galileo", "mcp"]
+    }
+  }
+}
+```
+
+Other MCP clients start it the same way: the command `galileo mcp` (or the `docker run`
+above), talking over stdin and stdout.
+
+Runs are kept in bounds. Code runs in a separate engine process; one `execute` may take
+30 seconds (`--timeout SECONDS`) and the engine may use 2048 MB (`--memory MB`, enforced on
+Linux and so in Docker). When a run goes over, it is stopped, a new engine starts, and the
+earlier calls are run again in it, so definitions are kept. Galileo cannot touch your disk:
+files written with `save` stay in memory. To let it read and write one folder, name it with
+`--dir`; that folder is then Galileo's `/`, and nothing outside it is reachable (symbolic
+links are not followed):
+
+```
+claude mcp add galileo -- docker run -i --rm -v "$PWD:/work" cascala/galileo mcp --dir /work
+```
+
 ## Galileo in a web page
 
 To put live Galileo examples in your own web page (lesson notes, worksheets, a blog),
@@ -275,6 +327,7 @@ GALILEO_BLESS=1 cargo test --test reference
 | `src/plot.rs` | Figures: text, SVG and Plotly JSON |
 | `src/latex.rs`, `src/display.rs` | LaTeX and notebook MIME bundles |
 | `src/kernel.rs` | `galileo --kernel` protocol |
+| `src/mcp.rs` | `galileo mcp`: the Model Context Protocol server for AI assistants, and its sandboxed engine process |
 | `src/wasm.rs` | WebAssembly entry points for the browser |
 
 ## Citing Galileo

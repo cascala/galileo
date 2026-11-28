@@ -275,7 +275,7 @@ pub fn table_text(e: &Expr, sep: char) -> R<(String, usize)> {
 // ---- pictures ----
 
 /// A plot as a picture file: (bytes, what it is)
-fn picture(e: &Expr, extension: &str) -> R<Vec<u8>> {
+pub(crate) fn picture(e: &Expr, extension: &str) -> R<Vec<u8>> {
     let (svg, raster) = match e {
         Expr::Obj(o) => match &**o {
             Obj::Figure(f) => (f.svg(), f.image.clone()),
