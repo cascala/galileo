@@ -109,7 +109,7 @@ pub enum Expr {
     Str(String),
     /// figures, metrics and other displayable results
     Obj(Rc<Obj>),
-    /// an operation kept as typed (simplify = false): 1/3 + 2/6 stays that
+    /// an operation kept as typed (calc = "off"): 1/3 + 2/6 stays that
     /// until simplify, eval or a command works with it
     Held(Hop, Vec<Expr>),
 }

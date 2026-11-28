@@ -36,6 +36,13 @@ pub const ENTRIES: &[Entry] = &[
         "explain = \"off\""
     ),
     e!(
+        "calc",
+        "Basics",
+        "calc = \"simplify\", calc = \"eval\", calc = \"off\"",
+        "How results of what you type are shown. calc = \"simplify\" (the default) works arithmetic out exactly, in the form simplify gives: x = 3; x + 7 is 10 and 1/3 + 2/6 is 2/3. calc = \"eval\" gives results with fractions, roots or constants in digits, like a calculator: 1/3 + 2/6 is 0.6666666666666666. calc = \"off\" keeps what you type as typed (1/3 + 2/6 shows 1/3+2/6) until you call simplify or eval; variables, commands such as solve and factor, comparisons, float arithmetic, loops and functions still compute. clear keeps the setting.",
+        "calc = \"off\""
+    ),
+    e!(
         "exactdigits",
         "Basics",
         "exactdigits = 38, exactdigits = inf, exactdigits = 0",
@@ -186,8 +193,8 @@ pub const ENTRIES: &[Entry] = &[
     e!(
         "simplify",
         "Algebra",
-        "simplify(expr), simplify = true, simplify = false",
-        "simplify(expr) writes expr in one fixed form: a fraction N/D of multiplied-out polynomials (in the symbols, constants and functions of expr) with common factors cancelled, square roots moved out of denominators, and sin^2 + cos^2 = 1 used in whichever direction is shorter. Two ways of writing the same value give the same form, and a second simplify changes nothing. With the setting simplify = false (the default) what you type stays as typed (1/3 + 2/6 shows 1/3+2/6) until you call simplify or eval, while variables, commands, comparisons, float arithmetic, loops and functions still compute; simplify = true tidies every result as you type it.",
+        "simplify(expr)",
+        "simplify(expr) writes expr in one fixed form: a fraction N/D of multiplied-out polynomials (in the symbols, constants and functions of expr) with common factors cancelled, square roots moved out of denominators, and sin^2 + cos^2 = 1 used in whichever direction is shorter. Two ways of writing the same value give the same form, and a second simplify changes nothing. With calc = \"simplify\" (the default) every result of arithmetic is put in this form; see calc.",
         "simplify(sin(y)^2 + cos(y)^2)"
     ),
     e!(

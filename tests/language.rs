@@ -296,7 +296,7 @@ fn exact_decimals() {
 
 #[test]
 fn held_input() {
-    let h = |code: &str| last(&format!("simplify = false; {}", code));
+    let h = |code: &str| last(&format!("calc = \"off\"; {}", code));
     assert_eq!(h("1/2"), "1/2");
     assert_eq!(h("0.5"), "0.5");
     assert_eq!(h("1/3 + 2/6"), "1/3+2/6");
@@ -328,7 +328,8 @@ fn held_input() {
     // loops and functions compute
     assert_eq!(h("s = 0; for k = 1:10; s = s + 0.1*k; end; s"), "5.5");
     assert_eq!(h("f(x) := x^2 + 1/3; f(2)"), "13/3");
-    assert!(shown("simplify = 1").iter().any(|l| l.contains("simplify is true")));
+    assert!(shown("calc = 1").iter().any(|l| l.contains("calc is")));
+    assert!(shown("simplify = true").iter().any(|l| l.contains("the setting is calc")));
 }
 
 #[test]
@@ -362,10 +363,17 @@ fn simplify_is_idempotent() {
 }
 
 #[test]
-fn held_is_the_default() {
-    let mut s = galileo_rs::eval::Session::new();
-    let out = s.run_to_string("explain = \"off\"\n1/3 + 2/6\nsimplify(ans)\nclear\n1/2 + 1/2");
-    assert_eq!(out, "\"off\"\n1/3+2/6\n2/3\n1/2+1/2");
-    let mut t = galileo_rs::eval::Session::new();
-    assert_eq!(t.run_to_string("simplify = true; clear\n1/2 + 1/2"), "true\n1");
+fn calc_modes() {
+    let run = |code: &str| {
+        let mut s = galileo_rs::eval::Session::new();
+        let out = s.run_to_string(&format!("explain = \"off\"\n{}", code));
+        out.split_once('\n').map(|(_, r)| r.to_string()).unwrap_or_default()
+    };
+    // the default works arithmetic out exactly, in simplify's form
+    assert_eq!(run("x = 3; x + 7"), "3\n10");
+    assert_eq!(run("1/3 + 2/6\n(y + 1)^2\nfactor(y^2 + 2*y + 1)"), "2/3\ny^2+2*y+1\n(y+1)^2");
+    // eval: digits for fractions, roots and constants; whole numbers stay whole
+    assert_eq!(run("calc = \"eval\"; 1/3 + 2/6\nsqrt(2)\n2 + 3"), "\"eval\"\n0.6666666666666666\n1.4142135623730951\n5");
+    // off: kept as typed until simplify or eval, also after clear
+    assert_eq!(run("calc = \"off\"; 1/3 + 2/6\nsimplify(ans)\nclear\n1/2 + 1/2"), "\"off\"\n1/3+2/6\n2/3\n1/2+1/2");
 }

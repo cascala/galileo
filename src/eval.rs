@@ -103,6 +103,9 @@ pub struct Session {
     pub(crate) in_block: usize,
     pub(crate) in_loop: usize,
     pub(crate) in_proc: usize,
+    /// with calc = "simplify", leave results as the arithmetic gives them
+    /// instead of in simplify's form (used by tests of the arithmetic itself)
+    pub(crate) tidy_only: bool,
 }
 
 impl Default for Session {
@@ -120,7 +123,7 @@ pub(crate) fn builtins() -> BTreeMap<String, Expr> {
     v.insert("true".into(), Expr::Bool(true));
     v.insert("false".into(), Expr::Bool(false));
     v.insert("explain".into(), explain_default());
-    v.insert("simplify".into(), Expr::Bool(false));
+    v.insert("calc".into(), Expr::Str("simplify".into()));
     crate::num::set_exact_digits(crate::num::DEFAULT_DIGITS);
     v.insert("exactdigits".into(), Expr::int(38));
     v
@@ -177,11 +180,41 @@ fn first_sentence(s: &str) -> &str {
 }
 
 impl Session {
-    /// A session with `simplify = true`: every answer is worked out as it is typed
+    /// A session whose results are worked out as the arithmetic gives them,
+    /// without being put in simplify's form (for tests of the arithmetic)
     pub fn tidy() -> Session {
         let mut s = Session::new();
-        s.vars.insert("simplify".into(), Expr::Bool(true));
+        s.tidy_only = true;
         s
+    }
+
+    /// the calc setting: "off", "simplify" or "eval"
+    pub(crate) fn calc_mode(&self) -> &str {
+        match self.vars.get("calc") {
+            Some(Expr::Str(m)) => m.as_str(),
+            _ => "simplify",
+        }
+    }
+
+    /// A top-level result as the calc setting shows it: with "simplify",
+    /// arithmetic is put in simplify's form (x = 3; x + 7 is 10); with "eval",
+    /// any result with fractions, roots or constants is given in digits
+    fn finish(&mut self, n: &Node, v: Expr) -> Expr {
+        if self.in_loop > 0 || self.in_proc > 0 {
+            return v;
+        }
+        match self.calc_mode() {
+            "simplify"
+                if !self.tidy_only
+                    && is_arithmetic(n, self)
+                    && (v.is_scalar() || matches!(v, Expr::Matrix(_)))
+                    && !crate::units::has_units(&v) =>
+            {
+                calc::simplify_target(&v)
+            }
+            "eval" if needs_digits(&v) => complex_evalf(&calc::evalf(&v)),
+            _ => v,
+        }
     }
 
     pub fn new() -> Session {
@@ -199,6 +232,7 @@ impl Session {
             in_block: 0,
             in_loop: 0,
             in_proc: 0,
+            tidy_only: false,
         }
     }
 
@@ -511,15 +545,21 @@ impl Session {
             }
             Stmt::Expr(n) => {
                 let v = if self.holding() { self.eval_held(n)? } else { self.eval(n)? };
+                let v = self.finish(n, v);
                 self.note_report(&v);
                 self.set("ans", v.clone());
                 Ok(Output::Value(v))
             }
             Stmt::Assign(name, n) => {
-                let v = if self.holding() && name != "simplify" { self.eval_held(n)? } else { self.eval(n)? };
-                if name == "simplify" && !matches!(v, Expr::Bool(_)) {
+                let setting = matches!(name.as_str(), "calc" | "explain" | "exactdigits");
+                let v = if self.holding() && !setting { self.eval_held(n)? } else { self.eval(n)? };
+                let v = if setting { v } else { self.finish(n, v) };
+                if name == "simplify" {
+                    return Err("simplify is a command; the setting is calc = \"simplify\" (work results out exactly), \"eval\" (give digits) or \"off\" (keep what you type as typed)".into());
+                }
+                if name == "calc" && !matches!(&v, Expr::Str(m) if matches!(m.as_str(), "off" | "simplify" | "eval")) {
                     return Err(format!(
-                        "simplify is true (tidy each result as you type) or false (keep it as typed until simplify or eval), not {}",
+                        "calc is \"simplify\" (work results out exactly), \"eval\" (give digits) or \"off\" (keep what you type as typed), not {}",
                         show(&v)
                     ));
                 }
@@ -682,11 +722,11 @@ impl Session {
                 Ok(Output::Text(text))
             }
             "clear" => {
-                // clear removes variables and functions; the simplify setting stays
-                let keep = self.vars.get("simplify").cloned();
+                // clear removes variables and functions; the calc setting stays
+                let keep = self.vars.get("calc").cloned();
                 self.vars = builtins();
                 if let Some(v) = keep {
-                    self.vars.insert("simplify".into(), v);
+                    self.vars.insert("calc".into(), v);
                 }
                 self.funcs.clear();
                 Ok(Output::Nothing)
@@ -770,9 +810,9 @@ impl Session {
     }
 
     /// Whether a statement typed at the prompt keeps its value as typed
-    /// (simplify = false); loops and function bodies always compute
+    /// (calc = "off"); loops and function bodies always compute
     pub(crate) fn holding(&self) -> bool {
-        matches!(self.vars.get("simplify"), Some(Expr::Bool(false))) && self.in_loop == 0 && self.in_proc == 0
+        self.calc_mode() == "off" && self.in_loop == 0 && self.in_proc == 0
     }
 
     /// The value of a statement kept as typed: arithmetic on exact numbers and
@@ -856,7 +896,7 @@ impl Session {
         }
     }
 
-    /// A held expression worked out: what it would have been with simplify = true
+    /// A held expression worked out: what it would have been with calc = "simplify"
     pub fn lower(&mut self, e: &Expr) -> R<Expr> {
         use crate::expr::Hop;
         if !has_held(e) {
@@ -2581,6 +2621,40 @@ mod tests {
 }
 
 /// eval of something like exp(-2*i/3) or polylog(2, i): the complex number
+/// whether a statement is arithmetic that calc = "simplify" works out:
+/// operators, matrices written out, and elementary functions, not commands
+fn is_arithmetic(n: &Node, s: &Session) -> bool {
+    match n {
+        Node::Bin(Op::Add | Op::Sub | Op::Mul | Op::Div | Op::Pow | Op::EMul | Op::EDiv | Op::EPow, _, _) => true,
+        Node::Neg(_) => true,
+        Node::Matrix(_) => true,
+        Node::Call(f, args) => {
+            args.len() == 1
+                && (Func::from_name(f).is_some() || matches!(f.as_str(), "sqrt" | "exp"))
+                && !s.funcs.contains_key(f)
+                && !s.procs.contains_key(f)
+                && !s.vars.contains_key(f)
+        }
+        _ => false,
+    }
+}
+
+/// whether a result has fractions, roots, constants or functions that eval
+/// turns into digits (whole numbers stay whole)
+fn needs_digits(e: &Expr) -> bool {
+    match e {
+        Expr::Num(n) => n.is_exact() && !n.is_integer(),
+        Expr::Const(_) => true,
+        Expr::Func(..) => true,
+        Expr::Pow(b, p) => !p.num().is_some_and(|n| n.is_integer()) || needs_digits(b),
+        Expr::Add(v) | Expr::Mul(v) => v.iter().any(needs_digits),
+        Expr::Apply(f, v) => crate::special::is_special(f, v.len()) || v.iter().any(needs_digits),
+        Expr::Matrix(m) => m.iter().flatten().any(needs_digits),
+        Expr::Held(..) => true,
+        _ => false,
+    }
+}
+
 fn complex_evalf(e: &Expr) -> Expr {
     match e {
         Expr::Matrix(m) => Expr::Matrix(m.iter().map(|r| r.iter().map(complex_evalf).collect()).collect()),
