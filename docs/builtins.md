@@ -272,7 +272,7 @@ Also found as `gcd`, `lcm`.
 
 `simplify(expr), simplify = true, simplify = false`
 
-simplify(expr) writes expr in one fixed form: a fraction N/D of multiplied-out polynomials (in the symbols, constants and functions of expr) with common factors cancelled, square roots moved out of denominators, and sin^2 + cos^2 = 1 used in whichever direction is shorter. Two ways of writing the same value give the same form, and a second simplify changes nothing. The setting simplify = true (the default for now) tidies every result as you type it; with simplify = false what you type stays as typed (1/3 + 2/6 shows 1/3+2/6) until you call simplify or eval, while variables, commands, comparisons, float arithmetic, loops and functions still compute.
+simplify(expr) writes expr in one fixed form: a fraction N/D of multiplied-out polynomials (in the symbols, constants and functions of expr) with common factors cancelled, square roots moved out of denominators, and sin^2 + cos^2 = 1 used in whichever direction is shorter. Two ways of writing the same value give the same form, and a second simplify changes nothing. With the setting simplify = false (the default) what you type stays as typed (1/3 + 2/6 shows 1/3+2/6) until you call simplify or eval, while variables, commands, comparisons, float arithmetic, loops and functions still compute; simplify = true tidies every result as you type it.
 
 Example: `simplify(sin(y)^2 + cos(y)^2)`
 

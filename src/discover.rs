@@ -1888,7 +1888,7 @@ mod tests {
 
     /// values, with a report replaced by its plain text
     fn run(src: &str) -> String {
-        run_in(&mut Session::new(), src)
+        run_in(&mut Session::tidy(), src)
     }
 
     fn run_in(s: &mut Session, src: &str) -> String {
@@ -1917,7 +1917,7 @@ mod tests {
 
     #[test]
     fn inverse_square_with_four_pi_squared() {
-        let mut s = Session::new();
+        let mut s = Session::tidy();
         s.run_to_string("a = [0.387; 0.723; 1; 1.524; 5.203; 9.537]; T = [0.2408; 0.6152; 1; 1.881; 11.86; 29.46]");
         // centripetal acceleration 4 pi^2 a / T^2 of exact Kepler data
         let out = run_in(

@@ -17,7 +17,7 @@ const DIVERGENCES: &[(&str, &str)] = &[(
 )];
 
 fn last_value(src: &str) -> Result<Expr, String> {
-    let mut s = Session::new();
+    let mut s = Session::tidy();
     let mut last = None;
     for r in s.run(src) {
         if let Output::Value(v) = r? {

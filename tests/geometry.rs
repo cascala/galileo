@@ -6,7 +6,7 @@ use galileo_rs::kernel;
 
 /// Run a program and return the text of every non-quiet result
 fn run(code: &str) -> String {
-    let mut s = Session::new();
+    let mut s = Session::tidy();
     let mut out = vec![];
     for (r, quiet) in s.run_quiet(code) {
         match r {
@@ -64,7 +64,7 @@ fn ode_and_plots() {
         .parse::<f64>()
         .unwrap();
     assert!((x - std::f64::consts::E).abs() < 1e-6);
-    let mut s = Session::new();
+    let mut s = Session::tidy();
     let rs = s.run_quiet("plot(sin(x), x, 0, 2*pi)");
     let Ok(o) = &rs[0].0 else { panic!() };
     let Shown::Rich(b) = shown(o) else {
@@ -83,7 +83,7 @@ fn ode_and_plots() {
 
 #[test]
 fn kernel_protocol() {
-    let mut s = Session::new();
+    let mut s = Session::tidy();
     let r = kernel::execute(&mut s, "x = 3;\nx^2");
     assert_eq!(r, r#"{"outputs":[{"text":"9"}],"error":null}"#);
     let r = kernel::execute(&mut s, "1 +");

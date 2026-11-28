@@ -4,7 +4,7 @@ use galileo_rs::kernel::execute;
 /// load(RSA) defines the numbers, prints no value and no error, only a note
 #[test]
 fn load_rsa_is_clean() {
-    let mut s = Session::new();
+    let mut s = Session::tidy();
     let r = execute(&mut s, "load(RSA)");
     assert!(r.contains("\"error\":null"), "{}", r);
     assert!(r.contains("\"notes\":true"), "{}", r);

@@ -96,7 +96,7 @@ fn wrap(s: (String, u8), min: u8) -> String {
 fn num_prec(n: &Number) -> u8 {
     if n.is_negative() {
         P_ADD
-    } else if !n.is_integer() && n.is_exact() {
+    } else if !n.is_integer() && n.is_exact() && !n.is_xd() {
         P_MUL
     } else {
         P_ATOM

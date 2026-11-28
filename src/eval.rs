@@ -13,7 +13,7 @@ pub type R<T> = Result<T, String>;
 
 /// The value of a piece of Galileo source (for building results from text such as a polynomial)
 pub fn value_of(src: &str) -> Expr {
-    let mut s = Session::new();
+    let mut s = Session::tidy();
     match s.run(src).pop() {
         Some(Ok(Output::Value(v))) => v,
         _ => Expr::Str(src.to_string()),
@@ -120,7 +120,7 @@ pub(crate) fn builtins() -> BTreeMap<String, Expr> {
     v.insert("true".into(), Expr::Bool(true));
     v.insert("false".into(), Expr::Bool(false));
     v.insert("explain".into(), explain_default());
-    v.insert("simplify".into(), Expr::Bool(true));
+    v.insert("simplify".into(), Expr::Bool(false));
     crate::num::set_exact_digits(crate::num::DEFAULT_DIGITS);
     v.insert("exactdigits".into(), Expr::int(38));
     v
@@ -177,6 +177,13 @@ fn first_sentence(s: &str) -> &str {
 }
 
 impl Session {
+    /// A session with `simplify = true`: every answer is worked out as it is typed
+    pub fn tidy() -> Session {
+        let mut s = Session::new();
+        s.vars.insert("simplify".into(), Expr::Bool(true));
+        s
+    }
+
     pub fn new() -> Session {
         crate::assume::clear();
         Session {
@@ -675,7 +682,12 @@ impl Session {
                 Ok(Output::Text(text))
             }
             "clear" => {
+                // clear removes variables and functions; the simplify setting stays
+                let keep = self.vars.get("simplify").cloned();
                 self.vars = builtins();
+                if let Some(v) = keep {
+                    self.vars.insert("simplify".into(), v);
+                }
                 self.funcs.clear();
                 Ok(Output::Nothing)
             }
@@ -772,7 +784,8 @@ impl Session {
             Node::Ident(name) if !name.contains('.') => Ok(self.lookup(name)),
             Node::Neg(a) => {
                 let x = self.eval_held(a)?;
-                if float_data(&x) {
+                // a negative number is a number: [1 -1] is data, not held
+                if float_data(&x) || matches!(x, Expr::Num(_)) {
                     return arith(Op::Mul, Expr::int(-1), x);
                 }
                 Ok(Expr::Held(Hop::Neg, vec![x]))
@@ -780,7 +793,12 @@ impl Session {
             Node::Bin(op @ (Op::Add | Op::Sub | Op::Mul | Op::Div | Op::Pow | Op::EMul | Op::EDiv | Op::EPow), a, b) => {
                 let x = self.eval_held(a)?;
                 let y = self.eval_held(b)?;
-                if (float_data(&x) && numeric_data(&y)) || (float_data(&y) && numeric_data(&x)) {
+                // float arithmetic runs at once, and so does joining strings ("x = " + 3)
+                if (float_data(&x) && numeric_data(&y))
+                    || (float_data(&y) && numeric_data(&x))
+                    || matches!(x, Expr::Str(_))
+                    || matches!(y, Expr::Str(_))
+                {
                     return arith(*op, x, y);
                 }
                 let h = match op {
@@ -804,7 +822,8 @@ impl Session {
             {
                 let x = self.eval_held(&args[0])?;
                 let held = Expr::Held(Hop::Fn(f.clone()), vec![x.clone()]);
-                if float_data(&x) {
+                // a function of a vector or matrix (data) is worked out: abs(iterate(...))
+                if float_data(&x) || matches!(x, Expr::Matrix(_)) {
                     return self.lower(&held);
                 }
                 Ok(held)
@@ -1148,15 +1167,14 @@ impl Session {
         if self.funcs.contains_key(f) {
             return self.call_user(f, args);
         }
-        if let Some(v) = self
-            .vars
-            .get(f)
-            .filter(|_| !self.hidden.iter().any(|h| h == f))
-            .filter(|v| {
-                matches!(v, Expr::Matrix(_) | Expr::Str(_)) || crate::lang::as_list(v).is_some()
-            })
-            .cloned()
-        {
+        // a variable kept as typed is worked out before it is indexed: w = A*v; w(1)
+        let var = match self.vars.get(f).filter(|_| !self.hidden.iter().any(|h| h == f)).cloned() {
+            Some(v) if has_held(&v) => Some(self.lower(&v)?),
+            v => v,
+        };
+        if let Some(v) = var.filter(|v| {
+            matches!(v, Expr::Matrix(_) | Expr::Str(_)) || crate::lang::as_list(v).is_some()
+        }) {
             if args.is_empty() || args.len() > 2 {
                 return Err(format!("{}(...) takes one or two positions", f));
             }
@@ -2384,7 +2402,7 @@ fn unquote(s: &str) -> &str {
 mod tests {
     use super::*;
     fn run(s: &str) -> String {
-        Session::new().run_values(s)
+        Session::tidy().run_values(s)
     }
     #[test]
     fn basics() {
@@ -2411,7 +2429,7 @@ mod tests {
     #[test]
     fn explain_levels() {
         let notes = |src: &str| -> String {
-            let mut s = Session::new();
+            let mut s = Session::tidy();
             s.run_notes(src)
                 .into_iter()
                 .last()
@@ -2439,7 +2457,7 @@ mod tests {
         assert!(poly.contains("The degree is a balance") && poly.contains("0 mod 7"));
         assert_eq!(notes("explain = \"off\"; gnfs(2^128 + 1)"), "");
         assert!(notes("explain = \"brief\"; gnfs(2^128 + 1)").len() > 0);
-        let mut s = Session::new();
+        let mut s = Session::tidy();
         let e = s.run_to_string("explain = true");
         assert!(e.contains("explain = \"brief\""), "{}", e);
         assert!(s.run_to_string("explain = false").contains("explain = \"off\""));
@@ -2487,22 +2505,22 @@ mod tests {
         assert_eq!(run("factor(x^4 + 1, 17)"), "(x+2)*(x+8)*(x+9)*(x+15)");
         assert_eq!(run("factor(x^2 + y^2, i)"), "(x-i*y)*(x+i*y)");
         assert!(
-            Session::new()
+            Session::tidy()
                 .run_to_string("N = (2^1062 + 1)/5; algfactor(N)")
                 .contains("divides 2^1062 + 1")
         );
         assert!(
-            Session::new()
+            Session::tidy()
                 .run_to_string("N = 7^50 + 3^50; algfactor(N)")
                 .contains("All 7 prime factors found")
         );
         assert!(
-            Session::new()
+            Session::tidy()
                 .run_to_string("N = 31415926^5 + 31415926 + 1; algfactor(N)")
                 .contains("x^5 + x + 1 with x = 31415926")
         );
         assert!(
-            Session::new()
+            Session::tidy()
                 .run_to_string("N = 98765^4 + 4*7^4; algfactor(N)")
                 .contains("x^4 + 9604 with x = 98765")
         );

@@ -389,7 +389,7 @@ mod tests {
     use super::*;
     use crate::eval::{Output, Session};
     fn tex(src: &str) -> String {
-        match Session::new().run(src).pop().unwrap().unwrap() {
+        match Session::tidy().run(src).pop().unwrap().unwrap() {
             Output::Value(v) => latex(&v),
             _ => panic!(),
         }

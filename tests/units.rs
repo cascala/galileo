@@ -5,7 +5,7 @@ use galileo_rs::eval::Session;
 use galileo_rs::print::show;
 
 fn one(code: &str) -> String {
-    let mut s = Session::new();
+    let mut s = Session::tidy();
     let mut last = String::new();
     for r in s.run(code) {
         last = match r {
@@ -84,7 +84,7 @@ fn unit_names_stay_variables() {
 
 #[test]
 fn latex_of_quantities() {
-    let mut s = Session::new();
+    let mut s = Session::tidy();
     let mut tex = vec![];
     for code in ["9.81 m/s^2", "5 uF", "3 kohm", "(2*t+3) m", "[1 2] N"] {
         if let Some(Ok(Output::Value(v))) = s.run(code).pop() {

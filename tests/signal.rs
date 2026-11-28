@@ -5,7 +5,7 @@ use galileo_rs::eval::Session;
 use galileo_rs::print::show;
 
 fn one(code: &str) -> String {
-    let mut s = Session::new();
+    let mut s = Session::tidy();
     let mut last = String::new();
     for r in s.run(code) {
         last = match r {
@@ -30,7 +30,7 @@ fn fourier_transforms() {
 
 #[test]
 fn animations() {
-    let mut s = Session::new();
+    let mut s = Session::tidy();
     let r = s.run("p = animate(sin(x - t), x, 0, 10, t, 0, 2*pi, 12)").pop().unwrap().unwrap();
     let Output::Value(v) = r else { panic!() };
     let b = galileo_rs::display::bundle(&v).unwrap();

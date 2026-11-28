@@ -986,7 +986,7 @@ mod tests {
     use crate::parser::parse;
 
     fn t(src: &str) -> String {
-        let mut s = Session::new();
+        let mut s = Session::tidy();
         let v = match s.run(src).pop().unwrap().unwrap() {
             crate::eval::Output::Value(v) => v,
             _ => panic!(),

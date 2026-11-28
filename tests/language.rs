@@ -8,7 +8,7 @@ use galileo_rs::print::show_value;
 
 /// everything a program shows, one line per result ("ERROR ..." for an error)
 fn shown(code: &str) -> Vec<String> {
-    let mut s = Session::new();
+    let mut s = Session::tidy();
     s.run_quiet(code)
         .into_iter()
         .filter(|(_, quiet)| !quiet)
@@ -359,4 +359,13 @@ fn simplify_is_idempotent() {
     // one form for one value, whichever way it was written
     assert_eq!(last("simplify(sin(x)^2)"), last("simplify(1 - cos(x)^2)"));
     assert_eq!(last("simplify((x+1)^2)"), last("simplify(x^2 + 2*x + 1)"));
+}
+
+#[test]
+fn held_is_the_default() {
+    let mut s = galileo_rs::eval::Session::new();
+    let out = s.run_to_string("explain = \"off\"\n1/3 + 2/6\nsimplify(ans)\nclear\n1/2 + 1/2");
+    assert_eq!(out, "\"off\"\n1/3+2/6\n2/3\n1/2+1/2");
+    let mut t = galileo_rs::eval::Session::new();
+    assert_eq!(t.run_to_string("simplify = true; clear\n1/2 + 1/2"), "true\n1");
 }

@@ -125,7 +125,7 @@ fn small_primes_equal_to_a_base() {
 
 #[test]
 fn aurifeuillean_type_families_and_fermat() {
-    let mut s = galileo_rs::eval::Session::new();
+    let mut s = galileo_rs::eval::Session::tidy();
     let run = |s: &mut galileo_rs::eval::Session, src: &str| -> String {
         s.run(src)
             .into_iter()

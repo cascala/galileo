@@ -1065,6 +1065,7 @@ fn mentions(e: &Expr, y: &str) -> bool {
     match e {
         Expr::Sym(s) => s == y,
         Expr::Apply(f, v) => f.trim_end_matches('\'') == y || v.iter().any(|a| mentions(a, y)),
+        Expr::Held(_, v) => v.iter().any(|a| mentions(a, y)),
         Expr::Add(v) | Expr::Mul(v) => v.iter().any(|a| mentions(a, y)),
         Expr::Pow(a, b) => mentions(a, y) || mentions(b, y),
         Expr::Func(_, a) => mentions(a, y),
@@ -2726,7 +2727,7 @@ fn snap(v: f64) -> Expr {
 mod tests {
     use crate::Session;
     fn run(s: &str) -> String {
-        Session::new().run_values(s)
+        Session::tidy().run_values(s)
     }
     #[test]
     fn number_theory() {

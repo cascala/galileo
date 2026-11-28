@@ -5,7 +5,7 @@ use galileo_rs::eval::Session;
 use galileo_rs::print::show;
 
 fn one(code: &str) -> String {
-    let mut s = Session::new();
+    let mut s = Session::tidy();
     let mut last = String::new();
     for r in s.run(code) {
         last = match r {
@@ -166,7 +166,7 @@ fn centrality_and_matrices() {
 
 #[test]
 fn drawings() {
-    let mut s = Session::new();
+    let mut s = Session::tidy();
     for code in [
         &format!("{} draw(W, shortest(W, \"A\", \"E\"))", W) as &str,
         "draw(petersen(), coloring(petersen()))",

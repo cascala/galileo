@@ -7,7 +7,7 @@ use galileo_rs::print::show;
 use num_bigint::BigInt;
 
 fn one(code: &str) -> String {
-    let mut s = Session::new();
+    let mut s = Session::tidy();
     let mut last = String::new();
     for r in s.run(code) {
         last = match r {
@@ -194,7 +194,7 @@ fn quotient_identities() {
         for k in 0..n {
             f.push_str(&format!(" + ({})*x^{}", rnd(4), k));
         }
-        let fe = galileo_rs::eval::Session::new().run(&f).pop().unwrap().ok();
+        let fe = galileo_rs::eval::Session::tidy().run(&f).pop().unwrap().ok();
         let Some(galileo_rs::Output::Value(fe)) = fe else {
             panic!()
         };

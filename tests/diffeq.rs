@@ -6,7 +6,7 @@ use galileo_rs::eval::Session;
 use galileo_rs::print::show;
 
 fn one(code: &str) -> String {
-    let mut s = Session::new();
+    let mut s = Session::tidy();
     let mut last = String::new();
     for r in s.run(code) {
         last = match r {

@@ -1014,7 +1014,7 @@ mod tests {
 
     #[test]
     fn lab_commands() {
-        let mut s = Session::new();
+        let mut s = Session::tidy();
         let out = s.run_to_string("N = semiprime(20, 1); f = semifactors(20, 1); f(1, 1)*f(2, 1) == N");
         assert!(out.trim().ends_with("true"), "{}", out);
         let out = s.run_to_string("labrun(\"rho\", semiprime(20, 3))");
@@ -1048,7 +1048,7 @@ mod tests {
     /// Factoring methods give every prime, like factor, not just one split
     #[test]
     fn methods_factor_completely() {
-        let mut s = Session::new();
+        let mut s = Session::tidy();
         s.run_to_string("explain = \"off\"; N = semiprime(15) * semiprime(13); M = semiprime(12, 1) * semiprime(10, 2) * 7^2");
         let want = s.run_to_string("factor(N)");
         assert_eq!(want.matches(", 1").count(), 4, "{}", want);

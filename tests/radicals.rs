@@ -52,7 +52,7 @@ fn cval(e: &Expr) -> C {
 }
 
 fn roots(code: &str) -> (Vec<Expr>, String) {
-    let mut s = Session::new();
+    let mut s = Session::tidy();
     let mut last = None;
     let mut notes = String::new();
     for (r, _, n) in s.run_notes(code) {
@@ -147,7 +147,7 @@ fn symbolic_formulas() {
             "{}",
             notes
         );
-        let mut s = Session::new();
+        let mut s = Session::tidy();
         let mut sub = String::new();
         for (k, v) in &vals {
             sub = format!("{}{} = {}; ", sub, k, v);
@@ -247,7 +247,7 @@ fn low_degree_notes() {
         "{}",
         b
     );
-    let mut s = Session::new();
+    let mut s = Session::tidy();
     let r = s.run_notes("explain = \"teach\"; solve(3*x + 7, x)");
     let n: Vec<String> = r
         .last()

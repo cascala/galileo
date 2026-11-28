@@ -6,7 +6,7 @@ use galileo_rs::eval::Session;
 use galileo_rs::print::show;
 
 fn one(code: &str) -> String {
-    let mut s = Session::new();
+    let mut s = Session::tidy();
     let mut last = String::new();
     for r in s.run(code) {
         last = match r {
@@ -116,7 +116,7 @@ fn field_plots() {
         "fieldplot([-y, x], x, -2, 2, y, -2, 2)",
         "show(contour(x^2+y^2, x, -1, 1, y, -1, 1, 5), fieldplot(grad(x^2+y^2, [x y]), x, -1, 1, y, -1, 1))",
     ] {
-        let mut s = Session::new();
+        let mut s = Session::tidy();
         let r = s.run(code).pop().unwrap();
         assert!(matches!(r, Ok(Output::Value(galileo_rs::expr::Expr::Obj(_)))), "{}", code);
     }

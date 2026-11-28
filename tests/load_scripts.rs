@@ -30,7 +30,7 @@ fn values(s: &mut Session, src: &str) -> String {
 #[test]
 fn load_shows_every_unhidden_result() {
     let d = folder("every", &[("a.gg", "a = 1;\nb = 2\nc = a + b\n")]);
-    let mut s = Session::new();
+    let mut s = Session::tidy();
     let out = values(&mut s, &format!("load({})", d.join("a.gg").display()));
     assert_eq!(out, "2\n3");
 }
@@ -38,7 +38,7 @@ fn load_shows_every_unhidden_result() {
 #[test]
 fn load_adds_gg_and_takes_quotes() {
     let d = folder("names", &[("my script.gg", "x = 41 + 1\n")]);
-    let mut s = Session::new();
+    let mut s = Session::tidy();
     let p = d.join("my script");
     assert_eq!(values(&mut s, &format!("load(\"{}\")", p.display())), "42");
     assert_eq!(values(&mut s, "x"), "42");
@@ -56,7 +56,7 @@ fn errors_name_file_and_line() {
             ("run.gg", "p = 1\nq = nosuch(1)\nr = 2\n"),
         ],
     );
-    let mut s = Session::new();
+    let mut s = Session::tidy();
     let r = s.load_file(d.join("bad.gg").to_str().unwrap());
     let e = r.last().unwrap().0.clone().unwrap_err();
     assert!(e.contains("bad.gg:6: parse error"), "{}", e);
@@ -77,7 +77,7 @@ fn nested_loads_resolve_next_to_the_loading_file() {
             ("sub/inner.gg", "w = 3;\nw*2\n"),
         ],
     );
-    let mut s = Session::new();
+    let mut s = Session::tidy();
     let out = values(
         &mut s,
         &format!("load({})", d.join("sub/outer.gg").display()),
@@ -90,7 +90,7 @@ fn a_file_loading_itself_stops() {
     let d = folder("self", &[]);
     let f = d.join("self.gg");
     std::fs::write(&f, format!("load({})\n", f.display())).unwrap();
-    let mut s = Session::new();
+    let mut s = Session::tidy();
     let e = s
         .load_file(f.to_str().unwrap())
         .last()
@@ -103,7 +103,7 @@ fn a_file_loading_itself_stops() {
 
 #[test]
 fn missing_file() {
-    let mut s = Session::new();
+    let mut s = Session::tidy();
     let r = execute(&mut s, "load(no/such/file)");
     assert!(r.contains("no such file"), "{}", r);
 }
@@ -111,7 +111,7 @@ fn missing_file() {
 #[test]
 fn notebook_cells_show_loaded_results() {
     let d = folder("kernel", &[("k.gg", "u = 6;\nu * 7\n")]);
-    let mut s = Session::new();
+    let mut s = Session::tidy();
     let r = execute(&mut s, &format!("load({})", d.join("k.gg").display()));
     assert!(
         r.contains("{\"text\":\"42\"}") && r.contains("\"error\":null"),
@@ -122,7 +122,7 @@ fn notebook_cells_show_loaded_results() {
 
 #[test]
 fn calls_span_lines() {
-    let mut s = Session::new();
+    let mut s = Session::tidy();
     assert_eq!(
         values(&mut s, "b = max(2,\n  7)\nc = (1 +\n 2) * [1 2\n3 4]"),
         "7\n[3,  6;\n 9, 12]"
@@ -131,7 +131,7 @@ fn calls_span_lines() {
 
 #[test]
 fn backslash_continues_a_line() {
-    let mut s = Session::new();
+    let mut s = Session::tidy();
     assert_eq!(values(&mut s, "k = 1 + \\\n  2\nk"), "3\n3");
     // with spaces or a comment after it
     assert_eq!(values(&mut s, "m = 2 * \\   // more\n  5"), "10");

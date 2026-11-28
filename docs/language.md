@@ -18,19 +18,25 @@ Each line is a statement, and Galileo shows its result. A `;` at the end of a st
 hides the result, and `;` also separates statements on one line. `ans` is the last result
 that was not assigned to a name.
 
+What you type is kept as you typed it: `2 + 3` stays `2+3` until you ask for it to be
+worked out with `simplify` (exactly) or `eval` (in digits). Commands such as `solve`,
+`factor` and `inv` work out their input themselves. See [Simplify and eval](#simplify-and-eval).
+
 ```galileo
 galileo> 2 + 3
+2+3
+galileo> simplify(ans)
 5
-galileo> ans * 10
+galileo> simplify(ans * 10)
 50
-galileo> a = 7; b = a^2
+galileo> a = 7; b = simplify(a^2)
 49
 ```
 
 `//` starts a comment that runs to the end of the line.
 
 ```galileo
-galileo> 6*7   // the answer
+galileo> simplify(6*7)   // the answer
 42
 ```
 
@@ -41,7 +47,7 @@ the rest, and so do blocks (`for`, `while`, `if`, `function`) until their `end`.
 ```galileo
 galileo> 1 + 2 + \
 ...> 3
-6
+1+2+3
 galileo> max(4,
 ...> 9)
 9
@@ -53,11 +59,11 @@ Whole numbers and fractions are exact, with no size limit. Roots and constants s
 symbolic until you ask for a number with `eval`.
 
 ```galileo
-galileo> 1/3 + 2/6
+galileo> simplify(1/3 + 2/6)
 2/3
-galileo> 2^100
+galileo> simplify(2^100)
 1267650600228229401496703205376
-galileo> sqrt(8)
+galileo> simplify(sqrt(8))
 2*sqrt(2)
 galileo> eval(5/4)
 1.25
@@ -80,13 +86,13 @@ a fraction) becomes a float, so a loop that multiplies decimals thousands of tim
 decimal a float, as in MATLAB.
 
 ```galileo
-galileo> 0.5 + 1/4
+galileo> simplify(0.5 + 1/4)
 0.75
-galileo> 0.1 + 0.2 - 0.3
+galileo> simplify(0.1 + 0.2 - 0.3)
 0.0
-galileo> 1e20 + 1
+galileo> simplify(1e20 + 1)
 100000000000000000001.0
-galileo> 0.1/3
+galileo> simplify(0.1/3)
 1/30
 galileo> sin(0.5)
 sin(0.5)
@@ -100,9 +106,9 @@ The constants are `pi`, `e`, and `i` (or `j`) for the imaginary unit. `true` and
 are the two booleans, and `inf` stands for infinity in limits and integrals.
 
 ```galileo
-galileo> (2 + 3*i)*(2 - 3*i)
+galileo> simplify((2 + 3*i)*(2 - 3*i))
 13
-galileo> i^2
+galileo> simplify(i^2)
 -1
 ```
 
@@ -129,13 +135,12 @@ galileo> simplify(1/sqrt(2))
 sqrt(2)/2
 ```
 
-The setting `simplify` chooses when this happens. With `simplify = true`, the default for
-now, Galileo tidies every result as you type it: `1/3 + 2/6` shows `2/3`. With
-`simplify = false`, what you type stays as you typed it until you call `simplify` or
-`eval`:
+The setting `simplify` chooses when this happens. With `simplify = false`, the default,
+what you type stays as you typed it until you call `simplify` or `eval`. With
+`simplify = true`, Galileo tidies every result as you type it: `1/3 + 2/6` shows `2/3`.
+`clear` keeps the setting.
 
 ```galileo
-galileo> simplify = false;
 galileo> 1/3 + 2/6
 1/3+2/6
 galileo> simplify(1/3 + 2/6)
@@ -149,6 +154,9 @@ sqrt(0.5)
 galileo> eval(sqrt(0.5))
 0.7071067811865476
 galileo> simplify = true;
+galileo> 1/3 + 2/6
+2/3
+galileo> simplify = false;
 ```
 
 Even with `simplify = false`, some things still run:
@@ -159,6 +167,7 @@ Even with `simplify = false`, some things still run:
 - Comparisons and conditions decide: `0.1*x + 0.2*x == 0.3*x` is `true`.
 - Arithmetic on floats runs.
 - Loops and function bodies compute as with `simplify = true`.
+- Joining strings and functions of vectors and matrices (such as `abs([3 -4])`) run.
 
 ## Names and variables
 
@@ -227,11 +236,11 @@ From loosest to tightest binding:
 So `-x^2` is `-(x^2)`, `2^3^2` is `2^9`, and `2^-1` is allowed.
 
 ```galileo
-galileo> 2^3^2
+galileo> simplify(2^3^2)
 512
-galileo> -2^2
+galileo> simplify(-2^2)
 -4
-galileo> 2^-1
+galileo> simplify(2^-1)
 1/2
 galileo> 3 > 2 && 1 == 1
 true
@@ -314,9 +323,9 @@ galileo> 10:-3:1
 `*`, `/` and `^` are the matrix operations; `.*`, `./` and `.^` work entry by entry.
 
 ```galileo
-galileo> [1 2 3] .* [4 5 6]
+galileo> simplify([1 2 3] .* [4 5 6])
 [4, 10, 18]
-galileo> [1 2 3].^2
+galileo> simplify([1 2 3].^2)
 [1, 4, 9]
 ```
 
@@ -397,19 +406,19 @@ is the bare number (for plots and tables).
 
 ```galileo
 galileo> v = 3 m/s;
-galileo> v*(2 s)
+galileo> simplify(v*(2 s))
 6 m
-galileo> 1 km + 300 m
+galileo> simplify(1 km + 300 m)
 1.3 km
 galileo> convert(2 kg*3 m/s^2, N)
 6 N
 galileo> convert(100 km/h, m/s)
 27.7777777777778 m/s
-galileo> (3 km)/(1500 m)
+galileo> simplify((3 km)/(1500 m))
 2
-galileo> sin(30 deg)
+galileo> simplify(sin(30 deg))
 1/2
-galileo> sqrt(16 m^2)
+galileo> simplify(sqrt(16 m^2))
 4 m
 galileo> 3 m > 200 cm
 true
