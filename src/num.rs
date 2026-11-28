@@ -194,6 +194,52 @@ fn rat_mul(a: i128, b: i128, c: i128, d: i128) -> Option<(i128, i128)> {
     Some((n, m))
 }
 
+/// gcd, quick when one side is small: num-integer's binary gcd takes about
+/// one step per bit of the big side, so gcd(1, 100000!) took seconds
+fn gcd_big(a: &BigInt, b: &BigInt) -> BigInt {
+    let (s, l) = if a.bits() <= b.bits() { (a, b) } else { (b, a) };
+    if s.bits() <= 64 {
+        if s.is_zero() {
+            return l.abs();
+        }
+        let r = (l % s).abs().to_u128().unwrap();
+        let mut x = s.abs().to_u128().unwrap();
+        let mut y = r;
+        while y != 0 {
+            let t = x % y;
+            x = y;
+            y = t;
+        }
+        return BigInt::from(x);
+    }
+    num_integer::Integer::gcd(a, b)
+}
+
+/// (a/b)(c/d) in lowest terms, with the cross gcds of gcd_big
+fn rat_mul_big(x: &BigRational, y: &BigRational) -> BigRational {
+    let g1 = gcd_big(x.numer(), y.denom());
+    let g2 = gcd_big(y.numer(), x.denom());
+    let n = (x.numer() / &g1) * (y.numer() / &g2);
+    let d = (x.denom() / &g2) * (y.denom() / &g1);
+    if n.is_zero() {
+        return BigRational::zero();
+    }
+    BigRational::new_raw(n, d)
+}
+
+/// a/b + c/d in lowest terms, with gcd_big
+fn rat_add_big(x: &BigRational, y: &BigRational) -> BigRational {
+    let (a, b, c, d) = (x.numer(), x.denom(), y.numer(), y.denom());
+    let g = gcd_big(b, d);
+    let l = (b / &g) * d;
+    let n = a * (&l / b) + c * (&l / d);
+    if n.is_zero() {
+        return BigRational::zero();
+    }
+    let g2 = gcd_big(&n, &l);
+    BigRational::new_raw(n / &g2, l / g2)
+}
+
 #[derive(Clone, Debug)]
 pub enum Number {
     /// numerator, denominator; denominator > 0 and gcd == 1
@@ -670,7 +716,7 @@ impl Number {
             }
         }
         match (self.big(), o.big()) {
-            (Some(x), Some(y)) => norm(x + y),
+            (Some(x), Some(y)) => norm(rat_add_big(&x, &y)),
             _ => Float(self.to_f64() + o.to_f64()),
         }
     }
@@ -696,7 +742,29 @@ impl Number {
             }
         }
         match (self.big(), o.big()) {
-            (Some(x), Some(y)) => norm(x * y),
+            (Some(x), Some(y)) => {
+                // a/b * c/d where d divides a (or b divides c), as in
+                // factorial(100000)/factorial(99990): divide exactly instead
+                // of taking the gcd of two huge numbers
+                for (p, q) in [(&x, &y), (&y, &x)] {
+                    if p.denom().is_one() && q.numer().abs().is_one() && q.denom().bits() > 128 {
+                        let (quo, rem) = num_integer::Integer::div_rem(p.numer(), q.denom());
+                        if rem.is_zero() {
+                            return norm(BigRational::from_integer(quo * q.numer()));
+                        }
+                        // or p divides d: p/d = 1/(d/p)
+                        if quo.is_zero() && !p.numer().is_zero() {
+                            let (quo, rem) = num_integer::Integer::div_rem(q.denom(), p.numer());
+                            if rem.is_zero() {
+                                // already in lowest terms; new() would take a slow gcd
+                                let sign = if quo.is_negative() { -q.numer() } else { q.numer().clone() };
+                                return norm(BigRational::new_raw(sign, quo.abs()));
+                            }
+                        }
+                    }
+                }
+                norm(rat_mul_big(&x, &y))
+            }
             _ => Float(self.to_f64() * o.to_f64()),
         }
     }

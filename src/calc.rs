@@ -466,13 +466,19 @@ pub fn simplify_target(e: &Expr) -> Expr {
     if crate::units::has_units(e) {
         return simplify(e);
     }
-    let e = &no_root_denominators(e);
+    let e = &no_root_denominators(&cancel_ratios(e));
     let r = crate::ratfun::normal_form(e).unwrap_or_else(|| simplify(e));
     if has_decimal(e) {
         decimals(&r)
     } else {
         r
     }
+}
+
+/// factorial(n + 2)/factorial(n) = (n + 1)(n + 2), everywhere in e
+fn cancel_ratios(e: &Expr) -> Expr {
+    let inner = e.map_children(&mut |x| cancel_ratios(x));
+    crate::special::ratios(&inner).unwrap_or(inner)
 }
 
 /// square roots of fractions with the root in the numerator: sqrt(1/2) = sqrt(2)/2
@@ -526,7 +532,13 @@ pub fn simplify(e: &Expr) -> Expr {
         Num(_) | Sym(_) | Const(_) | Bool(_) | Str(_) => return e.clone(),
         _ => {}
     }
+    // factorial(n + 2)/factorial(n) = (n + 1)(n + 2): cancel before the
+    // factorials are worked out, and again once the factors are simplified
+    if let Some(r) = crate::special::ratios(e) {
+        return simplify(&r);
+    }
     let inner = e.map_children(&mut |x| simplify(x));
+    let inner = crate::special::ratios(&inner).map(|r| simplify(&r)).unwrap_or(inner);
     let mut best = inner.clone();
     let mut consider = |c: Expr| {
         if cost(&c) < cost(&best) {

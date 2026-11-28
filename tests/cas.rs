@@ -98,3 +98,30 @@ fn polynomial_gcd() {
     assert_eq!(one("gcd(x^4 + 1, x^3 - x, 3)"), "1");
     assert_eq!(one("gcd(12, 18)"), "6");
 }
+
+#[test]
+fn factorial_ratios() {
+    // big factorials are quick (binary splitting), and so is their ratio
+    let t = std::time::Instant::now();
+    assert_eq!(
+        one("factorial(10010)/factorial(10000)"),
+        "10055132181657863239677710775463890028800"
+    );
+    assert_eq!(
+        one("factorial(99990)/factorial(100000)"),
+        "1/99955008699055063270306822366827310265723712000000"
+    );
+    assert_eq!(one("factorial(100000)").len(), 456574);
+    assert!(t.elapsed().as_secs() < 20, "factorials took {:?}", t.elapsed());
+    // a symbolic argument stays as factorial(n); simplify cancels the ratio
+    // (and, like every simplify, multiplies the result out)
+    assert_eq!(one("factorial(n)"), "factorial(n)");
+    assert_eq!(one("simplify(factorial(n+2)/factorial(n))"), "n^2+3*n+2");
+    assert_eq!(one("simplify(factorial(n)/factorial(n+3))"), "1/(n^3+6*n^2+11*n+6)");
+    assert_eq!(one("simplify(factorial(n+1)/factorial(n-1))"), "n^2+n");
+    assert_eq!(one("simplify(gamma(x+2)/gamma(x))"), "x^2+x");
+    assert_eq!(one("simplify(factorial(n)/gamma(n))"), "n");
+    assert_eq!(one("f = factorial(n+1)/factorial(n-1); n = 7; f"), "56");
+    assert_eq!(one("diff(factorial(x), x)"), "digamma(x+1)*factorial(x)");
+    assert_eq!(one("factorial(-1)"), "ERROR factorial needs a non-negative integer");
+}

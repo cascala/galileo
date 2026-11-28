@@ -363,6 +363,11 @@ fn special_latex(f: &str, v: &[Expr]) -> Option<String> {
     }
     let a = |k: usize| fmt(&v[k]).0;
     Some(match f {
+        "factorial" => match &v[0] {
+            Expr::Sym(_) => format!("{}!", a(0)),
+            Expr::Num(n) if n.is_integer() && !n.is_negative() => format!("{}!", a(0)),
+            _ => format!("\\left({}\\right)!", a(0)),
+        },
         "gamma" => format!("\\Gamma\\left({}\\right)", a(0)),
         "digamma" => format!("\\psi\\left({}\\right)", a(0)),
         "polygamma" => format!("\\psi^{{({})}}\\left({}\\right)", a(0), a(1)),
