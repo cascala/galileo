@@ -243,8 +243,8 @@ pub const ENTRIES: &[Entry] = &[
         "factorial",
         "Functions",
         "factorial(n), binomial(n, k)",
-        "n! and the binomial coefficient n choose k, exact.",
-        "binomial(10, 3)"
+        "n! and the binomial coefficient n choose k, exact. For a symbol, factorial(n) stays as it is, and simplify cancels ratios: factorial(n + 2)/factorial(n) becomes (n + 1)*(n + 2), the same for gamma.",
+        "simplify(factorial(n + 2)/factorial(n))"
     ),
     e!(
         "floor",

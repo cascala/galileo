@@ -443,7 +443,13 @@ pub fn simplify(e: &Expr) -> Expr {
         Num(_) | Sym(_) | Const(_) | Bool(_) | Str(_) => return e.clone(),
         _ => {}
     }
+    // factorial(n + 2)/factorial(n) = (n + 1)(n + 2): cancel before the
+    // factorials are worked out, and again once the factors are simplified
+    if let Some(r) = crate::special::ratios(e) {
+        return simplify(&r);
+    }
     let inner = e.map_children(&mut |x| simplify(x));
+    let inner = crate::special::ratios(&inner).map(|r| simplify(&r)).unwrap_or(inner);
     let mut best = inner.clone();
     let mut consider = |c: Expr| {
         if cost(&c) < cost(&best) {

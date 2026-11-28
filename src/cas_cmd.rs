@@ -710,6 +710,14 @@ impl Session {
             })
         };
         match f {
+            // a symbolic argument stays as factorial(n), so that
+            // simplify(factorial(n + 2)/factorial(n)) gives (n + 1)(n + 2)
+            "factorial" if exact_int(&v).is_none()
+                && !matches!(v, Expr::Matrix(_))
+                && calc::evalf(&v).num().is_none() =>
+            {
+                Ok(crate::special::apply("factorial", vec![v]))
+            }
             "factorial" => cas::factorial(integer(&v, f)?),
             "floor" | "ceil" | "round" if round_exact(&v, f).is_some() => {
                 round_exact(&v, f).unwrap()

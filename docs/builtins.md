@@ -240,9 +240,9 @@ Also found as `min`.
 
 `factorial(n), binomial(n, k)`
 
-n! and the binomial coefficient n choose k, exact.
+n! and the binomial coefficient n choose k, exact. For a symbol, factorial(n) stays as it is, and simplify cancels ratios: factorial(n + 2)/factorial(n) becomes (n + 1)*(n + 2), the same for gamma.
 
-Example: `binomial(10, 3)`
+Example: `simplify(factorial(n + 2)/factorial(n))`
 
 Also found as `binomial`.
 
