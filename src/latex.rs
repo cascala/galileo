@@ -118,6 +118,19 @@ fn wrap(s: (String, u8), min: u8) -> String {
 
 pub fn latex(e: &Expr) -> String {
     match e {
+        Matrix(rows) if crate::fmat::all_elems(rows).is_some() => {
+            let r = crate::fmat::all_elems(rows).unwrap();
+            let lifts: Vec<Vec<Expr>> = rows
+                .iter()
+                .map(|row| row.iter().map(|x| crate::ffield::as_elem(x).unwrap().lift()).collect())
+                .collect();
+            let field = if r.gf {
+                format!("\\mathbb{{F}}_{{{}}}", r.size())
+            } else {
+                format!("\\mathbb{{Z}}/{}", r.n)
+            };
+            format!("{}_{{{}}}", latex(&Matrix(lifts)), field)
+        }
         Matrix(rows) => format!(
             "\\begin{{pmatrix}} {} \\end{{pmatrix}}",
             rows.iter()

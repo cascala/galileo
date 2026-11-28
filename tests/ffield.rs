@@ -44,7 +44,7 @@ fn commands() {
         ("G = gf(2^61 - 1); dlog(G(3)^123456789, G(3))", "123456789"),
         (
             "elements(zmod(4))",
-            "[zmod(4, 0), zmod(4, 1), zmod(4, 2), zmod(4, 3)]",
+            "zmod(4, [0, 1, 2, 3])",
         ),
         ("isfield(zmod(12))", "false"),
         ("isfield(zmod(13))", "true"),

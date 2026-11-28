@@ -546,13 +546,188 @@ impl Session {
     }
 
     /// solve(f, x, N): the roots of a polynomial in Z/N
+    fn ff_eigvec(&mut self, m: &linalg::Mat, r: &std::rc::Rc<crate::ffield::Ring>) -> R<Expr> {
+        let a = crate::fmat::lift(m, r)?;
+        let c = crate::fmat::charpoly(&a, r)?;
+        let n = a.len();
+        let mut cols: Vec<Vec<Expr>> = vec![vec![]; n];
+        let mut vals = vec![];
+        for l in crate::fmat::roots(&c, r)? {
+            let shifted: crate::fmat::FM = (0..n)
+                .map(|i| {
+                    (0..n)
+                        .map(|j| if i == j { a[i][j].add(&l.neg()) } else { a[i][j].clone() })
+                        .collect()
+                })
+                .collect();
+            let ns = crate::fmat::nullspace(&shifted, r)?;
+            for k in 0..ns.first().map_or(0, |row| row.len()) {
+                for i in 0..n {
+                    cols[i].push(crate::ffield::value(ns[i][k].clone()));
+                }
+                vals.push(l.text());
+            }
+        }
+        if vals.is_empty() {
+            self.note(&format!("No eigenvalues in {}, so no eigenvectors there.", r.name()));
+            return Ok(Expr::Matrix(vec![]));
+        }
+        self.note(&format!(
+            "Eigenvectors over {}, one per column, for the eigenvalues {} (a basis of the null space of A - λI for each).",
+            r.name(),
+            vals.join(", ")
+        ));
+        Ok(Expr::Matrix(cols))
+    }
+
+    /// solve(f, x, F) and solve([f1, f2], [x, y], F) over a finite ring F
+    fn solve_ring(&mut self, f: &Node, x: &Node, r: std::rc::Rc<crate::ffield::Ring>) -> R<Expr> {
+        use crate::ffield as ff;
+        let xs = names(x, "solve: the unknowns")?;
+        let fx = self.eval_hidden(f, &xs)?;
+        let eqs: Vec<Expr> = match fx {
+            Expr::Matrix(m) => m.into_iter().flatten().map(|e| crate::eval::equation_lhs(&e)).collect(),
+            Expr::Obj(o) if matches!(&*o, crate::expr::Obj::List(_)) => {
+                let crate::expr::Obj::List(v) = &*o else { unreachable!() };
+                v.iter().map(crate::eval::equation_lhs).collect()
+            }
+            e => vec![crate::eval::equation_lhs(&e)],
+        };
+        let exact = |e: &Expr| -> R<ff::Elem> {
+            r.from_expr(&simplify(e)).map_err(|_| {
+                format!(
+                    "solve over {}: the coefficients must be whole numbers or fractions, got {}",
+                    r.name(),
+                    show(e)
+                )
+            })
+        };
+        // linear: coefficient matrix and right-hand side
+        let mut linear = true;
+        let mut a = vec![];
+        let mut b = vec![];
+        'eq: for e in &eqs {
+            let mut rowv = vec![];
+            for v in &xs {
+                let c = simplify(&calc::deriv(e, v));
+                if xs.iter().any(|w| c.contains_sym(w)) {
+                    linear = false;
+                    break 'eq;
+                }
+                rowv.push(exact(&c)?);
+            }
+            let mut rest = e.clone();
+            for v in &xs {
+                rest = calc::subst(&rest, v, &Expr::zero());
+            }
+            a.push(rowv);
+            b.push(exact(&rest)?.neg());
+        }
+        if linear && !(eqs.len() == 1 && xs.len() == 1) {
+            let sol = crate::fmat::system(&a, &b, &xs, &r)?;
+            let free: Vec<&String> = xs.iter().zip(&sol).filter(|(x, e)| **e == Expr::sym(x)).map(|p| p.0).collect();
+            if free.is_empty() {
+                self.note(&format!("The one solution in {} ({}), by Gaussian elimination in the field.", r.name(), xs.join(", ")));
+            } else {
+                let names: Vec<&str> = free.iter().map(|s| s.as_str()).collect();
+                self.note(&format!(
+                    "{}^{} solutions in {}: {} free (any element of {}) and the others given by representatives of their coefficients.",
+                    r.size(),
+                    names.len(),
+                    r.name(),
+                    names.join(", "),
+                    r.name()
+                ));
+            }
+            return Ok(row(sol));
+        }
+        // polynomial equations: one unknown by roots, several by trying every point
+        let polys: Vec<Vec<(ff::Elem, Vec<u32>)>> = eqs
+            .iter()
+            .map(|e| poly_terms(&calc::expand(e), &xs, &r))
+            .collect::<Option<_>>()
+            .ok_or_else(|| format!("solve over {}: the equations must be polynomials in {}", r.name(), xs.join(", ")))?;
+        let q = r.size();
+        let nv = xs.len() as u32;
+        let points = num_traits::pow(q.clone(), nv as usize);
+        if xs.len() == 1 && eqs.len() == 1 {
+            let deg = polys[0].iter().map(|(_, e)| e[0]).max().unwrap_or(0) as usize;
+            let mut c = vec![r.int(0.into()); deg + 1];
+            for (co, e) in &polys[0] {
+                c[e[0] as usize] = c[e[0] as usize].add(co);
+            }
+            if r.is_field() {
+                let roots = crate::fmat::roots(&c, &r)?;
+                self.note(&format!("The roots of {} in {}.", show(&eqs[0]), r.name()));
+                return Ok(if roots.is_empty() { Expr::Matrix(vec![]) } else { row(roots.into_iter().map(ff::value).collect()) });
+            }
+        }
+        if points > num_bigint::BigInt::from(2_000_000) {
+            return Err(format!(
+                "solve over {}: a nonlinear system is solved by trying all {} points, which stops at two million",
+                r.name(),
+                points
+            ));
+        }
+        let qn = num_traits::ToPrimitive::to_u64(&q).unwrap();
+        let mut sols: Vec<Vec<Expr>> = vec![];
+        let mut pt: Vec<ff::Elem> = vec![r.int(0.into()); xs.len()];
+        let all: Vec<ff::Elem> = (0..qn).map(|t| r.elem(crate::fmat::digits(t, &r.n, r.k))).collect();
+        let total = num_traits::ToPrimitive::to_u64(&points).unwrap();
+        for t in 0..total {
+            let mut u = t;
+            for slot in pt.iter_mut().rev() {
+                *slot = all[(u % qn) as usize].clone();
+                u /= qn;
+            }
+            let ok = polys.iter().all(|p| {
+                p.iter()
+                    .fold(r.int(0.into()), |acc, (c, e)| {
+                        let mut term = c.clone();
+                        for (x, k) in pt.iter().zip(e) {
+                            term = term.mul(&x.pow(&num_bigint::BigInt::from(*k)).unwrap());
+                        }
+                        acc.add(&term)
+                    })
+                    .is_zero()
+            });
+            if ok {
+                sols.push(pt.iter().cloned().map(ff::value).collect());
+                if sols.len() > 10_000 {
+                    return Err("solve: more than 10000 solutions".into());
+                }
+            }
+        }
+        self.note(&format!(
+            "All {} solutions in {}, one per row ({}), found by trying each of the {} points.",
+            sols.len(),
+            r.name(),
+            xs.join(", "),
+            points
+        ));
+        Ok(match sols.len() {
+            0 => Expr::Matrix(vec![]),
+            1 => row(sols.pop().unwrap()),
+            _ => Expr::Matrix(sols),
+        })
+    }
+
     fn solve_mod(&mut self, f: &Node, x: &Node, n: &Node) -> R<Expr> {
+        let nv = self.eval(n)?;
+        if let Some(r) = crate::ffield::as_ring(&nv) {
+            return self.solve_ring(f, x, r);
+        }
+        if matches!(x, Node::Matrix(_)) {
+            let n = nv.num().and_then(|v| v.as_bigint()).ok_or("solve(eqs, vars, N): N must be an integer or a ring such as gf(4)")?;
+            let r = if crate::numtheory::is_prime(&n) { crate::ffield::gf(&n)? } else { crate::ffield::zmod(&n)? };
+            return self.solve_ring(f, x, r);
+        }
         let x = name(x, "solve: x")?;
-        let n = match self.eval(n)? {
+        let n = match nv {
             Expr::Num(v) => v.as_bigint(),
             _ => None,
         }
-        .ok_or("solve(f, x, N): N must be an integer")?;
+        .ok_or("solve(f, x, N): N must be an integer or a ring such as gf(4)")?;
         let fx = crate::eval::equation_lhs(&self.eval_hidden(f, std::slice::from_ref(&x))?);
         let c = cas::poly_coeffs(&fx, &x)
             .ok_or_else(|| format!("solve(f, x, N): {} is not a polynomial in {}", show(&fx), x))?;
@@ -733,6 +908,14 @@ impl Session {
                 let Expr::Matrix(m) = v else {
                     return Err(format!("{} needs a matrix", f));
                 };
+                if let Some(r) = crate::fmat::ring_of(&m)? {
+                    let a = crate::fmat::lift(&m, &r)?;
+                    return Ok(match f {
+                        "rref" => crate::fmat::expr(&crate::fmat::rref(&a, &r)?.0),
+                        "rank" => Expr::int(crate::fmat::rref(&a, &r)?.1.len() as i128),
+                        _ => crate::fmat::expr(&crate::fmat::nullspace(&a, &r)?),
+                    });
+                }
                 match f {
                     "rref" => Ok(Expr::Matrix(linalg::rref(&m).0)),
                     "rank" => Ok(Expr::int(linalg::rref(&m).1.len() as i128)),
@@ -750,6 +933,9 @@ impl Session {
                 let Expr::Matrix(m) = v else {
                     return Err("eigvec needs a square matrix".into());
                 };
+                if let Some(r) = crate::fmat::ring_of(&m)? {
+                    return self.ff_eigvec(&m, &r);
+                }
                 eigvec(&m).map(|(vecs, _)| Expr::Matrix(vecs))
             }
             "trace" | "size" | "eig" => {
@@ -771,6 +957,27 @@ impl Session {
                         Expr::int(c as i128),
                     ]])),
                     _ if r != c => Err(format!("{} needs a square matrix", f)),
+                    _ if crate::fmat::ring_of(&m)?.is_some() => {
+                        let ring = crate::fmat::ring_of(&m)?.unwrap();
+                        let a = crate::fmat::lift(&m, &ring)?;
+                        if f == "trace" {
+                            let t = (0..r).fold(ring.int(0.into()), |acc, i| acc.add(&a[i][i]));
+                            return Ok(crate::ffield::value(t));
+                        }
+                        let c = crate::fmat::charpoly(&a, &ring)?;
+                        let roots = crate::fmat::roots(&c, &ring)?;
+                        self.note(&format!(
+                            "eig over {}: the roots in the field of det(A - x I) = {}; eigenvalues outside {} (in a bigger field) are not listed.",
+                            ring.name(),
+                            show(&ff_poly(&c, "x")),
+                            ring.name()
+                        ));
+                        Ok(if roots.is_empty() {
+                            Expr::Matrix(vec![])
+                        } else {
+                            row(roots.into_iter().map(crate::ffield::value).collect())
+                        })
+                    }
                     "trace" => Ok(simplify(&add((0..r).map(|i| m[i][i].clone()).collect()))),
                     _ => {
                         if let Some((vals, _)) = numeric_symmetric_eig(&m) {
@@ -891,6 +1098,16 @@ impl Session {
             let Expr::Matrix(m) = v else {
                 return Err("charpoly needs a matrix".into());
             };
+            if let Some(r) = crate::fmat::ring_of(&m)? {
+                let a = crate::fmat::lift(&m, &r)?;
+                let c = crate::fmat::charpoly(&a, &r)?;
+                self.note(&format!(
+                    "det(A - {} I) with coefficients in {} (shown by their representatives).",
+                    x,
+                    r.name()
+                ));
+                return Ok(ff_poly(&c, &x));
+            }
             return charpoly(&m, &x);
         }
         let (va, vb) = (self.eval(a)?, self.eval(b)?);
@@ -1126,8 +1343,33 @@ fn elementwise_num(v: &Expr, f: &str, g: &dyn Fn(f64) -> Expr) -> R<Expr> {
     }
 }
 
+/// A polynomial with ring coefficients (low to high), written with their
+/// representatives
+pub(crate) fn ff_poly(c: &[crate::ffield::Elem], x: &str) -> Expr {
+    let xv = Expr::sym(x);
+    let terms: Vec<Expr> = c
+        .iter()
+        .enumerate()
+        .rev()
+        .filter(|(_, e)| !e.is_zero())
+        .map(|(k, e)| {
+            let co = e.lift();
+            match k {
+                0 => co,
+                1 => mul2(co, xv.clone()),
+                _ => mul2(co, pow(xv.clone(), Expr::int(k as i128))),
+            }
+        })
+        .collect();
+    if terms.is_empty() {
+        Expr::zero()
+    } else {
+        simplify(&add(terms))
+    }
+}
+
 /// det(A - x I), expanded
-fn charpoly(m: &[Vec<Expr>], x: &str) -> R<Expr> {
+pub(crate) fn charpoly(m: &[Vec<Expr>], x: &str) -> R<Expr> {
     let (r, c) = linalg::dims(&m.to_vec());
     if r != c {
         return Err("charpoly needs a square matrix".into());
@@ -1512,4 +1754,44 @@ pub(crate) fn definite(fx: &Expr, x: &str, a: &Expr, b: &Expr, depth: usize) -> 
         show(a),
         show(b)
     ))
+}
+
+/// The terms (coefficient, exponents) of an expanded polynomial in vars with
+/// coefficients in the ring r
+fn poly_terms(
+    e: &Expr,
+    vars: &[String],
+    r: &std::rc::Rc<crate::ffield::Ring>,
+) -> Option<Vec<(crate::ffield::Elem, Vec<u32>)>> {
+    let terms: Vec<&Expr> = match e {
+        Expr::Add(v) => v.iter().collect(),
+        o => vec![o],
+    };
+    let mut out = vec![];
+    for t in terms {
+        let factors: Vec<&Expr> = match t {
+            Expr::Mul(v) => v.iter().collect(),
+            o => vec![o],
+        };
+        let mut c = r.int(1.into());
+        let mut ex = vec![0u32; vars.len()];
+        for f in factors {
+            let (base, k) = match f {
+                Expr::Pow(b, k) => (&**b, k.num().filter(|n| n.is_integer()).and_then(|n| n.as_int())?),
+                o => (o, 1),
+            };
+            match base {
+                Expr::Sym(s) if k >= 0 => {
+                    let i = vars.iter().position(|v| v == s)?;
+                    ex[i] += k as u32;
+                }
+                _ => {
+                    let v = r.from_expr(f).ok()?;
+                    c = c.mul(&v);
+                }
+            }
+        }
+        out.push((c, ex));
+    }
+    Some(out)
 }

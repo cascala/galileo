@@ -9,8 +9,23 @@ const P_MUL: u8 = 2;
 const P_POW: u8 = 3;
 const P_ATOM: u8 = 4;
 
+/// A matrix over a finite ring as gf(q, [..]) or zmod(n, [..])
+fn ring_matrix(rows: &[Vec<Expr>], one_line: bool) -> Option<String> {
+    let r = crate::fmat::all_elems(rows)?;
+    let lifts: Vec<Vec<Expr>> = rows
+        .iter()
+        .map(|row| row.iter().map(|x| crate::ffield::as_elem(x).unwrap().lift()).collect())
+        .collect();
+    let size = if r.gf { r.size() } else { r.n.clone() };
+    let head = format!("{}({}, ", if r.gf { "gf" } else { "zmod" }, size);
+    let body = if one_line { fmt(&Matrix(lifts)).0 } else { show_matrix(&lifts) };
+    let pad = " ".repeat(head.chars().count());
+    Some(format!("{}{})", head, body.replace('\n', &format!("\n{}", pad))))
+}
+
 pub fn show(e: &Expr) -> String {
     match e {
+        Matrix(rows) if crate::fmat::all_elems(rows).is_some() => ring_matrix(rows, false).unwrap(),
         Matrix(rows) => match crate::units::matrix_units(rows) {
             Some((m, u)) => format!("{} {}", show_matrix(&m), crate::units::text(&u)),
             None => show_matrix(rows),
@@ -146,6 +161,7 @@ fn fmt(e: &Expr) -> (String, u8) {
             (o.text(), P_ATOM)
         }
         Obj(o) => (format!("<{}>", o.kind()), P_ATOM),
+        Matrix(rows) if crate::fmat::all_elems(rows).is_some() => (ring_matrix(rows, true).unwrap(), P_ATOM),
         Matrix(rows) if crate::units::matrix_units(rows).is_some() => {
             let (m, u) = crate::units::matrix_units(rows).unwrap();
             (format!("{} {}", fmt(&Matrix(m)).0, crate::units::text(&u)), P_MUL)
@@ -386,4 +402,9 @@ fn partial(f: &str, v: &[Expr]) -> Option<String> {
         out = format!("d({}, {})", out, x);
     }
     Some(out)
+}
+
+/// An expression on one line (matrices as [1, 2; 3, 4])
+pub fn fmt_one_line(e: &Expr) -> String {
+    fmt(e).0
 }

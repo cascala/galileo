@@ -64,10 +64,13 @@ pub fn as_record(e: &Expr) -> Option<&Vec<(String, Expr)>> {
 
 /// {1, "a", x}
 pub fn list_text(v: &[Expr]) -> String {
-    format!(
-        "{{{}}}",
-        v.iter().map(show_value).collect::<Vec<_>>().join(", ")
-    )
+    let items: Vec<String> = v.iter().map(show_value).collect();
+    if items.iter().any(|s| s.contains('\n')) {
+        // matrices with several rows: one item per line, columns aligned
+        let items: Vec<String> = items.iter().map(|s| s.replace('\n', "\n ")).collect();
+        return format!("{{{}}}", items.join(",\n "));
+    }
+    format!("{{{}}}", items.join(", "))
 }
 
 /// {mass: 3, name: "ball"}

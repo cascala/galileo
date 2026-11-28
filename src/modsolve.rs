@@ -183,7 +183,7 @@ pub struct ModSolve {
 }
 
 /// roots of f mod p
-fn roots_mod_p(f: &[BigInt], p: &BigInt) -> (Vec<BigInt>, bool, bool, usize) {
+pub(crate) fn roots_mod_p(f: &[BigInt], p: &BigInt) -> (Vec<BigInt>, bool, bool, usize) {
     let fp = reduce(f, p);
     if fp.is_empty() {
         let all = if p.bits() <= 14 {

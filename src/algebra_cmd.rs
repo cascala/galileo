@@ -69,6 +69,38 @@ fn rows(ps: &[Perm]) -> Expr {
     Expr::Matrix(ps.iter().map(perm_expr).collect())
 }
 
+/// Elements of g: permutations one per row, or a list of matrices
+fn elems_of(g: &Group, ps: &[Perm]) -> Expr {
+    match &g.mats {
+        Some(a) => Expr::Obj(Rc::new(Obj::List(ps.iter().map(|p| a.expr(p)).collect()))),
+        None => rows(ps),
+    }
+}
+
+/// An element of g given as a permutation, or as a matrix for a matrix group
+fn elem_in(g: &Group, e: &Expr, f: &str) -> R<Perm> {
+    if let (Some(a), Expr::Matrix(m)) = (&g.mats, e) {
+        let r = crate::fmat::ring_of(m)?.unwrap_or_else(|| a.ring.clone());
+        if r != a.ring {
+            return Err(format!("{}: the matrix is over {}, the group over {}", f, r.name(), a.ring.name()));
+        }
+        return a.perm(&crate::fmat::lift(m, &r)?);
+    }
+    perm_in(e, g.degree, f)
+}
+
+/// a permutation of g in the notes: cycles, or a matrix
+fn shown(g: &Group, p: &Perm) -> String {
+    match &g.mats {
+        Some(a) => crate::print::fmt_one_line(&a.expr(p)),
+        None => fg::cycles(p),
+    }
+}
+
+fn lie_max() -> usize {
+    crate::lie::MAX_N
+}
+
 fn small(e: &Expr, f: &str, lo: i128, hi: i128) -> R<usize> {
     let n = crate::extra_cmd::int_of(e, f)?;
     if n < lo || n > hi {
@@ -110,6 +142,7 @@ impl Session {
             "isomorphic",
             "abelianinv",
             "cayleygraph",
+            "gl",
             "zmod",
             "gf",
             "generator",
@@ -137,6 +170,15 @@ impl Session {
             "coords",
             "adjoint",
             "killing",
+            "gellmann",
+            "structure",
+            "cartan",
+            "roots",
+            "dim",
+            "casimir",
+            "rep",
+            "weights",
+            "decompose",
         ];
         if !NAMES.contains(&f) {
             return None;
@@ -183,11 +225,33 @@ impl Session {
         if f == "conj" {
             return None;
         }
+        if matches!(f, "gl" | "sl") && v.len() == 2 {
+            return Some(self.algebra(f, &v));
+        }
+        if f == "gl" {
+            return Some(Err("usage: gl(n, q), the invertible n x n matrices over gf(q)".into()));
+        }
+        if f == "order" {
+            if let Some(Expr::Matrix(m)) = v.first() {
+                return Some((|| {
+                    let r = crate::fmat::ring_of(m)?.ok_or("order(A) needs a matrix over a finite field, such as gf(3, [1, 1; 0, 1])")?;
+                    let o = crate::matgroup::order(&crate::fmat::lift(m, &r)?, &r)?;
+                    self.note(format!("A^{} = I and no smaller positive power is the identity.", o));
+                    Ok(Expr::Num(crate::num::Number::from_bigint(o)))
+                })());
+            }
+        }
         if matches!(
             f,
             "su" | "so" | "sl" | "bracket" | "coords" | "adjoint" | "killing"
         ) {
             return Some(self.lie_cmd(f, &v));
+        }
+        if matches!(
+            f,
+            "gellmann" | "structure" | "cartan" | "roots" | "dim" | "casimir" | "rep" | "weights" | "decompose"
+        ) {
+            return Some(self.lie2_cmd(f, &v));
         }
         if f == "galois" {
             return Some(self.galois_cmd(&v));
@@ -636,6 +700,202 @@ impl Session {
         }
     }
 
+    /// Gell-Mann matrices, structure constants, root systems, representations
+    fn lie2_cmd(&mut self, f: &str, v: &[Expr]) -> R<Expr> {
+        use crate::liealg as la;
+        let basis = |e: &Expr| -> Option<Vec<crate::linalg::Mat>> {
+            match e {
+                Expr::Obj(o) => match &**o {
+                    Obj::List(l) => l
+                        .iter()
+                        .map(|m| match m {
+                            Expr::Matrix(m) if !m.is_empty() && m.len() == m[0].len() => Some(m.clone()),
+                            _ => None,
+                        })
+                        .collect(),
+                    _ => None,
+                },
+                _ => None,
+            }
+        };
+        let need_basis = |e: &Expr| -> R<Vec<crate::linalg::Mat>> {
+            basis(e).ok_or_else(|| format!("{}: expected a list of matrices such as su(3) or gellmann()", f))
+        };
+        // the root system of a list of matrices or a type such as "G2"
+        let system = |e: &Expr| -> R<la::RootSystem> {
+            match e {
+                Expr::Str(t) => la::root_system(t),
+                _ => la::root_system(&la::type_of_basis(&need_basis(e)?)?),
+            }
+        };
+        let labels = |e: &Expr, r: usize| -> R<Vec<i64>> {
+            let vals: Vec<Expr> = match e {
+                Expr::Matrix(m) => m.iter().flatten().cloned().collect(),
+                o => vec![o.clone()],
+            };
+            let w = vals
+                .iter()
+                .map(|x| {
+                    crate::extra_cmd::int_of(x, f)
+                        .ok()
+                        .filter(|&k| (0..=1000).contains(&k))
+                        .map(|k| k as i64)
+                        .ok_or_else(|| format!("{}: a highest weight is a row of whole numbers ≥ 0 (Dynkin labels), such as [1, 1]", f))
+                })
+                .collect::<R<Vec<i64>>>()?;
+            if w.len() != r {
+                return Err(format!(
+                    "{}: this algebra has rank {}, so a highest weight has {} Dynkin label{}",
+                    f,
+                    r,
+                    r,
+                    if r == 1 { "" } else { "s" }
+                ));
+            }
+            Ok(w)
+        };
+        let int_row = |w: &[i64]| Expr::Matrix(vec![w.iter().map(|&k| Expr::int(k as i128)).collect()]);
+        let qe = |r: &num_rational::BigRational| Expr::Num(crate::num::Number::from_big(r.clone()));
+        let list = |ms: Vec<crate::linalg::Mat>| crate::lang::list(ms.into_iter().map(Expr::Matrix).collect());
+        // n for su(n) from a list, or from "A(n-1)"
+        let type_a = |e: &Expr| -> R<usize> {
+            let s = system(e)?;
+            if !s.name.starts_with('A') {
+                return Err(format!("{}: representations are built for su(n) (type A); this is {}", f, s.name));
+            }
+            Ok(s.rank() + 1)
+        };
+        match (f, v) {
+            ("gellmann", []) | ("gellmann", [_]) => {
+                let n = match v {
+                    [n] => small(n, f, 2, lie_max() as i128)?,
+                    _ => 3,
+                };
+                self.note(format!(
+                    "The {} Gell-Mann matrices of su({}){}: Hermitian, traceless, tr(λa λb) = 2 δab. Physicists use Ta = λa/2; i·Ta is then a basis of su({}) as returned by su({}), and structure(gellmann({})) gives f_abc.",
+                    n * n - 1,
+                    n,
+                    if n == 2 { " (the Pauli matrices)" } else if n == 3 { ", λ1 … λ8" } else { "" },
+                    n,
+                    n,
+                    n
+                ));
+                Ok(list(la::gellmann(n)))
+            }
+            ("structure", [b]) | ("structure", [b, _]) => {
+                let kind = match v {
+                    [_, Expr::Str(k)] if k == "d" || k == "f" => k.as_str(),
+                    [_, _] => return Err("structure(L, \"d\") gives the symmetric d_abc; structure(L) the f_abc".into()),
+                    _ => "f",
+                };
+                let (rows, what) = la::structure(&need_basis(b)?, kind)?;
+                self.note(format!("The structure constants {}.", what));
+                Ok(Expr::Matrix(rows))
+            }
+            ("cartan", [t]) => {
+                let s = system(t)?;
+                self.note(format!(
+                    "The Cartan matrix of {}: a_ij = 2(αi, αj)/(αj, αj) for the simple roots α1 … α{} (Bourbaki numbering). Off the diagonal, -1 is a single bond of the Dynkin diagram, -2 or -3 a double or triple bond pointing to the shorter root.",
+                    s.name,
+                    s.rank()
+                ));
+                Ok(Expr::Matrix(s.cartan().iter().map(|r| r.iter().map(qe).collect()).collect()))
+            }
+            ("roots", [t]) => {
+                let s = system(t)?;
+                let r = s.positive_roots();
+                self.note(format!(
+                    "The {} positive roots of {}, one per row as coefficients of the simple roots, by height; with their negatives there are {} roots, and the algebra has dimension {} + {} = {}.",
+                    r.len(),
+                    s.name,
+                    2 * r.len(),
+                    2 * r.len(),
+                    s.rank(),
+                    2 * r.len() + s.rank()
+                ));
+                Ok(Expr::Matrix(r.iter().map(|w| w.iter().map(|&k| Expr::int(k as i128)).collect()).collect()))
+            }
+            ("dim", [t, w]) => {
+                let s = system(t)?;
+                let w = labels(w, s.rank())?;
+                let d = s.dim(&w);
+                self.note(format!(
+                    "Weyl's dimension formula: the product over the positive roots β of (λ + ρ, β)/(ρ, β), for the highest weight λ with Dynkin labels {:?} in {}.",
+                    w, s.name
+                ));
+                Ok(Expr::Num(crate::num::Number::from_bigint(d)))
+            }
+            ("casimir", [t]) | ("casimir", [t, _]) => {
+                let s = system(t)?;
+                let w = match v {
+                    [_, w] => labels(w, s.rank())?,
+                    _ => {
+                        let mut w = vec![0; s.rank()];
+                        w[0] = 1;
+                        w
+                    }
+                };
+                let c = s.casimir(&w)?;
+                self.note(format!(
+                    "The quadratic Casimir C = (λ, λ + 2ρ)/2 of the irrep {:?} of {}, long roots of length² 2. For su(n) this is sum_a Ta Ta with tr(Ta Tb) = δab/2 in the defining representation: 4/3 for the quark triplet of su(3), 3 for the octet, j(j+1) for spin j of su(2).",
+                    w, s.name
+                ));
+                Ok(qe(&c))
+            }
+            ("rep", [b, w]) => {
+                let bs = need_basis(b)?;
+                let n = bs[0].len();
+                let w = labels(w, n - 1)?;
+                let r = la::rep(&bs, &w)?;
+                let d = r.first().map_or(0, |m| m.len());
+                self.note(format!(
+                    "The images of the {} basis matrices in the irreducible representation of su({}) with highest weight {:?}, of dimension {}, in an orthonormal Gelfand–Tsetlin basis (highest weight first). They satisfy the same brackets as the basis{}.",
+                    bs.len(),
+                    n,
+                    w,
+                    d,
+                    if n == 2 { format!("; for su(2) this is spin j = {}", if w[0] % 2 == 0 { (w[0] / 2).to_string() } else { format!("{}/2", w[0]) }) } else { String::new() }
+                ));
+                Ok(list(r))
+            }
+            ("weights", [t, w]) => {
+                let n = type_a(t)?;
+                let w = labels(w, n - 1)?;
+                let ws = la::weights(&w);
+                self.note(format!(
+                    "The {} weights of the su({}) irrep {:?} in Dynkin labels, one per row (repeated by multiplicity), highest first.",
+                    ws.len(),
+                    n,
+                    w
+                ));
+                Ok(Expr::Matrix(ws.iter().map(|w| w.iter().map(|&k| Expr::int(k as i128)).collect()).collect()))
+            }
+            ("decompose", [t, ws @ ..]) if ws.len() >= 2 => {
+                let n = type_a(t)?;
+                let ws = ws.iter().map(|w| labels(w, n - 1)).collect::<R<Vec<_>>>()?;
+                let parts = la::decompose(&ws)?;
+                // conjugate irreps (labels reversed are larger) get a bar: 3̄, 10̄
+                let name = |w: &[i64]| {
+                    let rev: Vec<i64> = w.iter().rev().cloned().collect();
+                    format!("{}{}", la::dim_a(w), if rev.as_slice() > w { "\u{0304}" } else { "" })
+                };
+                self.note(format!(
+                    "{} = {}, by dimension (the irreps by highest weight are the result).",
+                    ws.iter().map(|w| name(w)).collect::<Vec<_>>().join(" ⊗ "),
+                    parts.iter().map(|w| name(w)).collect::<Vec<_>>().join(" ⊕ ")
+                ));
+                Ok(crate::lang::list(parts.iter().map(|w| int_row(w)).collect()))
+            }
+            _ => Err(match f {
+                "gellmann" => "usage: gellmann() for su(3), gellmann(n) for su(n)".into(),
+                "structure" => "usage: structure(L) or structure(L, \"d\") for a list of matrices L".into(),
+                "decompose" => "usage: decompose(su(3), [1, 0], [0, 1]) for 3 ⊗ 3̄".into(),
+                "rep" => "usage: rep(L, w): the matrices of L (such as gellmann()) in the irrep with highest weight w".into(),
+                _ => format!("usage: {}(L, w) with L a type such as \"A2\" or a list such as su(3), and w a highest weight such as [1, 1]", f),
+            }),
+        }
+    }
+
     fn galois_cmd(&mut self, v: &[Expr]) -> R<Expr> {
         use num_bigint::BigInt;
         let (p, x) = match v {
@@ -753,7 +1013,7 @@ impl Session {
                     ff::zmod(&n)?
                 };
                 match rest {
-                    [x] => Ok(ff::value(r.from_expr(x)?)),
+                    [x] => ff::embed(&r, x),
                     _ => {
                         let field = if r.is_field() {
                             "a field"
@@ -865,6 +1125,31 @@ impl Session {
                 self.note(format!("`{}`: a group of order {}.", g.name, g.order()));
                 Ok(gval(g))
             }
+            "gl" | "sl" => {
+                let [n, q] = v else { unreachable!() };
+                let n = small(n, f, 1, 16)?;
+                let q = crate::extra_cmd::int_of(q, f)?;
+                let g = if f == "gl" {
+                    crate::matgroup::gl(n, &q.into())?
+                } else {
+                    crate::matgroup::sl(n, &q.into())?
+                };
+                self.note(format!(
+                    "{}: the {} {}x{} matrices over gf({}), a group of order {}.",
+                    g.name,
+                    if f == "gl" { "invertible" } else { "determinant-1" },
+                    n,
+                    n,
+                    q,
+                    g.order()
+                ));
+                Ok(gval(g))
+            }
+            "group" if !v.is_empty() && v.iter().all(|m| matches!(m, Expr::Matrix(rows) if crate::fmat::ring_of(rows).ok().flatten().is_some())) => {
+                let g = crate::matgroup::generated(v)?;
+                self.note(format!("A matrix group of order {}.", g.order()));
+                Ok(gval(g))
+            }
             "group" => {
                 let g =
                     match v {
@@ -911,9 +1196,12 @@ impl Session {
                         g.order()
                     ));
                 }
-                Ok(rows(g.elements()))
+                Ok(elems_of(&g, g.elements()))
             }
-            "gens" => Ok(rows(&one(f)?.gens)),
+            "gens" => {
+                let g = one(f)?;
+                Ok(elems_of(&g, &g.gens))
+            }
             "isabelian" => Ok(Expr::Bool(one(f)?.is_abelian())),
             "issolvable" => {
                 let g = one(f)?;
@@ -960,12 +1248,12 @@ impl Session {
                 let g = group_of(g, f)?;
                 let ps = ps
                     .iter()
-                    .map(|p| perm_in(p, g.degree, f))
+                    .map(|p| elem_in(&g, p, f))
                     .collect::<R<Vec<_>>>()?;
                 if let Some(p) = ps.iter().find(|p| !g.contains(p)) {
                     return Err(format!(
                         "subgroup: {} is not in {}",
-                        fg::show_perm(p),
+                        shown(&g, p),
                         g.name
                     ));
                 }
@@ -1000,7 +1288,7 @@ impl Session {
                             c.len(),
                             h.order()
                         ));
-                        Ok(rows(&c.iter().map(|c| c[0].clone()).collect::<Vec<_>>()))
+                        Ok(elems_of(&g, &c.iter().map(|c| c[0].clone()).collect::<Vec<_>>()))
                     }
                     "isnormal" => Ok(Expr::Bool(g.is_normal(&h))),
                     _ => {
@@ -1026,13 +1314,17 @@ impl Session {
                 let cls = g.classes();
                 let sizes: Vec<String> = cls.iter().map(|c| c.len().to_string()).collect();
                 self.note(format!(
-                    "{} conjugacy classes (one representative per row, in cycle notation {}). Class equation: {} = {}.",
+                    "{} conjugacy classes ({}). Class equation: {} = {}.",
                     cls.len(),
-                    cls.iter().map(|c| fg::cycles(&c[0])).collect::<Vec<_>>().join(", "),
+                    if g.mats.is_some() {
+                        "one representative matrix each".to_string()
+                    } else {
+                        format!("one representative per row, in cycle notation {}", cls.iter().map(|c| fg::cycles(&c[0])).collect::<Vec<_>>().join(", "))
+                    },
                     g.order(),
                     sizes.join(" + ")
                 ));
-                Ok(rows(&cls.iter().map(|c| c[0].clone()).collect::<Vec<_>>()))
+                Ok(elems_of(&g, &cls.iter().map(|c| c[0].clone()).collect::<Vec<_>>()))
             }
             "orders" => {
                 let g = one(f)?;
@@ -1097,10 +1389,10 @@ impl Session {
                 let (g, h) = (group_of(a, f)?, group_of(b, f)?);
                 let imgs = imgs
                     .iter()
-                    .map(|p| perm_in(p, h.degree, f))
+                    .map(|p| elem_in(&h, p, f))
                     .collect::<R<Vec<_>>>()?;
                 if let Some(p) = imgs.iter().find(|p| !h.contains(p)) {
-                    return Err(format!("{}: {} is not in {}", f, fg::show_perm(p), h.name));
+                    return Err(format!("{}: {} is not in {}", f, shown(&h, p), h.name));
                 }
                 match f {
                     "ishom" => Ok(Expr::Bool(fg::hom_table(&g, &h, &imgs).is_ok())),
@@ -1130,7 +1422,7 @@ impl Session {
                             "An isomorphism, sending generators (in cycle notation) to: {}.",
                             gs.iter()
                                 .zip(&imgs)
-                                .map(|(x, y)| format!("{} ↦ {}", fg::cycles(x), fg::cycles(y)))
+                                .map(|(x, y)| format!("{} ↦ {}", shown(&g, x), shown(&h, y)))
                                 .collect::<Vec<_>>()
                                 .join(", ")
                         ));

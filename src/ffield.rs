@@ -74,7 +74,7 @@ impl Ring {
             v,
         }
     }
-    fn int(self: &Rc<Ring>, c: BigInt) -> Elem {
+    pub(crate) fn int(self: &Rc<Ring>, c: BigInt) -> Elem {
         self.elem(vec![c])
     }
     /// the generator symbol `a` (gf(p^k), k > 1)
@@ -219,6 +219,24 @@ pub fn as_ring(e: &Expr) -> Option<Rc<Ring>> {
 
 pub fn value(x: Elem) -> Expr {
     Expr::Obj(Rc::new(Obj::Elem(x)))
+}
+
+/// F(x) for a number, an element, a matrix or a list of them
+pub fn embed(r: &Rc<Ring>, x: &Expr) -> R<Expr> {
+    match x {
+        Expr::Matrix(m) => Ok(Expr::Matrix(
+            m.iter()
+                .map(|row| row.iter().map(|e| embed(r, e)).collect::<R<Vec<_>>>())
+                .collect::<R<Vec<_>>>()?,
+        )),
+        Expr::Obj(o) if matches!(&**o, Obj::List(_)) => {
+            let Obj::List(v) = &**o else { unreachable!() };
+            Ok(Expr::Obj(Rc::new(Obj::List(
+                v.iter().map(|e| embed(r, e)).collect::<R<Vec<_>>>()?,
+            ))))
+        }
+        _ => r.from_expr(x).map(value),
+    }
 }
 
 pub fn ring_value(r: Rc<Ring>) -> Expr {
@@ -427,7 +445,7 @@ impl Elem {
             Ok(self.pow_nat(e))
         }
     }
-    fn is_one(&self) -> bool {
+    pub fn is_one(&self) -> bool {
         self.v.len() == 1 && self.v[0].is_one()
     }
 

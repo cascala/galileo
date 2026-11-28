@@ -1232,7 +1232,7 @@ impl Session {
                     return Err(format!("{}(x) takes one argument", f));
                 }
                 let x = self.eval_hidden(&args[0], &["a".to_string()])?;
-                return r.from_expr(&x).map(crate::ffield::value);
+                return crate::ffield::embed(r, &x);
             }
             if let crate::expr::Obj::QRing(r) = &*o {
                 if args.len() != 1 {
@@ -1442,6 +1442,11 @@ impl Session {
             "inv" => {
                 arity(1)?;
                 match self.eval(&args[0])? {
+                    Expr::Matrix(m) if crate::fmat::ring_of(&m)?.is_some() => {
+                        let r = crate::fmat::ring_of(&m)?.unwrap();
+                        let a = crate::fmat::lift(&m, &r)?;
+                        Ok(crate::fmat::expr(&crate::fmat::inverse(&a, &r)?))
+                    }
                     Expr::Matrix(m) => {
                         let inv = linalg::inverse(&m)?;
                         Ok(Expr::Matrix(
@@ -1457,6 +1462,10 @@ impl Session {
             "det" => {
                 arity(1)?;
                 let m = self.matrix_arg(&args[0], "det")?;
+                if let Some(r) = crate::fmat::ring_of(&m)? {
+                    let a = crate::fmat::lift(&m, &r)?;
+                    return Ok(crate::ffield::value(crate::fmat::det(&a, &r)?));
+                }
                 linalg::det(&m)
             }
             "transpose" => {
@@ -1915,6 +1924,18 @@ pub fn arith(op: Op, a: Expr, b: Expr) -> R<Expr> {
             crate::print::show(&a),
             crate::print::show(&b)
         )));
+    }
+    // matrices over a finite ring: exact arithmetic in the ring
+    if matches!(op, Op::Add | Op::Sub | Op::Mul | Op::Div | Op::Solve | Op::Pow)
+        && (matches!(a, M(_)) || matches!(b, M(_)))
+    {
+        let r = match crate::fmat::ring_of_expr(&a)? {
+            Some(r) => Some(r),
+            None => crate::fmat::ring_of_expr(&b)?,
+        };
+        if let Some(r) = r {
+            return crate::fmat::arith(op, &a, &b, &r);
+        }
     }
     // elementwise .* ./ .^
     if matches!(op, Op::EMul | Op::EDiv | Op::EPow) {

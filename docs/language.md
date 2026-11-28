@@ -359,6 +359,25 @@ galileo> R
  0, 3]
 ```
 
+A matrix over a finite field or ring holds elements of it. `F(A)` turns a matrix of whole
+numbers into one over `F`, and it prints as `gf(q, [..])` (or `zmod(n, [..])`), which reads
+back as the same matrix. Arithmetic and the matrix commands then work in that field
+instead of over the rationals:
+
+```galileo
+galileo> F = gf(17);
+galileo> A = F([1 2; 3 4])
+gf(17, [1, 2;
+        3, 4])
+galileo> inv(A)
+gf(17, [15, 1;
+        10, 8])
+galileo> rank(gf(2, [1 1 0; 0 1 1; 1 0 1]))
+2
+galileo> solve([x + y == 1, x == 1], [x, y], gf(2))
+gf(2, [1, 0])
+```
+
 ## Strings
 
 Strings are written in double quotes. `+` joins a string with anything.
