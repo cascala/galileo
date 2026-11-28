@@ -76,7 +76,7 @@ docker run -it --rm -v galileo-home:/home/galileo cascala/galileo
 To publish the image for both architectures:
 
 ```
-docker buildx build --platform linux/amd64,linux/arm64 -t cascala/galileo:0.6.1 -t cascala/galileo:latest --push .
+docker buildx build --platform linux/amd64,linux/arm64 -t cascala/galileo:0.7.0 -t cascala/galileo:latest --push .
 ```
 
 Type `help` for the list of commands, and `help(name)` for one of them. A statement ending
