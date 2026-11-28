@@ -905,6 +905,72 @@ fn check_same(a: &Expr, b: &Expr, mode: u8) {
     }
 }
 
+/// The target form of `simplify`: c * N / D with N and D expanded polynomials
+/// in kernels, N and D without common factors, D primitive with a positive
+/// leading coefficient (D = 1 for a polynomial, whose coefficients are then
+/// distributed). With sines and cosines, sin^2 + cos^2 = 1 is used in the one
+/// direction that gives the shorter form, so the form does not depend on how
+/// the input was written and a second simplify changes nothing. None when the expression is not a rational
+/// function of kernels (or too large).
+pub fn normal_form(e: &Expr) -> Option<Expr> {
+    fn trig(e: &Expr, sin: &mut Vec<Expr>, cos: &mut Vec<Expr>) {
+        match e {
+            Expr::Func(Func::Sin, a) => sin.push(inner(a)),
+            Expr::Func(Func::Cos, a) => cos.push(inner(a)),
+            _ => {}
+        }
+        match e {
+            Expr::Add(v) | Expr::Mul(v) | Expr::Apply(_, v) => v.iter().for_each(|x| trig(x, sin, cos)),
+            Expr::Pow(a, b) => {
+                trig(a, sin, cos);
+                trig(b, sin, cos)
+            }
+            Expr::Func(_, a) => trig(a, sin, cos),
+            _ => {}
+        }
+    }
+    let (mut sin, mut cos) = (vec![], vec![]);
+    trig(e, &mut sin, &mut cos);
+    if sin.is_empty() && cos.is_empty() {
+        return normal_form_with(e, Trig::None);
+    }
+    // with sines or cosines: the normal forms that remove sin^2, and cos^2,
+    // are each the same for every way of writing the value; keep the shorter
+    let a = normal_form_with(e, Trig::SinToCos);
+    let b = normal_form_with(e, Trig::CosToSin);
+    match (a, b) {
+        (Some(a), Some(b)) => {
+            let (sa, sb) = (size(&a), size(&b));
+            Some(if sb < sa || (sb == sa && show(&b) < show(&a)) { b } else { a })
+        }
+        (a, b) => a.or(b),
+    }
+}
+
+fn normal_form_with(e: &Expr, t: Trig) -> Option<Expr> {
+    let mut cx = Ctx::new(t);
+    let r = cx.rat_of(e).ok()?;
+    let r = cx.reduce(r).ok()?;
+    if r.num.is_empty() {
+        return Some(Expr::zero());
+    }
+    let mut d = constant(Number::one());
+    for (p, k) in &r.den {
+        for _ in 0..*k {
+            d = cx.mul(&d, p).ok()?;
+        }
+    }
+    let (cd, dprim) = normalize(&d);
+    if as_constant(&dprim).is_some() {
+        let inv = cd.recip()?;
+        let n: Poly = r.num.iter().map(|(m, c)| (m.clone(), c.mul(&inv))).collect();
+        return Some(cx.poly_expr(&clean(n)));
+    }
+    let (cn, nprim) = normalize(&r.num);
+    let c = cn.div(&cd)?;
+    Some(mul(vec![Expr::Num(c), cx.poly_expr(&nprim), pow(cx.poly_expr(&dprim), Expr::int(-1))]))
+}
+
 /// True when the expression is identically zero (as far as the normal form can tell)
 pub fn is_zero(e: &Expr) -> bool {
     e.is_zero()

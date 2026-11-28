@@ -19,7 +19,6 @@ fn int(n: i128) -> Expr {
 
 /// (name, number of arguments)
 pub const NAMES: &[(&str, usize)] = &[
-    ("factorial", 1),
     ("gamma", 1),
     ("digamma", 1),
     ("polygamma", 2),
@@ -57,12 +56,6 @@ fn float_of(e: &Expr) -> Option<f64> {
 pub fn check(f: &str, args: &[Expr]) -> Result<(), String> {
     let pole = |what: &str| Err(format!("{} has a pole at {}", f, what));
     match f {
-        "factorial" => match args[0].num() {
-            Some(n) if n.is_exact() && !(n.is_integer() && !n.is_negative()) => {
-                Err("factorial needs a non-negative integer".into())
-            }
-            _ => Ok(()),
-        },
         "gamma" | "digamma" | "polygamma" => {
             let x = args.last().unwrap();
             if let Some(n) = int_of(x) {
@@ -110,10 +103,6 @@ pub fn apply(f: &str, args: Vec<Expr>) -> Expr {
     }
     match f {
         "gamma" => gamma_exact(&args[0]).unwrap_or_else(|| app(f, args)),
-        "factorial" => match int_of(&args[0]) {
-            Some(n) if (0..=100_000).contains(&n) => crate::cas::factorial(n).unwrap(),
-            _ => app(f, args),
-        },
         "polygamma" if args[0].is_zero() => apply("digamma", vec![args[1].clone()]),
         "erf" | "erfi" => {
             let x = &args[0];
@@ -412,74 +401,6 @@ pub fn polylog_c(s: f64, z: (f64, f64)) -> (f64, f64) {
     (acc.re, acc.im)
 }
 
-// ---------- factorial and gamma ratios ----------
-
-/// gamma(x + k)/gamma(x) = x(x + 1)...(x + k - 1) and
-/// factorial(x + k)/factorial(x) = (x + 1)...(x + k), for a whole-number
-/// offset k: the factorials cancel and only the k factors between them are
-/// left, so factorial(10010)/factorial(10000) is a product of 10 numbers.
-/// factorial(x) counts as gamma(x + 1), so the two can be mixed. Applies to
-/// the factors of one product (not below it); None when nothing cancels.
-pub fn ratios(e: &Expr) -> Option<Expr> {
-    let Expr::Mul(fs) = e else { return None };
-    // (index, gamma argument, exponent) of each factorial/gamma factor
-    let mut gs: Vec<(usize, Expr, i128)> = Vec::new();
-    for (i, f) in fs.iter().enumerate() {
-        let (b, m) = match f {
-            Expr::Pow(b, p) => match int_of(p) {
-                Some(m) => (&**b, m),
-                None => continue,
-            },
-            _ => (f, 1),
-        };
-        match b {
-            Expr::Apply(g, a) if a.len() == 1 && g == "gamma" => gs.push((i, a[0].clone(), m)),
-            Expr::Apply(g, a) if a.len() == 1 && g == "factorial" => {
-                gs.push((i, add2(a[0].clone(), Expr::one()), m))
-            }
-            _ => {}
-        }
-    }
-    for x in 0..gs.len() {
-        for y in 0..gs.len() {
-            let ((i, gi, mi), (j, gj, mj)) = (&gs[x], &gs[y]);
-            if i == j || *mi != -*mj {
-                continue;
-            }
-            // gamma(gi)^mi * gamma(gj)^(-mi) with gi = gj + k, k > 0
-            let Some(k) = int_of(&crate::calc::expand(&sub(gi.clone(), gj.clone()))) else {
-                continue;
-            };
-            if k <= 0 {
-                continue;
-            }
-            let p = if let Some(g) = int_of(gj) {
-                // gj(gj + 1)...(gj + k - 1) = (gj - 1 + 1)...(gj - 1 + k)
-                if g < 1 || k > 1_000_000 || g.checked_add(k).is_none() {
-                    continue;
-                }
-                Expr::Num(Number::from_bigint(crate::cas::range_product(g - 1, g - 1 + k)))
-            } else {
-                if k > 64 {
-                    continue;
-                }
-                mul((0..k).map(|t| add2(gj.clone(), int(t))).collect())
-            };
-            let mut rest: Vec<Expr> = fs
-                .iter()
-                .enumerate()
-                .filter(|(t, _)| t != i && t != j)
-                .map(|(_, f)| f.clone())
-                .collect();
-            rest.push(pow(p, int(*mi)));
-            let r = mul(rest);
-            // more pairs may cancel
-            return Some(ratios(&r).unwrap_or(r));
-        }
-    }
-    None
-}
-
 // ---------- derivatives ----------
 
 /// d/dx of f(args), with the chain rule; None when there is no rule (zeta)
@@ -487,12 +408,6 @@ pub fn deriv(f: &str, args: &[Expr], x: &str) -> Option<Expr> {
     use crate::calc::deriv as d;
     let two_over_sqrt_pi = || div(int(2), sqrt(Expr::Const(Const::Pi)));
     Some(match f {
-        // factorial(u) = gamma(u + 1)
-        "factorial" => mul(vec![
-            apply("factorial", args.to_vec()),
-            apply("digamma", vec![add2(args[0].clone(), Expr::one())]),
-            d(&args[0], x),
-        ]),
         "gamma" => mul(vec![
             apply("gamma", args.to_vec()),
             apply("digamma", args.to_vec()),
@@ -552,7 +467,7 @@ pub fn at_infinity(f: &str, sign: i32) -> Option<Option<Expr>> {
         ("sign", k) => Some(Expr::int(k as i128)),
         ("dirac", _) => Some(Expr::zero()),
         ("besselj" | "bessely", 1) => Some(Expr::zero()),
-        ("factorial" | "gamma" | "digamma" | "erfi" | "besseli", 1) => None,
+        ("gamma" | "digamma" | "erfi" | "besseli", 1) => None,
         _ => return None,
     })
 }
@@ -562,7 +477,6 @@ pub fn at_infinity(f: &str, sign: i32) -> Option<Option<Expr>> {
 /// Numeric value; NaN where undefined
 pub fn value(f: &str, a: &[f64]) -> f64 {
     match f {
-        "factorial" => gamma(a[0] + 1.0),
         "gamma" => gamma(a[0]),
         "digamma" => digamma(a[0]),
         "polygamma" => {

@@ -61,7 +61,7 @@ fn apply_name(f: &str) -> String {
 pub fn number(n: Number) -> String {
     match n {
         Number::Dec(..) => n.to_string(),
-        Number::Xd(..) => number(Number::Float(n.to_f64())),
+        Number::Xd(..) | Number::XdBig(_) => n.to_string(),
         Number::Big(ref r) if r.is_integer() => r.numer().to_string(),
         Number::Big(ref r) => {
             let a = r.numer();
@@ -235,6 +235,25 @@ fn fmt(e: &Expr) -> (String, u8) {
             }
             (s.trim_start().to_string(), P_ADD)
         }
+        Held(op, v) => {
+            use crate::expr::Hop;
+            let bin = |sym: &str, l: u8, r: u8, p: u8| {
+                (format!("{}{}{}", wrap(fmt(&v[0]), l), sym, wrap(fmt(&v[1]), r)), p)
+            };
+            match op {
+                Hop::Add => bin(" + ", P_ADD, P_MUL, P_ADD),
+                Hop::Sub => bin(" - ", P_ADD, P_MUL, P_ADD),
+                Hop::Mul | Hop::EMul => bin(" \\cdot ", P_MUL, P_POW, P_MUL),
+                Hop::Div | Hop::EDiv => (format!("\\frac{{{}}}{{{}}}", fmt(&v[0]).0, fmt(&v[1]).0), P_ATOM),
+                Hop::Pow | Hop::EPow => (format!("{}^{{{}}}", wrap(fmt(&v[0]), P_ATOM), fmt(&v[1]).0), P_POW),
+                Hop::Neg => (format!("-{}", wrap(fmt(&v[0]), P_POW)), P_ADD),
+                Hop::Fn(f) if f == "sqrt" => (format!("\\sqrt{{{}}}", fmt(&v[0]).0), P_ATOM),
+                Hop::Fn(f) => (
+                    format!("\\{}\\left({}\\right)", f, v.iter().map(|x| fmt(x).0).collect::<Vec<_>>().join(", ")),
+                    P_ATOM,
+                ),
+            }
+        }
         Mul(_) => fmt_mul(e),
         Pow(b, x) => {
             if let Num(n) = (**x).clone() {
@@ -296,7 +315,7 @@ fn fmt_mul(e: &Expr) -> (String, u8) {
         ),
         Number::Big(ref r) if r.is_integer() => (r.numer().to_string(), None),
         Number::Big(ref r) => (r.numer().to_string(), Some(r.denom().to_string())),
-        Number::Float(_) | Number::Dec(..) | Number::Xd(..) => (number(coeff), None),
+        Number::Float(_) | Number::Dec(..) | Number::Xd(..) | Number::XdBig(_) => (number(coeff), None),
     };
     let join = |fs: &[Expr], lead: Option<String>| -> String {
         let mut parts: Vec<String> = lead.into_iter().collect();
@@ -344,11 +363,6 @@ fn special_latex(f: &str, v: &[Expr]) -> Option<String> {
     }
     let a = |k: usize| fmt(&v[k]).0;
     Some(match f {
-        "factorial" => match &v[0] {
-            Expr::Sym(_) => format!("{}!", a(0)),
-            Expr::Num(n) if n.is_integer() && !n.is_negative() => format!("{}!", a(0)),
-            _ => format!("\\left({}\\right)!", a(0)),
-        },
         "gamma" => format!("\\Gamma\\left({}\\right)", a(0)),
         "digamma" => format!("\\psi\\left({}\\right)", a(0)),
         "polygamma" => format!("\\psi^{{({})}}\\left({}\\right)", a(0), a(1)),

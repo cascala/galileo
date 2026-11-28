@@ -217,6 +217,7 @@ fn fmt(e: &Expr) -> (String, u8) {
             }
             (s, P_ADD)
         }
+        Held(op, v) => fmt_held(op, v),
         Mul(_) => fmt_mul(e),
         Pow(b, x) => {
             if let Num(n) = &**x {
@@ -238,14 +239,36 @@ fn fmt(e: &Expr) -> (String, u8) {
     }
 }
 
+/// A held expression, exactly as typed (with the parentheses it needs to read back)
+fn fmt_held(op: &crate::expr::Hop, v: &[Expr]) -> (String, u8) {
+    use crate::expr::Hop;
+    let bin = |sym: &str, l: u8, r: u8, p: u8| {
+        (format!("{}{}{}", wrap(fmt(&v[0]), l), sym, wrap(fmt(&v[1]), r)), p)
+    };
+    match op {
+        Hop::Add => bin("+", P_ADD, P_MUL, P_ADD),
+        Hop::Sub => bin("-", P_ADD, P_MUL, P_ADD),
+        Hop::Mul => bin("*", P_MUL, P_POW, P_MUL),
+        Hop::Div => bin("/", P_MUL, P_POW, P_MUL),
+        Hop::EMul => bin(".*", P_MUL, P_POW, P_MUL),
+        Hop::EDiv => bin("./", P_MUL, P_POW, P_MUL),
+        Hop::Pow => bin("^", P_ATOM, P_POW, P_POW),
+        Hop::EPow => bin(".^", P_ATOM, P_POW, P_POW),
+        Hop::Neg => (format!("-{}", wrap(fmt(&v[0]), P_POW)), P_ADD),
+        Hop::Fn(f) => (
+            format!("{}({})", f, v.iter().map(|x| fmt(x).0).collect::<Vec<_>>().join(", ")),
+            P_ATOM,
+        ),
+    }
+}
+
 /// A quantity: 3 m/s, -2.5 kg, (3/2) m, (2*t) m/s^2 (read back the same way)
 fn fmt_quantity(c: &Expr, units: &str) -> (String, u8) {
     let (cs, cp) = fmt(c);
     match c {
-        Num(n) if n.is_negative() && (n.is_integer() || !n.is_exact()) => {
-            (format!("{} {}", cs, units), P_ADD)
-        }
-        Num(n) if n.is_integer() || !n.is_exact() => (format!("{} {}", cs, units), P_MUL),
+        // integers, floats and decimals need no parentheses; fractions do
+        Num(n) if n.is_negative() && !cs.contains('/') => (format!("{} {}", cs, units), P_ADD),
+        Num(_) if !cs.contains('/') => (format!("{} {}", cs, units), P_MUL),
         _ if cp >= P_ATOM && cs.ends_with(')') => (format!("{} {}", cs, units), P_MUL),
         _ => (format!("({}) {}", cs, units), P_MUL),
     }
@@ -291,7 +314,7 @@ fn fmt_mul(e: &Expr) -> (String, u8) {
                 ds.push(r.denom().to_string());
             }
         }
-        Number::Float(_) | Number::Dec(..) | Number::Xd(..) => {
+        Number::Float(_) | Number::Dec(..) | Number::Xd(..) | Number::XdBig(_) => {
             if !coeff.is_one() || numer.is_empty() {
                 ns.push(coeff.to_string())
             }

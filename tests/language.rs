@@ -267,18 +267,96 @@ fn small_coefficients_are_kept() {
 
 #[test]
 fn exact_decimals() {
+    // a decimal is an exact number written in decimal notation
     assert_eq!(last("0.1*x + 0.2*x == 0.3*x"), "true");
     assert_eq!(last("0.1 + 0.2"), "0.3");
     assert_eq!(last("0.1 + 0.2 - 0.3"), "0.0");
-    assert_eq!(last("(0.1/3)*3"), "0.1");
+    assert_eq!(last("0.1/3"), "1/30");
+    assert_eq!(last("1.5/7"), "3/14");
+    assert_eq!(last("simplify(sqrt(0.1/3))"), "sqrt(30)/30");
+    assert_eq!(last("(0.1/3)*3"), "1/10");
+    assert_eq!(last("solve(3*x == 0.1, x)"), "1/30");
+    assert_eq!(last("0.1/4"), "0.025");
     assert_eq!(last("1e20 + 1"), "100000000000000000001.0");
     assert_eq!(last("sqrt(0.25)"), "0.5");
-    assert_eq!(last("exp(1.0)"), "2.718281828459045");
+    assert_eq!(last("simplify(sqrt(0.5))"), "0.5*sqrt(2)");
+    assert_eq!(last("sin(0.5)"), "sin(0.5)");
+    // eval gives digits
+    assert_eq!(last("eval(exp(1.0))"), "2.718281828459045");
+    assert_eq!(last("eval(0.1/3)"), "0.03333333333333333");
     assert_eq!(last("x^2.0"), "x^2");
     // small coefficients are still kept
     assert_eq!(last("x^3 == x^3 + 1e-12*x^5"), "x^3 == 1e-12*x^5+x^3");
-    // past exactdigits, decimals are floats
+    // exactdigits: a limit after which decimals become floats
+    assert_eq!(last("exactdigits"), "38");
     assert_eq!(last("exactdigits = 0; 0.1 + 0.2"), "0.30000000000000004");
     assert_eq!(last("exactdigits = 3; 0.001*0.1"), "0.0001");
-    assert!(shown("exactdigits = 39").iter().any(|l| l.contains("from 0 to 38")));
+    assert!(shown("exactdigits = -1").iter().any(|l| l.contains("whole number of digits")));
+}
+
+#[test]
+fn held_input() {
+    let h = |code: &str| last(&format!("simplify = false; {}", code));
+    assert_eq!(h("1/2"), "1/2");
+    assert_eq!(h("0.5"), "0.5");
+    assert_eq!(h("1/3 + 2/6"), "1/3+2/6");
+    assert_eq!(h("simplify(1/3 + 2/6)"), "2/3");
+    assert_eq!(h("eval(1/3 + 2/6)"), "0.6666666666666666");
+    assert_eq!(h("2*3"), "2*3");
+    assert_eq!(h("x + x"), "x+x");
+    assert_eq!(h("simplify(x + x)"), "2*x");
+    assert_eq!(h("0.1/3"), "0.1/3");
+    assert_eq!(h("simplify(0.1/3)"), "1/30");
+    assert_eq!(h("0.1*x + 0.2*x"), "0.1*x+0.2*x");
+    assert_eq!(h("simplify(0.1*x + 0.2*x)"), "0.3*x");
+    assert_eq!(h("0.1*x + 0.2*x == 0.3*x"), "true");
+    assert_eq!(h("sqrt(0.5)"), "sqrt(0.5)");
+    assert_eq!(h("simplify(sqrt(0.5))"), "0.5*sqrt(2)");
+    assert_eq!(h("sin(0)"), "sin(0)");
+    assert_eq!(h("(x+1)^2"), "(x+1)^2");
+    assert_eq!(h("-x^2"), "-x^2");
+    assert_eq!(h("2^3^2"), "2^3^2");
+    assert_eq!(h("[1/2 2/4; 1 2]"), "[1/2, 2/4;\n   1,   2]");
+    // variables are replaced by their values, and stay as typed
+    assert_eq!(h("a = 1/3 + 2/6; a*3"), "(1/3+2/6)*3");
+    assert_eq!(h("a = 1/3 + 2/6; simplify(a*3)"), "2");
+    // commands simplify their input
+    assert_eq!(h("inv([0.1 0.2; 0.3 0.5])"), "[-50,  20;\n  30, -10]");
+    assert_eq!(h("diff(x^3 + 1/3, x)"), "3*x^2");
+    // float arithmetic runs straight away
+    assert_eq!(h("eval(pi)*2"), "6.283185307179586");
+    // loops and functions compute
+    assert_eq!(h("s = 0; for k = 1:10; s = s + 0.1*k; end; s"), "5.5");
+    assert_eq!(h("f(x) := x^2 + 1/3; f(2)"), "13/3");
+    assert!(shown("simplify = 1").iter().any(|l| l.contains("simplify is true")));
+}
+
+#[test]
+fn simplify_is_idempotent() {
+    for e in [
+        "1/3 + 2/6",
+        "(x^2-1)/(x-1)",
+        "1/(2*x) - 1/(2*(x-1))",
+        "(x+1)^3",
+        "(x^2-0.01)/(x-0.1)",
+        "x/2 + 1/3",
+        "1/(1-x)",
+        "sqrt(8)",
+        "1/sqrt(2)",
+        "exp(x)*exp(y)",
+        "sin(x)^2",
+        "1 - cos(x)^2",
+        "sin(x)^4 - cos(x)^4",
+        "cos(x)^2 + 2*sin(x)^2 - 1",
+        "(a+b)/(c+d) - (b+a)/(d+c)",
+        "x^3 + 1e-12*x^5",
+        "0.1*x + 0.2*x",
+    ] {
+        let once = last(&format!("simplify({})", e));
+        let twice = last(&format!("simplify(simplify({}))", e));
+        assert_eq!(once, twice, "simplify({}) is not stable", e);
+    }
+    // one form for one value, whichever way it was written
+    assert_eq!(last("simplify(sin(x)^2)"), last("simplify(1 - cos(x)^2)"));
+    assert_eq!(last("simplify((x+1)^2)"), last("simplify(x^2 + 2*x + 1)"));
 }

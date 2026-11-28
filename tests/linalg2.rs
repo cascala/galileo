@@ -67,7 +67,8 @@ fn matrix_exponential() {
     );
     // derivative at 0 gives A back
     assert_eq!(one("E = expm([1 -2; 1 3], t); subs(deriv(E, t), t, 0)"), "[1, -2;\n 1,  3]");
-    let r = one("expm([0.1 1; 0 0.2])");
+    assert_eq!(one("expm([0.1 1; 0 0.2])"), "[exp(1/10), 10*(exp(1/5)-exp(1/10));\n         0,                exp(1/5)]");
+    let r = one("eval(expm([0.1 1; 0 0.2]))");
     assert!(r.contains("1.1051709180"), "{}", r);
 }
 
@@ -101,8 +102,9 @@ fn numeric_symmetric_eigenvalues() {
         "[0.120614758428, 0.467911113762, 1.0, 1.65270364467, 2.34729635533, 3.0, 3.53208888624, 3.87938524157]"
     );
     assert_eq!(one(&format!("{} [V, D] = eig(M); eval([V(1, 1), sin(pi/9)*sqrt(2/9)], 6)", chain)), "[0.161230, 0.161230]");
-    assert_eq!(one("eig([2.0, 1; 1, 2])"), "[1.0, 3.0]");
-    assert_eq!(one("[V, D] = eig([2.0, 1; 1, 2]); V"), "[ 0.707106781187, 0.707106781187;\n -0.707106781187, 0.707106781187]");
+    assert_eq!(one("eig([2.0, 1; 1, 2])"), "[1, 3]");
+    // decimals are exact numbers, so their eigenvectors are exact too
+    assert_eq!(one("[V, D] = eig([2.0, 1; 1, 2]); V"), "[-1.0, 1.0;\n    1,   1]");
     // exact matrices keep exact eigenvalues
     assert_eq!(one("eig([2, -1; -1, 2])"), "[1, 3]");
 }

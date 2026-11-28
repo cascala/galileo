@@ -120,8 +120,9 @@ pub(crate) fn builtins() -> BTreeMap<String, Expr> {
     v.insert("true".into(), Expr::Bool(true));
     v.insert("false".into(), Expr::Bool(false));
     v.insert("explain".into(), explain_default());
-    crate::num::set_exact_digits(crate::num::DEFAULT_EXACT_DIGITS);
-    v.insert("exactdigits".into(), Expr::int(crate::num::DEFAULT_EXACT_DIGITS as i128));
+    v.insert("simplify".into(), Expr::Bool(true));
+    crate::num::set_exact_digits(crate::num::DEFAULT_DIGITS);
+    v.insert("exactdigits".into(), Expr::int(38));
     v
 }
 
@@ -502,21 +503,30 @@ impl Session {
                 }
             }
             Stmt::Expr(n) => {
-                let v = self.eval(n)?;
+                let v = if self.holding() { self.eval_held(n)? } else { self.eval(n)? };
                 self.note_report(&v);
                 self.set("ans", v.clone());
                 Ok(Output::Value(v))
             }
             Stmt::Assign(name, n) => {
-                let v = self.eval(n)?;
+                let v = if self.holding() && name != "simplify" { self.eval_held(n)? } else { self.eval(n)? };
+                if name == "simplify" && !matches!(v, Expr::Bool(_)) {
+                    return Err(format!(
+                        "simplify is true (tidy each result as you type) or false (keep it as typed until simplify or eval), not {}",
+                        show(&v)
+                    ));
+                }
                 if name == "explain" {
                     check_explain(&v)?;
                 }
                 if name == "exactdigits" {
-                    let max = crate::num::DEFAULT_EXACT_DIGITS as i128;
-                    match v.num().and_then(|k| if k.is_exact() { k.as_int() } else { None }) {
-                        Some(k) if (0..=max).contains(&k) => crate::num::set_exact_digits(k as u32),
-                        _ => return Err(format!("exactdigits: a whole number from 0 to {}", max)),
+                    let k = match &v {
+                        Expr::Sym(s) if s == "inf" => Some(crate::num::NO_LIMIT),
+                        _ => v.num().and_then(|k| k.as_int()).and_then(|k| u32::try_from(k).ok()).filter(|k| *k < 1_000_000),
+                    };
+                    match k {
+                        Some(k) => crate::num::set_exact_digits(k),
+                        None => return Err("exactdigits is a whole number of digits (0: decimals are floats) or inf (no limit)".into()),
                     }
                 }
                 self.note_report(&v);
@@ -747,6 +757,177 @@ impl Session {
         }
     }
 
+    /// Whether a statement typed at the prompt keeps its value as typed
+    /// (simplify = false); loops and function bodies always compute
+    pub(crate) fn holding(&self) -> bool {
+        matches!(self.vars.get("simplify"), Some(Expr::Bool(false))) && self.in_loop == 0 && self.in_proc == 0
+    }
+
+    /// The value of a statement kept as typed: arithmetic on exact numbers and
+    /// symbols, and elementary functions, stay held; variables are replaced by
+    /// their values, float arithmetic runs, and commands compute
+    pub fn eval_held(&mut self, n: &Node) -> R<Expr> {
+        use crate::expr::Hop;
+        match n {
+            Node::Ident(name) if !name.contains('.') => Ok(self.lookup(name)),
+            Node::Neg(a) => {
+                let x = self.eval_held(a)?;
+                if float_data(&x) {
+                    return arith(Op::Mul, Expr::int(-1), x);
+                }
+                Ok(Expr::Held(Hop::Neg, vec![x]))
+            }
+            Node::Bin(op @ (Op::Add | Op::Sub | Op::Mul | Op::Div | Op::Pow | Op::EMul | Op::EDiv | Op::EPow), a, b) => {
+                let x = self.eval_held(a)?;
+                let y = self.eval_held(b)?;
+                if (float_data(&x) && numeric_data(&y)) || (float_data(&y) && numeric_data(&x)) {
+                    return arith(*op, x, y);
+                }
+                let h = match op {
+                    Op::Add => Hop::Add,
+                    Op::Sub => Hop::Sub,
+                    Op::Mul => Hop::Mul,
+                    Op::Div => Hop::Div,
+                    Op::Pow => Hop::Pow,
+                    Op::EMul => Hop::EMul,
+                    Op::EDiv => Hop::EDiv,
+                    _ => Hop::EPow,
+                };
+                Ok(Expr::Held(h, vec![x, y]))
+            }
+            Node::Call(f, args)
+                if args.len() == 1
+                    && (Func::from_name(f).is_some() || matches!(f.as_str(), "sqrt" | "exp"))
+                    && !self.funcs.contains_key(f)
+                    && !self.procs.contains_key(f)
+                    && !self.vars.contains_key(f) =>
+            {
+                let x = self.eval_held(&args[0])?;
+                let held = Expr::Held(Hop::Fn(f.clone()), vec![x.clone()]);
+                if float_data(&x) {
+                    return self.lower(&held);
+                }
+                Ok(held)
+            }
+            Node::Matrix(rows) => {
+                let mut out = vec![];
+                for r in rows {
+                    let mut row = vec![];
+                    for x in r {
+                        let v = self.eval_held(x)?;
+                        if !v.is_scalar() {
+                            return self.eval(n);
+                        }
+                        row.push(v);
+                    }
+                    if !row.is_empty() {
+                        out.push(row);
+                    }
+                }
+                if out.iter().any(|r| r.len() != out[0].len()) {
+                    return Err("not all rows have the same size".into());
+                }
+                Ok(if out.len() == 1 && out[0].len() == 1 {
+                    out.pop().unwrap().pop().unwrap()
+                } else {
+                    Expr::Matrix(out)
+                })
+            }
+            _ => self.eval(n),
+        }
+    }
+
+    /// A held expression worked out: what it would have been with simplify = true
+    pub fn lower(&mut self, e: &Expr) -> R<Expr> {
+        use crate::expr::Hop;
+        if !has_held(e) {
+            return Ok(e.clone());
+        }
+        match e {
+            Expr::Held(op, v) => {
+                let mut a = vec![];
+                for x in v {
+                    a.push(self.lower(x)?);
+                }
+                match op {
+                    Hop::Neg => arith(Op::Mul, Expr::int(-1), a.remove(0)),
+                    Hop::Fn(f) => self.call_values(f, a),
+                    _ => {
+                        let o = match op {
+                            Hop::Add => Op::Add,
+                            Hop::Sub => Op::Sub,
+                            Hop::Mul => Op::Mul,
+                            Hop::Div => Op::Div,
+                            Hop::Pow => Op::Pow,
+                            Hop::EMul => Op::EMul,
+                            Hop::EDiv => Op::EDiv,
+                            _ => Op::EPow,
+                        };
+                        let y = a.pop().unwrap();
+                        let x = a.pop().unwrap();
+                        arith(o, x, y)
+                    }
+                }
+            }
+            Expr::Matrix(rows) => {
+                let mut out = vec![];
+                for r in rows {
+                    let mut row = vec![];
+                    for x in r {
+                        row.push(self.lower(x)?);
+                    }
+                    out.push(row);
+                }
+                Ok(Expr::Matrix(out))
+            }
+            other => {
+                let mut err = None;
+                let r = other.map_children(&mut |c| match self.lower(c) {
+                    Ok(v) => v,
+                    Err(m) => {
+                        err.get_or_insert(m);
+                        c.clone()
+                    }
+                });
+                match err {
+                    Some(m) => Err(m),
+                    None => Ok(r),
+                }
+            }
+        }
+    }
+
+    /// whether an argument holds a decimal (typed, or in a variable's value)
+    fn node_has_decimal(&self, n: &Node) -> bool {
+        match n {
+            Node::Num(s) => s.contains(['.', 'e', 'E']),
+            Node::Ident(k) => self.vars.get(k).is_some_and(calc::has_decimal),
+            Node::Neg(a) | Node::Transpose(a) => self.node_has_decimal(a),
+            Node::Bin(_, a, b) => self.node_has_decimal(a) || self.node_has_decimal(b),
+            Node::Call(_, v) | Node::List(v) => v.iter().any(|x| self.node_has_decimal(x)),
+            Node::Matrix(m) => m.iter().flatten().any(|x| self.node_has_decimal(x)),
+            _ => false,
+        }
+    }
+
+    /// Calls a built-in function with values (not syntax) as its arguments
+    pub(crate) fn call_values(&mut self, f: &str, vals: Vec<Expr>) -> R<Expr> {
+        let names: Vec<String> = (0..vals.len()).map(|i| format!("\u{1}arg{}", i)).collect();
+        let saved: Vec<Option<Expr>> = names.iter().map(|k| self.vars.get(k).cloned()).collect();
+        for (k, v) in names.iter().zip(vals) {
+            self.vars.insert(k.clone(), v);
+        }
+        let args: Vec<Node> = names.iter().map(|k| Node::Ident(k.clone())).collect();
+        let r = self.call(f, &args);
+        for (k, old) in names.iter().zip(saved) {
+            match old {
+                Some(v) => self.vars.insert(k.clone(), v),
+                None => self.vars.remove(k),
+            };
+        }
+        r
+    }
+
     pub fn eval(&mut self, n: &Node) -> R<Expr> {
         if crate::factorlab::tick() {
             return Err("out of time (factoring lab budget)".into());
@@ -772,7 +953,14 @@ impl Session {
                     None => self.lookup(name),
                 }
             }
-            Node::Ident(name) => self.lookup(name),
+            Node::Ident(name) => {
+                let v = self.lookup(name);
+                if has_held(&v) {
+                    self.lower(&v)?
+                } else {
+                    v
+                }
+            }
             Node::List(items) => {
                 let mut v = vec![];
                 for x in items {
@@ -807,6 +995,7 @@ impl Session {
                 let b = self.eval(b)?;
                 match op {
                     Op::Eq | Op::Ne | Op::Lt | Op::Gt | Op::Le | Op::Ge => compare(*op, a, b)?,
+                    Op::Solve if calc::has_decimal(&a) || calc::has_decimal(&b) => calc::decimals(&arith(*op, a, b)?),
                     _ => arith(*op, a, b)?,
                 }
             }
@@ -925,7 +1114,13 @@ impl Session {
                 self.calls += 1;
                 let r = self.call(f, args);
                 self.calls -= 1;
-                r?
+                let r = r?;
+                // a result worked out from decimals reads as decimals where it can
+                if f != "eval" && args.iter().any(|a| self.node_has_decimal(a)) {
+                    calc::decimals(&r)
+                } else {
+                    r
+                }
             }
         };
         check(&v)?;
@@ -1120,7 +1315,7 @@ impl Session {
                     return self.factor_over(&a, &field);
                 }
                 Ok(match f {
-                    "simplify" => calc::simplify(&a),
+                    "simplify" => calc::simplify_target(&a),
                     "expand" => calc::expand(&a),
                     "factor" => match a.num().and_then(|n| n.as_bigint()) {
                         // factor(360) = [2, 3; 3, 2; 5, 1] (primes and exponents);
@@ -2112,6 +2307,37 @@ fn range(a: &Expr, s: &Expr, b: &Expr) -> R<Expr> {
     Ok(Expr::Matrix(vec![row]))
 }
 
+/// whether an expression holds a part kept as typed
+pub fn has_held(e: &Expr) -> bool {
+    match e {
+        Expr::Held(..) => true,
+        Expr::Add(v) | Expr::Mul(v) | Expr::Apply(_, v) => v.iter().any(has_held),
+        Expr::Pow(a, b) => has_held(a) || has_held(b),
+        Expr::Func(_, a) => has_held(a),
+        Expr::Matrix(m) => m.iter().flatten().any(has_held),
+        _ => false,
+    }
+}
+
+/// a float, or a matrix of numbers with a float among them: arithmetic on
+/// these runs at once, since a float is already a computed value
+fn float_data(e: &Expr) -> bool {
+    match e {
+        Expr::Num(n) => !n.is_exact(),
+        Expr::Matrix(m) => m.iter().flatten().all(|x| x.is_number()) && m.iter().flatten().any(|x| matches!(x, Expr::Num(n) if !n.is_exact())),
+        _ => false,
+    }
+}
+
+/// a number or a matrix of numbers
+fn numeric_data(e: &Expr) -> bool {
+    match e {
+        Expr::Num(_) => true,
+        Expr::Matrix(m) => m.iter().flatten().all(|x| x.is_number()),
+        _ => false,
+    }
+}
+
 /// info(e): the expression tree
 fn structure(e: &Expr) -> String {
     use Expr::*;
@@ -2129,6 +2355,7 @@ fn structure(e: &Expr) -> String {
         Str(s) => format!("String({})", s),
         Apply(f, v) => format!("Function {}({})", f, list(v)),
         Obj(o) => o.kind().to_string(),
+        Held(op, v) => format!("Held {:?}({})", op, list(v)),
     }
 }
 

@@ -202,6 +202,21 @@ pub fn evalf(e: &Expr) -> Expr {
                 other => exp(other),
             }
         }
+        Apply(f, _) => {
+            // atan2 and special functions of numbers give a float
+            let a = e.map_children(&mut |c| evalf(c));
+            if let Apply(_, args) = &a {
+                if (f == "atan2" || crate::special::is_special(f, args.len()))
+                    && args.iter().all(|x| matches!(x, Num(_)))
+                {
+                    let v = crate::numeric::value(&a);
+                    if v.is_finite() {
+                        return Expr::float(v);
+                    }
+                }
+            }
+            a
+        }
         _ => e.map_children(&mut |c| evalf(c)),
     }
 }
@@ -437,19 +452,81 @@ fn pythagoras(e: &Expr, sin_to_cos: bool) -> Expr {
 
 /// Find a simpler equivalent form: combine fractions, cancel common factors
 /// and apply sin^2 + cos^2 = 1, keeping whichever form is smallest.
+/// The `simplify` command: every expression to one target form (see
+/// ratfun::normal_form), entry by entry for matrices; expressions that are not
+/// rational functions of kernels fall back to the smallest of several forms.
+/// Numbers keep the look of the input: when a decimal took part, results with
+/// a finite decimal form print as decimals.
+pub fn simplify_target(e: &Expr) -> Expr {
+    match e {
+        Matrix(_) => return e.map_children(&mut |x| simplify_target(x)),
+        Num(_) | Sym(_) | Const(_) | Bool(_) | Str(_) | Obj(_) => return e.clone(),
+        _ => {}
+    }
+    if crate::units::has_units(e) {
+        return simplify(e);
+    }
+    let e = &no_root_denominators(e);
+    let r = crate::ratfun::normal_form(e).unwrap_or_else(|| simplify(e));
+    if has_decimal(e) {
+        decimals(&r)
+    } else {
+        r
+    }
+}
+
+/// square roots of fractions with the root in the numerator: sqrt(1/2) = sqrt(2)/2
+fn no_root_denominators(e: &Expr) -> Expr {
+    if let Pow(b, x) = e {
+        if let (Num(r), Num(h)) = (&**b, &**x) {
+            let half = crate::num::Number::rat(1, 2).unwrap();
+            let r = if *h == half.neg() && r.is_exact() && !r.is_zero() { r.recip().unwrap() } else { r.clone() };
+            let h = if h.is_negative() { half.clone() } else { h.clone() };
+            if h == half && r.is_exact() && !r.is_integer() && !r.is_negative() {
+                if let (Some(n), Some(d)) = (r.to_exact().numer(), r.to_exact().denom()) {
+                    if let Some(nd) = n.checked_mul(d) {
+                        return mul(vec![
+                            Num(crate::num::Number::rat(1, d).unwrap()),
+                            crate::build::pow(Expr::int(nd), Num(half)),
+                        ]);
+                    }
+                }
+            }
+        }
+    }
+    e.map_children(&mut |c| no_root_denominators(c))
+}
+
+pub fn has_decimal(e: &Expr) -> bool {
+    match e {
+        Num(n) => n.is_xd(),
+        Add(v) | Mul(v) | Apply(_, v) => v.iter().any(has_decimal),
+        Pow(a, b) => has_decimal(a) || has_decimal(b),
+        Func(_, a) => has_decimal(a),
+        Held(_, v) => v.iter().any(has_decimal),
+        Matrix(m) => m.iter().flatten().any(has_decimal),
+        _ => false,
+    }
+}
+
+/// exact fractions with a finite decimal form, written as decimals
+pub fn decimals(e: &Expr) -> Expr {
+    match e {
+        Num(n) if n.is_exact() && !n.is_integer() => Num(n.to_xd()),
+        Num(_) | Bool(_) | Str(_) | Obj(_) | Sym(_) | Const(_) => e.clone(),
+        // exponents stay as they are: x^(1/2), not x^0.5
+        Pow(b, x) if **b != Const(Const::E) => crate::build::pow(decimals(b), (**x).clone()),
+        _ => e.map_children(&mut |x| decimals(x)),
+    }
+}
+
 pub fn simplify(e: &Expr) -> Expr {
     match e {
         Matrix(_) => return e.map_children(&mut |x| simplify(x)),
         Num(_) | Sym(_) | Const(_) | Bool(_) | Str(_) => return e.clone(),
         _ => {}
     }
-    // factorial(n + 2)/factorial(n) = (n + 1)(n + 2): cancel before the
-    // factorials are worked out, and again once the factors are simplified
-    if let Some(r) = crate::special::ratios(e) {
-        return simplify(&r);
-    }
     let inner = e.map_children(&mut |x| simplify(x));
-    let inner = crate::special::ratios(&inner).map(|r| simplify(&r)).unwrap_or(inner);
     let mut best = inner.clone();
     let mut consider = |c: Expr| {
         if cost(&c) < cost(&best) {

@@ -109,6 +109,25 @@ pub enum Expr {
     Str(String),
     /// figures, metrics and other displayable results
     Obj(Rc<Obj>),
+    /// an operation kept as typed (simplify = false): 1/3 + 2/6 stays that
+    /// until simplify, eval or a command works with it
+    Held(Hop, Vec<Expr>),
+}
+
+/// The operations a held expression keeps as typed
+#[derive(Clone, Debug, PartialEq)]
+pub enum Hop {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Pow,
+    Neg,
+    EMul,
+    EDiv,
+    EPow,
+    /// a function applied as typed: sin(0), sqrt(8)
+    Fn(String),
 }
 
 /// Results that are not algebraic expressions
@@ -263,7 +282,7 @@ impl Expr {
             Add(v) | Mul(v) => v.iter().any(|e| e.contains_sym(name)),
             Pow(a, b) => a.contains_sym(name) || b.contains_sym(name),
             Func(_, a) => a.contains_sym(name),
-            Apply(_, v) => v.iter().any(|e| e.contains_sym(name)),
+            Apply(_, v) | Held(_, v) => v.iter().any(|e| e.contains_sym(name)),
             Matrix(rows) => rows.iter().flatten().any(|e| e.contains_sym(name)),
             _ => false,
         }
@@ -280,7 +299,7 @@ impl Expr {
                     go(b, out)
                 }
                 Func(_, a) => go(a, out),
-                Apply(_, v) => v.iter().for_each(|x| go(x, out)),
+                Apply(_, v) | Held(_, v) => v.iter().for_each(|x| go(x, out)),
                 Matrix(rows) => rows.iter().flatten().for_each(|x| go(x, out)),
                 _ => {}
             }
@@ -298,7 +317,7 @@ impl Expr {
             Add(v) | Mul(v) => 1 + v.iter().map(|e| e.size()).sum::<usize>(),
             Pow(a, b) => 1 + a.size() + b.size(),
             Func(_, a) => 1 + a.size(),
-            Apply(_, v) => 1 + v.iter().map(|e| e.size()).sum::<usize>(),
+            Apply(_, v) | Held(_, v) => 1 + v.iter().map(|e| e.size()).sum::<usize>(),
             Matrix(rows) => rows.iter().flatten().map(|e| e.size()).sum(),
             _ => 1,
         }
@@ -313,6 +332,7 @@ impl Expr {
             Pow(a, b) => pow(f(a), f(b)),
             Func(g, a) => func(*g, f(a)),
             Apply(g, v) => crate::special::apply(g, v.iter().map(&mut *f).collect()),
+            Held(op, v) => Held(op.clone(), v.iter().map(&mut *f).collect()),
             Matrix(rows) => Matrix(
                 rows.iter()
                     .map(|r| r.iter().map(&mut *f).collect())
@@ -328,7 +348,7 @@ fn rank(e: &Expr) -> u8 {
         Num(_) => 0,
         Const(_) => 1,
         Sym(_) => 2,
-        Func(..) | Apply(..) => 3,
+        Func(..) | Apply(..) | Held(..) => 3,
         Mul(_) => 4,
         Add(_) => 5,
         Pow(..) => 6, // compared by base before rank is consulted

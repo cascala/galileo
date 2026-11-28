@@ -63,15 +63,21 @@ galileo> eval(5/4)
 1.25
 ```
 
-A number with a decimal point, like `0.5` or `1e-3`, is a decimal, and anything
-combined with a decimal becomes one. A decimal you type holds its exact value, so `0.1` is
-exactly one tenth and `+ - * /` and whole powers of decimals are exact: `0.1 + 0.2` is `0.3`
-and `0.1*x + 0.2*x == 0.3*x` is true. Decimals still act as numbers to compute with:
-`sqrt(0.5)`, `sin(0.5)` and `0.5^0.5` give decimal values. A decimal stays exact while its
-numerator and denominator have at most `exactdigits` digits (38, the default and the
-largest); beyond that it becomes a 64-bit float with about 16 digits. `exactdigits = 0`
-makes every decimal a float. `eval(x, digits)` gives as many significant digits as you ask
-for, up to 100000, and the digits carry through `+ - * /`.
+A number with a decimal point, like `0.5` or `1e-3`, is a decimal: an exact number written
+in decimal notation. `0.1` is exactly one tenth, so `0.1 + 0.2` is `0.3` and
+`0.1*x + 0.2*x == 0.3*x` is true. Decimals are exact everywhere until you call `eval`:
+`sin(0.5)` stays `sin(0.5)`, and `sqrt(0.1/3)` stays exact. A result that has no finite
+decimal form is an exact fraction, like `0.1/3`, which is `1/30`. Results worked out from
+decimals print as decimals where they can.
+
+`eval` is the one step that gives digits: `eval(x)` gives 64-bit floats, about 16 digits,
+and `eval(x, digits)` gives as many significant digits as you ask for, up to 100000.
+Arithmetic on floats runs as usual.
+
+`exactdigits` sets a limit on exactness, for speed. It is 38 by default: a result from
+decimals that needs more than 38 digits (written out, or in the numerator or denominator of
+a fraction) becomes a float, so a loop that multiplies decimals thousands of times stays fast. `exactdigits = inf` removes the limit, and `exactdigits = 0` makes every
+decimal a float, as in MATLAB.
 
 ```galileo
 galileo> 0.5 + 1/4
@@ -80,6 +86,12 @@ galileo> 0.1 + 0.2 - 0.3
 0.0
 galileo> 1e20 + 1
 100000000000000000001.0
+galileo> 0.1/3
+1/30
+galileo> sin(0.5)
+sin(0.5)
+galileo> eval(sin(0.5))
+0.479425538604203
 galileo> eval(pi, 30)
 3.14159265358979323846264338328
 ```
@@ -93,6 +105,60 @@ galileo> (2 + 3*i)*(2 - 3*i)
 galileo> i^2
 -1
 ```
+
+## Simplify and eval
+
+`simplify` and `eval` decide what a result looks like. `simplify(x)` writes `x` in one fixed
+form, and `eval(x)` gives its digits.
+
+The fixed form is a fraction N/D of polynomials in the symbols, constants and functions of
+`x`. Its terms are multiplied out and collected, and common factors of N and D are
+cancelled. Square roots move out of denominators. `sin(a)^2 + cos(a)^2 = 1` is used in
+whichever direction gives the shorter form. Two ways of writing the same value give the
+same form, and simplifying a second time changes nothing. `factor`, `expand` and `apart`
+give other forms on request.
+
+```galileo
+galileo> simplify((x^2 - 1)/(x - 1))
+x+1
+galileo> simplify((x+1)^2)
+x^2+2*x+1
+galileo> simplify(1 - cos(x)^2)
+sin(x)^2
+galileo> simplify(1/sqrt(2))
+sqrt(2)/2
+```
+
+The setting `simplify` chooses when this happens. With `simplify = true`, the default for
+now, Galileo tidies every result as you type it: `1/3 + 2/6` shows `2/3`. With
+`simplify = false`, what you type stays as you typed it until you call `simplify` or
+`eval`:
+
+```galileo
+galileo> simplify = false;
+galileo> 1/3 + 2/6
+1/3+2/6
+galileo> simplify(1/3 + 2/6)
+2/3
+galileo> 0.1*x + 0.2*x
+0.1*x+0.2*x
+galileo> simplify(ans)
+0.3*x
+galileo> sqrt(0.5)
+sqrt(0.5)
+galileo> eval(sqrt(0.5))
+0.7071067811865476
+galileo> simplify = true;
+```
+
+Even with `simplify = false`, some things still run:
+
+- Variables are replaced by their values.
+- Commands such as `inv`, `factor`, `diff` and `solve` simplify their input and give their
+  result.
+- Comparisons and conditions decide: `0.1*x + 0.2*x == 0.3*x` is `true`.
+- Arithmetic on floats runs.
+- Loops and function bodies compute as with `simplify = true`.
 
 ## Names and variables
 
@@ -366,6 +432,8 @@ galileo> dimension(const.G)
 "length^3/(mass*time^2)"
 galileo> h = 10 m;
 galileo> convert(sqrt(2*h/const.g))
+(200*sqrt(10/196133)) s
+galileo> eval(ans)
 1.4280869812290344 s
 ```
 

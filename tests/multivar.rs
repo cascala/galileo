@@ -18,7 +18,13 @@ fn one(code: &str) -> String {
     last
 }
 
+/// the value of the last statement, as digits
 fn close(code: &str, want: f64) {
+    let code = match code.rsplit_once(';') {
+        Some((head, tail)) => format!("{}; eval({})", head, tail.trim()),
+        None => format!("eval({})", code),
+    };
+    let code = code.as_str();
     let v: f64 = one(code).parse().unwrap_or_else(|_| panic!("{} gave {}", code, one(code)));
     assert!((v - want).abs() < 1e-9 * (1.0 + want.abs()), "{} = {} (want {})", code, v, want);
 }

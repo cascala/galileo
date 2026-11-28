@@ -52,7 +52,8 @@ fn conversions_and_constants() {
         ("convert(5 N)", "5 kg*m/s^2"),
         ("const.c", "299792458 m/s"),
         ("dimension(const.G)", "length^3/(mass*time^2)"),
-        ("h = 10 m; convert(sqrt(2*h/const.g))", "1.4280869812290344 s"),
+        ("h = 10 m; convert(sqrt(2*h/const.g))", "(200*sqrt(10/196133)) s"),
+        ("h = 10 m; eval(convert(sqrt(2*h/const.g)))", "1.4280869812290344 s"),
     ] {
         assert_eq!(one(code), want, "{}", code);
     }

@@ -1956,26 +1956,11 @@ pub fn factorial(n: i128) -> R<Expr> {
     if n > 100_000 {
         return Err("factorial: at most factorial(100000), which already has 456574 digits".into());
     }
-    Ok(Num(Number::from_bigint(range_product(0, n))))
-}
-
-/// (lo+1)(lo+2)...hi, and 1 when hi <= lo. Binary splitting: the halves are
-/// multiplied recursively, so the big multiplications are between numbers of
-/// similar size and 10000! takes milliseconds instead of minutes.
-pub fn range_product(lo: i128, hi: i128) -> num_bigint::BigInt {
-    use num_bigint::BigInt;
-    if hi <= lo {
-        return BigInt::from(1);
+    let mut acc = Number::one();
+    for k in 2..=n {
+        acc = acc.mul(Number::int(k));
     }
-    if hi - lo <= 16 {
-        let mut acc = BigInt::from(lo + 1);
-        for k in lo + 2..=hi {
-            acc *= k;
-        }
-        return acc;
-    }
-    let mid = lo + (hi - lo) / 2;
-    range_product(lo, mid) * range_product(mid, hi)
+    Ok(Num(acc))
 }
 
 pub fn binomial(n: i128, k: i128) -> Expr {

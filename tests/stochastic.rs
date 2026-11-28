@@ -17,7 +17,13 @@ fn one(code: &str) -> String {
     last.replace('\n', "")
 }
 
+/// the value of the last statement, as digits
 fn num(code: &str) -> f64 {
+    let code = match code.rsplit_once(';') {
+        Some((head, tail)) => format!("{}; eval({})", head, tail.trim()),
+        None => format!("eval({})", code),
+    };
+    let code = code.as_str();
     one(code).parse().unwrap_or_else(|_| panic!("{} gave {}", code, one(code)))
 }
 
@@ -43,7 +49,8 @@ fn markov_chains_exact() {
         let code = format!("{} {} {}", P, G, code);
         assert_eq!(one(&code), want, "{}", code);
     }
-    let d = one("stationary([0.9 0.1; 0.5 0.5])");
+    assert_eq!(one("stationary([0.9 0.1; 0.5 0.5])"), "[5/6, 1/6]");
+    let d = one("eval(stationary([0.9 0.1; 0.5 0.5]))");
     assert!(d.starts_with("[0.833333"), "{}", d);
 }
 
