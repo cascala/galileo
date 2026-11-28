@@ -1,5 +1,6 @@
 //! Galileo: `galileo` for an interactive prompt, `galileo file.gg` to run a file,
 //! `galileo -i file.gg` to run a file and then keep the prompt open,
+//! `galileo mcp` to serve the Model Context Protocol for AI assistants,
 //! `galileo --kernel` to serve the notebook kernel protocol on stdin/stdout.
 
 use galileo_rs::{Output, Session};
@@ -51,12 +52,14 @@ fn run(args: Vec<String>) -> i32 {
             galileo_rs::kernel::serve();
             0
         }
+        Some("mcp") => galileo_rs::mcp::main(&args[1..]),
         Some("-h") | Some("--help") => {
             println!(
-                "usage: galileo [-i] [file.gg] | galileo --kernel | galileo --version\n\
+                "usage: galileo [-i] [file.gg] | galileo mcp | galileo --kernel | galileo --version\n\
                  \n  galileo            interactive prompt\n\
                  \x20 galileo file.gg    run a file\n\
-                 \x20 galileo -i file.gg run a file, then keep the prompt open with its definitions"
+                 \x20 galileo -i file.gg run a file, then keep the prompt open with its definitions\n\
+                 \x20 galileo mcp        serve the Model Context Protocol, for AI assistants (galileo mcp --help)"
             );
             0
         }

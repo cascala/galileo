@@ -47,6 +47,8 @@ pub mod export;
 mod font_data;
 pub mod vfs;
 pub mod lie;
+#[cfg(not(target_arch = "wasm32"))]
+pub mod mcp;
 pub mod linalg;
 pub mod modsolve;
 pub mod num;
